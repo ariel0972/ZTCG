@@ -165,7 +165,6 @@ document.getElementById("save-deck").onclick = () => {
   salvarDados()
   atualizarSelectDecks()
   alert("Deck salvo com sucesso!");
-  window.location.href = "index.html"; // volta para o jogo
 };
 
 function atualizarSelectDecks() {
