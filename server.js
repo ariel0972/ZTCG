@@ -7,7 +7,7 @@ const bcrypt = require("bcrypt")
 const jwt = require('jsonwebtoken')
 
 const { checkAdmin } = require('./middlewares/checkAdmin')
-const { checkToken } = require ('./middlewares/checktoken')
+const { checkToken } = require('./middlewares/checktoken')
 
 const userRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes');
@@ -29,11 +29,11 @@ app.get('/user/:id', checkToken, async (req, res) => {
 
     const user = await User.findById(id, '-senha')
 
-    if(!user) {
-        return res.status(404).json({ success: false, content: "Usuário não encontrado "})
+    if (!user) {
+        return res.status(404).json({ success: false, content: "Usuário não encontrado!" })
     }
 
-    res.status(200).json({ user })
+    res.status(200).json({ success: true, user })
 })
 
 // Rotas de Autenticação

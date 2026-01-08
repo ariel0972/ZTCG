@@ -53,4 +53,35 @@ router.put("/:id", async (req, res) => {
     }
 })
 
+router.delete("/:id", async (req, res) => {
+    try {
+        const deck = await Deck.findOneAndDelete({
+            _id: req.params.id,
+            userId: req.userId
+        })
+
+        if (!deck) {
+            return res.status(404).json({ success: false, content: "Deck não encontrado" })
+        }
+
+        res.status(200).json({ success: true, content: "Deck deletado com sucesso!", id: req.params.id })
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, content: "Erro ao excluir o deck." });
+    }
+})
+
+router.get('/user/:id', async (req, res) => {
+    const userId = req.params.id
+
+    const decks = await Deck.find({ userId: userId })
+
+    if (!decks) {
+        return res.status(404).json({ success: false, content: "Deck não encontrado não encontrado!" })
+    }
+
+    res.status(200).json({ success: true, decks })
+})
+
 module.exports = router

@@ -116,7 +116,8 @@ router.post("/logar", async (req, res) => {
     }
 })
 
-router.put("/user/edit", checkToken,async (req, res) => {
+
+router.put("/user/edit", checkToken, async (req, res) => {
     const userId = req.userId
     const { nome, avatarURL } = req.body
 
@@ -141,6 +142,10 @@ router.put("/user/edit", checkToken,async (req, res) => {
         console.log(error);
         res.status(500).json({ success: false, content: "Erro ao salvar dados no servidor" })
     }
+})
+
+router.get("/user", checkToken, async (req, res) => {
+    
 })
 
 module.exports = router

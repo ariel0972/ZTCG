@@ -218,46 +218,48 @@ document.getElementById("edit-deck").onclick = async () => {
 }
 
 document.getElementById("delete-deck").onclick = async () => {
-  const deckAtual = colecaoDeDecks[deckAtualIndex];
-  document.getElementById("modal-edicao").style.display = "flex";
-  document.getElementById("input-editar-nome").value = deck.nome
+ const deckAtual = colecaoDeDecks[deckAtualIndex];
 
-  renderizarOpcoesIcones()
-
-  const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-
-  if (!token) {
-    alert('Você precisa estar logado no banco')
-    return
-  }
-
-  try {
-
-    const res = await fetch(`/decks/${deckAtual._id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': "application/json",
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        nome: deckAtual.nome,
-        cartas: deckAtual.cartas,
-        mago: deckAtual.mago
-      })
-    })
-
-    const data = await res.json()
-
-    if (data.success) {
-      salvarDados()
-      atualizarSelectDecks()
-      alert(data.content)
-    } else {
-      alert("Erro ao salvar")
+    // Segurança: Não deixa deletar se for o único deck
+    if (colecaoDeDecks.length <= 1) {
+        alert("Você precisa ter pelo menos um deck!")
+        return
     }
-  } catch (error) {
-    console.error(error)
-  }
+
+    const confirmar = confirm(`Tem certeza que deseja excluir o deck "${deckAtual.nome}"?`);
+    if (!confirmar) return;
+
+    const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+
+    try {
+        const res = await fetch(`/decks/${deckAtual._id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            alert(data.content);
+
+            // 1. Remove do array local
+            colecaoDeDecks.splice(deckAtualIndex, 1);
+
+            // 2. Ajusta o índice para não apontar para o vazio
+            deckAtualIndex = 0; 
+            
+            // 3. Atualiza tudo na tela
+            salvarDados(); // Salva no LocalStorage
+            atualizarSelectDecks();
+            renderDeck();
+        } else {
+            alert("Erro: " + data.content);
+        }
+    } catch (error) {
+        console.error("Erro na requisição:", error);
+    }
 };
 
 function atualizarSelectDecks() {
@@ -488,7 +490,6 @@ async function handleUpdateClick() {
   }
 }
 
-// 3. Função auxiliar para baixar o arquivo resultante
 function downloadCSV(content, fileName) {
   const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement("a");
@@ -502,8 +503,8 @@ function downloadCSV(content, fileName) {
   document.body.removeChild(link);
 }
 
-// 4. Adicionando o evento ao botão
 document.getElementById('btn-atualizar-csv').addEventListener('click', handleUpdateClick);
+
 
 /* Modal de edição */
 
@@ -550,7 +551,7 @@ document.getElementById("btn-confirmar-edicao").onclick = async () => {
     alert('Você precisa estar logado no banco')
     return
   }
-  
+
   try {
 
     const res = await fetch(`/decks/${deckAtual._id}`, {
@@ -584,8 +585,6 @@ document.getElementById("btn-confirmar-edicao").onclick = async () => {
   atualizarSelectDecks(); // Atualiza o nome no seletor
   fecharModalEdicao();
 };
-
-
 
 renderDeck()
 renderCards()
