@@ -49,7 +49,7 @@ const allCards = [
     name: "Chuva de flechas",
     type: "feitiço",
     cost: 2,
-    image: 'public/assets/cards/Chuva de flechas.png',
+    image: '../assets/Cards/Chuva de Flechas.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
