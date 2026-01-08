@@ -5,7 +5,7 @@ const allCards = [
     name: "Bola de fogo",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/bola de fogo.png',
+    image: '../assets/Cards/Bola de fogo.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -27,7 +27,7 @@ const allCards = [
     name: "Fluxo Forte",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/Fluxo forte.png',
+    image: '../assets/Cards/Fluxo Forte.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -38,7 +38,7 @@ const allCards = [
     name: "Lágrima de Zarcos",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/lágrima de zarcos.png',
+    image: '../assets/Cards/Lágrima de Zarcos.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -60,7 +60,7 @@ const allCards = [
     name: "Encanto da Traição",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/Encanto da traição.png',
+    image: '../assets/Cards/Encanto da Traição.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -90,10 +90,10 @@ const allCards = [
   },
   {
     id: 6,
-    name: "Escudo de Porteção",
+    name: "Escudo de Proteção",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/escudo de proteção.png',
+    image: '../assets/Cards/Escudo de Proteção.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -115,7 +115,7 @@ const allCards = [
     name: "Espada dos Mil Mortos",
     type: "arma",
     cost: 2,
-    image: '../assets/cards/espada dos mil mortos.png',
+    image: '../assets/Cards/Espada dos Mil Mortos.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -126,7 +126,7 @@ const allCards = [
     name: "Machado",
     type: "arma",
     cost: 2,
-    image: '../assets/Cards/machado.png',
+    image: '../assets/Cards/Machado.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -137,7 +137,7 @@ const allCards = [
     name: "Palhaço",
     type: "criatura",
     cost: 2,
-    image: '../assets/Cards/palhaço.png',
+    image: '../assets/Cards/Palhaço.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -148,7 +148,7 @@ const allCards = [
     name: "Goblin Sombrio",
     type: "criatura",
     cost: 2,
-    image: '../assets/Cards/goblin sombrio.png',
+    image: '../assets/Cards/Goblin Sombrio.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -159,7 +159,7 @@ const allCards = [
     name: "Sifão de mana",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/sifão de mana.png',
+    image: '../assets/Cards/Sifão de Mana.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -170,7 +170,7 @@ const allCards = [
     name: "Pele de Luokis",
     type: "arma",
     cost: 2,
-    image: '../assets/Cards/Pele de luokis.png',
+    image: '../assets/Cards/Pele de Luokis.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -181,7 +181,7 @@ const allCards = [
     name: "Chamar tropa",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/chamar tropa.png',
+    image: '../assets/Cards/Chamar Tropa.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -203,7 +203,7 @@ const allCards = [
     name: "Refletir",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/refletir.png',
+    image: '../assets/Cards/Refletir.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -225,7 +225,7 @@ const allCards = [
     name: "Faca de Brinquedo",
     type: "arma",
     cost: 2,
-    image: '../assets/Cards/faca de brinquedo.png',
+    image: '../assets/Cards/Faca de Brinquedo.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -236,7 +236,7 @@ const allCards = [
     name: "Trazer dos mortos",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/trazer dos mortos.png',
+    image: '../assets/Cards/Trazer dos Mortos.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -247,7 +247,7 @@ const allCards = [
     name: "Chamar tropa",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/olho da verdade.png',
+    image: '../assets/Cards/Olho da Verdade.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -258,7 +258,7 @@ const allCards = [
     name: "Rato",
     type: "criatura",
     cost: 4,
-    image: '../assets/Cards/rato.png',
+    image: '../assets/Cards/Rato.png',
     atk: 2,
     hp: 1,
     attackPattern: "front"
@@ -268,7 +268,7 @@ const allCards = [
     name: "Ladino",
     type: "criatura",
     cost: 4,
-    image: '../assets/Cards/ladino.png',
+    image: '../assets/Cards/Ladino.png',
     atk: 2,
     hp: 1,
     attackPattern: "front"
@@ -278,7 +278,7 @@ const allCards = [
     name: "Cavalo",
     type: "criatura",
     cost: 4,
-    image: '../assets/Cards/cavalo.png',
+    image: '../assets/Cards/Cavalo.png',
     atk: 2,
     hp: 1,
     attackPattern: "front"
@@ -288,7 +288,7 @@ const allCards = [
     name: "Salamandra",
     type: "criatura",
     cost: 4,
-    image: '../assets/Cards/salamandra.png',
+    image: '../assets/Cards/Salamandra.png',
     atk: 2,
     hp: 1,
     attackPattern: "front"
@@ -298,7 +298,7 @@ const allCards = [
     name: "Golém de água",
     type: "criatura",
     cost: 4,
-    image: '../assets/Cards/golem de água.png',
+    image: '../assets/Cards/Golem de água.png',
     atk: 2,
     hp: 1,
     attackPattern: "front"
@@ -318,7 +318,7 @@ const allCards = [
     name: "Beija Flor",
     type: "criatura",
     cost: 4,
-    image: '../assets/Cards/beija-flor de fagniz.png',
+    image: '../assets/Cards/Beija-flor de Fagniz.png',
     atk: 2,
     hp: 1,
     attackPattern: "front"
@@ -328,7 +328,7 @@ const allCards = [
     name: "Guerreiro",
     type: "criatura",
     cost: 3,
-    image: '../assets/Cards/guerreiro.png',
+    image: '../assets/Cards/Guerreiro.png',
     element: "Neutro",
     atk: 3,
     hp: 11,
@@ -339,7 +339,7 @@ const allCards = [
     name: "Assasino",
     type: "criatura",
     cost: 4,
-    image: '../assets/Cards/assassino.png',
+    image: '../assets/Cards/Assassino.png',
     atk: 2,
     hp: 1,
     attackPattern: "front"
@@ -349,7 +349,7 @@ const allCards = [
     name: "Cavaleiro",
     type: "criatura",
     cost: 4,
-    image: '../assets/Cards/cavaleiro.png',
+    image: '../assets/Cards/Cavaleiro.png',
     atk: 3,
     hp: 12,
     attackPattern: "front"
@@ -359,7 +359,7 @@ const allCards = [
     name: "Arqueiro",
     type: "criatura",
     cost: 4,
-    image: '../assets/Cards/arqueiro.png',
+    image: '../assets/Cards/Arqueiro.png',
     atk: 4,
     hp: 11,
     attackPattern: "diagonal"
@@ -369,7 +369,7 @@ const allCards = [
     name: "Goblin",
     type: "criatura",
     cost: 4,
-    image: '../assets/Cards/goblin.png',
+    image: '../assets/Cards/Goblin.png',
     atk: 2,
     hp: 6,
     attackPattern: "diagonal"
@@ -379,7 +379,7 @@ const allCards = [
     name: "Golem",
     type: "criatura",
     cost: 4,
-    image: '../assets/Cards/golem.png',
+    image: '../assets/Cards/Golem.png',
     atk: 4,
     hp: 1,
     attackPattern: "diagonal"
@@ -388,21 +388,21 @@ const allCards = [
     id: 28,
     name: "Aprendiz de mago",
     type: "mago",
-    image: "../assets/Cards/aprendiz de mago.png",
+    image: "../assets/Cards/Aprendiz de mago.png",
     hp: 18
   },
   {
     id: 16,
     name: "Mago de fogo",
     type: "mago",
-    image: "../assets/Cards/mago de fogo.png",
+    image: "../assets/Cards/Mago de fogo.png",
     hp: 18
   },
   {
     id: 17,
     name: "Mago de água",
     type: "mago",
-    image: "../assets/Cards/mago de água.png",
+    image: "../assets/Cards/Mago de água.png",
     hp: 18
   },
   {
@@ -416,28 +416,28 @@ const allCards = [
     id: 18,
     name: "Mago de terra",
     type: "mago",
-    image: "../assets/Cards/mago de terra.png",
+    image: "../assets/Cards/Mago de terra.png",
     hp: 18
   },
   {
     id: 29,
     name: "Bruxo",
     type: "mago",
-    image: "../assets/Cards/bruxo.png",
+    image: "../assets/Cards/Bruxo.png",
     hp: 18
   },
   {
     id: 70,
     name: "Druida",
     type: "mago",
-    image: "../assets/Cards/druida.png",
+    image: "../assets/Cards/Druida.png",
     hp: 18
   },
   {
     id: 108,
     name: "Necromante",
     type: "mago",
-    image: "../assets/Cards/necromante.png",
+    image: "../assets/Cards/Necromante.png",
     hp: 18
   }
 ];
