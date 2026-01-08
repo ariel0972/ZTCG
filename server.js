@@ -7,7 +7,7 @@ const bcrypt = require("bcrypt")
 const jwt = require('jsonwebtoken')
 
 const { checkAdmin } = require('./middlewares/checkAdmin.js')
-const { checkToken } = require('./middlewares/temp.js')
+const { checkToken } = require('./middlewares/checkToken.js')
 
 const userRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes');
