@@ -22,8 +22,8 @@
             <a href="../HTML/perfil.html">Perfil</a>
         </div>
         <div class="sign" id="auth-links">
-            <a href="#" class="auth">Login</a>
-            <a href="#" class="auth">Registrar</a>
+            <a href="../HTML/login.html" class="auth">Login</a>
+            <a href="../HTML/register.html" class="auth">Registrar</a>
         </div>
     </nav>
 
@@ -46,6 +46,9 @@
                 <div class="deck-header">
                     <h2>Baralho: <span id="actual-deck">Meu Novo Deck</span> (<span id="deck-count">0</span>/40)</h2>
                     <select id="seletor-decks" class="select"></select>
+                    <button id="edit-deck">Editar Deck</button>
+                    <button id="delete-deck">Excluir Deck</button>
+                    <button id="btn-principal" class="btn-favorito">⭐ Definir como Principal</button>
                 </div>
                 <div id="deck-cards" class="grid-cartas">
                 </div>
@@ -68,6 +71,24 @@
             </div>
         </aside>
     </section>
+
+    <div id="modal-edicao" class="modal-container" style="display: none;">
+        <div class="modal-content">
+            <h3 class="modal-title">Configurações do Baralho</h3>
+
+            <label for="input-editar-nome">Nome do Deck:</label>
+            <input type="text" id="input-editar-nome" placeholder="Novo nome do deck...">
+            <br><br>
+            <!-- <h4>Escolha um Ícone:</h4>
+            <div id="icon-selector" class="icon-grid-selector">
+            </div> -->
+
+            <div class="modal-actions">
+                <button onclick="fecharModalEdicao()">Cancelar</button>
+                <button id="btn-confirmar-edicao" class="btn-save">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
 
     <div id="export-area" class="export-hidden">
         <h1 id="export-deck-name">Nome</h1>

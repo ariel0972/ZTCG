@@ -68,7 +68,6 @@
 
             // No momento do sucesso do login:
             if (data.success) {
-                const lembrar = form.lembrar.checked; // Pega o checkbox
                 const storage = form.lembrar.checked ? localStorage : sessionStorage;
 
                 storage.setItem("token", data.token);

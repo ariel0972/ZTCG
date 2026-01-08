@@ -1,0 +1,56 @@
+const express = require('express')
+const router = express.Router()
+const Deck = require('../db/models/decks')
+const bcrypt = require('bcrypt')
+const jwt = require('jsonwebtoken')
+
+
+router.post('/user', async (req, res) => {
+    try {
+        const { nome, cartas, mago } = req.body
+
+        const deck = new Deck({
+            nome,
+            cartas,
+            mago,
+            userId: req.userId
+        })
+
+        const save = await deck.save()
+        if (!save) {
+            return res.status(500).json({ success: false, content: "Falha ao criar um novo Deck " })
+        }
+
+        res.status(200).json({ success: true, content: "O deck Foi criado com Suceso!", deck: deck })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ success: false, content: "Falha interna do servidor." })
+    }
+})
+
+router.put("/:id", async (req, res) => {
+    try {
+        const { nome, cartas, mago } = req.body
+
+        const deck = await Deck.findOneAndUpdate(
+            { _id: req.params.id, userId: req.userId },
+            {
+                nome,
+                cartas,
+                mago
+            },
+            { new: true }
+        )
+
+        if (!deck) {
+            return res.status(403).json({ success: false, content: "Deck não encontrado" });
+        }
+
+        res.status(200).json({ success: true, content: "Deck Atualizado", deck: deck });
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ success: false, content: "Erro ao carregar usuários" });
+    }
+})
+
+module.exports = router

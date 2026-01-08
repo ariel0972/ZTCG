@@ -1,22 +1,22 @@
-let deckAtualIndex = 0
+// Tenta pegar o índice salvo, se não existir, usa 0
+let deckAtualIndex = parseInt(localStorage.getItem("ultimoDeckSelecionado")) || 0
 let cardSelect = null
 let playerProfile = JSON.parse(localStorage.getItem("playerProfile")) || {
-    nome: "Novo Duelista",
-    avatarURL: "../assets/avatar.png",
-    nivel: 1,
-    xp: 0,
-    vitorias: 0,
-    decks: [
-        { nome: "Deck Inicial", cartas: [], mago: null }
-    ]
+  nome: "Novo Duelista",
+  avatarURL: "../assets/avatar.png",
+  nivel: 1,
+  vitorias: 0,
+  decks: [
+    { nome: "Deck Inicial", cartas: [], mago: null }
+  ]
 }
 
 let colecaoDeDecks = playerProfile.decks
 
 function salvarDados() {
-    // Atualizamos a lista de decks dentro do objeto de perfil antes de salvar
-    playerProfile.decks = colecaoDeDecks; 
-    localStorage.setItem("playerProfile", JSON.stringify(playerProfile));
+  // Atualizamos a lista de decks dentro do objeto de perfil antes de salvar
+  playerProfile.decks = colecaoDeDecks;
+  localStorage.setItem("playerProfile", JSON.stringify(playerProfile));
 }
 
 function definirMago(card) {
@@ -89,7 +89,7 @@ function renderDeck() {
   });
   const mago = document.getElementById("mage-container")
   mago.innerHTML = ""
-  if (deckAtual.mago && deckAtual.mago.image){
+  if (deckAtual.mago && deckAtual.mago.image) {
     const img = document.createElement("img")
     img.classList.add("mago")
     img.src = deckAtual.mago.image
@@ -114,8 +114,8 @@ function addToDeck(card) {
       alert("Não pode ter mais de 3 cartas iguais no deck ")
       return
     }
-  } 
-  
+  }
+
   if (card.type === "feitiço") {
     const cardCount = colecaoDeDecks[deckAtualIndex].cartas.filter(item => item.id === card.id).length
     if (cardCount >= 3) {
@@ -149,22 +149,115 @@ function removeFromDeck(cardId) {
 
   const index = deckAtual.findIndex(card => card.id === cardId)
 
-  if (!index !== -1){
+  if (!index !== -1) {
     deckAtual.splice(index, 1)
     renderDeck();
   }
 }
 
 // Botão para Salvar o Deck
-document.getElementById("save-deck").onclick = () => {
-  if (colecaoDeDecks[deckAtualIndex].cartas.length < 10) {
+document.getElementById("save-deck").onclick = async () => {
+  const deckAtual = colecaoDeDecks[deckAtualIndex]
+
+  if (deckAtual.cartas.length < 10) {
     alert("Seu deck precisa ter pelo menos 10 cartas!");
     return;
   }
-  localStorage.setItem("colecaoDeDecks", JSON.stringify(colecaoDeDecks));
-  salvarDados()
-  atualizarSelectDecks()
-  alert("Deck salvo com sucesso!");
+
+  const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+
+  if (!token) {
+    alert('Você precisa estar logado no banco')
+    return
+  }
+
+
+  console.log(deckAtual)
+  try {
+
+    const res = await fetch(`/decks/${deckAtual._id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': "application/json",
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        nome: deckAtual.nome,
+        cartas: deckAtual.cartas,
+        mago: deckAtual.mago
+      })
+    })
+
+    const data = await res.json()
+
+    if (data.success) {
+      salvarDados()
+      atualizarSelectDecks()
+      alert(data.content)
+    } else {
+      alert("Erro ao salvar")
+    }
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+document.getElementById("edit-deck").onclick = async () => {
+  const deckAtual = colecaoDeDecks[deckAtualIndex];
+  document.getElementById("modal-edicao").style.display = "flex";
+  document.getElementById("input-editar-nome").value = deckAtual.nome
+
+  const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+
+  if (!token) {
+    alert('Você precisa estar logado no banco')
+    return
+  }
+
+  renderizarOpcoesIcones()
+}
+
+document.getElementById("delete-deck").onclick = async () => {
+  const deckAtual = colecaoDeDecks[deckAtualIndex];
+  document.getElementById("modal-edicao").style.display = "flex";
+  document.getElementById("input-editar-nome").value = deck.nome
+
+  renderizarOpcoesIcones()
+
+  const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+
+  if (!token) {
+    alert('Você precisa estar logado no banco')
+    return
+  }
+
+  try {
+
+    const res = await fetch(`/decks/${deckAtual._id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': "application/json",
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        nome: deckAtual.nome,
+        cartas: deckAtual.cartas,
+        mago: deckAtual.mago
+      })
+    })
+
+    const data = await res.json()
+
+    if (data.success) {
+      salvarDados()
+      atualizarSelectDecks()
+      alert(data.content)
+    } else {
+      alert("Erro ao salvar")
+    }
+  } catch (error) {
+    console.error(error)
+  }
 };
 
 function atualizarSelectDecks() {
@@ -183,19 +276,62 @@ function atualizarSelectDecks() {
 // Quando mudar o select, trocamos o deck atual
 document.getElementById("seletor-decks").onchange = (e) => {
   deckAtualIndex = e.target.value;
+  localStorage.setItem("ultimoDeckSelecionado", deckAtualIndex);
   renderDeck(); // Re-renderiza a lista de cartas do novo deck selecionado
 };
 
-document.getElementById("btn-novo-deck").onclick = () => {
+document.getElementById("btn-novo-deck").onclick = async () => {
+  const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+
+  if (!token) {
+    alert("Você precisa estar logado para criar um deck!")
+    window.location.href = "login.html"
+    return
+  }
+
   const nome = prompt("Qual o nome do novo deck?");
   if (nome) {
-    colecaoDeDecks.push({ nome: nome, cartas: [] });
-    deckAtualIndex = colecaoDeDecks.length - 1; // Vai para o novo deck
-    atualizarSelectDecks();
-    renderDeck();
+    try {
+
+      const res = await fetch(`/decks/user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': "application/json",
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          nome: nome,
+          cartas: [],
+          mago: "null"
+        })
+      })
+
+      const data = await res.json()
+
+      if (data.success) {
+        colecaoDeDecks.push(data.deck)
+        deckAtualIndex = colecaoDeDecks.length - 1;
+        atualizarSelectDecks();
+        renderDeck()
+        salvarDados()
+        alert(data.content)
+      } else {
+        alert("Erro ao salvar")
+      }
+    } catch (error) {
+      console.error(error)
+    }
   }
 };
 
+document.getElementById("btn-principal").onclick = () => {
+  // Salva o ID ou o índice do deck principal no perfil do jogador
+  playerProfile.deckPrincipalIndex = deckAtualIndex;
+
+  salvarDados(); // Usa sua função que já salva o playerProfile no localStorage
+  alert(`O deck "${colecaoDeDecks[deckAtualIndex].nome}" agora é o seu principal!`);
+  atualizarSelectDecks(); // Para mostrar algum destaque visual, se quiser
+};
 
 function showPreview(card) {
   const container = document.querySelector(".preview-sidebar")
@@ -227,7 +363,7 @@ function showPreview(card) {
       definirMago(card)
     }
   } else {
-     document.getElementById("addMago").style.display = "none"
+    document.getElementById("addMago").style.display = "none"
   }
 }
 
@@ -253,7 +389,7 @@ async function exportDeck() {
   const grid = document.getElementById("export-grid");
   const magoContainer = document.getElementById("export-mago-preview");
   const autor = document.querySelector('.export-credits')
-  
+
   // 1. Atualiza Nome e Limpa containers
   document.getElementById("export-deck-name").innerText = `${deck.nome}`;
   grid.innerHTML = "";
@@ -262,8 +398,8 @@ async function exportDeck() {
   // 2. Lógica de Agrupamento (Contagem)
   const contagem = {};
   deck.cartas.forEach(c => contagem[c.id] = (contagem[c.id] || 0) + 1);
-  
-  const unicas = deck.cartas.filter((c, i, self) => 
+
+  const unicas = deck.cartas.filter((c, i, self) =>
     i === self.findIndex(t => t.id === c.id)
   );
 
@@ -289,7 +425,7 @@ async function exportDeck() {
 
   // 5. Tira o print com html2canvas
   const areaExport = document.getElementById("export-area");
-  const canvas = await html2canvas(areaExport, { 
+  const canvas = await html2canvas(areaExport, {
     useCORS: true, // Importante para carregar imagens de outros domínios
     scale: 2 // Aumenta a qualidade da imagem
   });
@@ -303,71 +439,152 @@ async function exportDeck() {
 
 // Função para carregar o conteúdo do CSV
 async function carregarCSV() {
-    try {
-        const response = await fetch('../assets/cards.csv'); // Caminho do seu arquivo
-        const texto = await response.text();
-        return texto;
-    } catch (erro) {
-        console.error("Erro ao carregar o CSV:", erro);
-    }
+  try {
+    const response = await fetch('../assets/cards.csv'); // Caminho do seu arquivo
+    const texto = await response.text();
+    return texto;
+  } catch (erro) {
+    console.error("Erro ao carregar o CSV:", erro);
+  }
 }
 
 // 1. Sua lógica de sincronização (melhorada)
 function exportarCSV(csvContent, cardsArray) {
-    const counts = {};
-    cardsArray.forEach(card => {
-        const name = card.name.toLowerCase().trim();
-        counts[name] = (counts[name] || 0) + 1;
-    });
+  const counts = {};
+  cardsArray.forEach(card => {
+    const name = card.name.toLowerCase().trim();
+    counts[name] = (counts[name] || 0) + 1;
+  });
 
-    const lines = csvContent.split('\n');
-    const header = lines[0];
-    const updatedRows = lines.slice(1).map(line => {
-        if (!line.trim()) return line;
-        const columns = line.split(',');
-        const cardLabel = columns[1].toLowerCase().trim();
-        
-        // Atualiza o item-count (coluna 2)
-        columns[2] = counts[cardLabel] || 0;
-        return columns.join(',');
-    });
+  const lines = csvContent.split('\n');
+  const header = lines[0];
+  const updatedRows = lines.slice(1).map(line => {
+    if (!line.trim()) return line;
+    const columns = line.split(',');
+    const cardLabel = columns[1].toLowerCase().trim();
 
-    return [header, ...updatedRows].join('\n');
+    // Atualiza o item-count (coluna 2)
+    columns[2] = counts[cardLabel] || 0;
+    return columns.join(',');
+  });
+
+  return [header, ...updatedRows].join('\n');
 }
 
 // 2. Função que será chamada pelo botão
 async function handleUpdateClick() {
-    // Array de exemplo (no seu caso, viria do estado do seu deck/inventário)
-    const deckInput = colecaoDeDecks[deckAtualIndex].cartas
+  // Array de exemplo (no seu caso, viria do estado do seu deck/inventário)
+  const deckInput = colecaoDeDecks[deckAtualIndex].cartas
 
-    // Passo A: Lê o arquivo original
-    const csvOriginal = await carregarCSV();
+  // Passo A: Lê o arquivo original
+  const csvOriginal = await carregarCSV();
 
-    if (csvOriginal) {
-        // Passo B: Processa os dados
-        const csvFinal = exportarCSV(csvOriginal, deckInput);
+  if (csvOriginal) {
+    // Passo B: Processa os dados
+    const csvFinal = exportarCSV(csvOriginal, deckInput);
 
-        // Passo C: Cria um link de download automático para o usuário
-        downloadCSV(csvFinal, "ztcg_atualizado.csv");
-    }
+    // Passo C: Cria um link de download automático para o usuário
+    downloadCSV(csvFinal, `ztcg_${colecaoDeDecks[deckAtualIndex].nome} - ${playerProfile.nome}.csv`);
+  }
 }
 
 // 3. Função auxiliar para baixar o arquivo resultante
 function downloadCSV(content, fileName) {
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute("href", url);
-    link.setAttribute("download", fileName);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+
+  link.setAttribute("href", url);
+  link.setAttribute("download", fileName);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 // 4. Adicionando o evento ao botão
 document.getElementById('btn-atualizar-csv').addEventListener('click', handleUpdateClick);
+
+/* Modal de edição */
+
+function fecharModalEdicao() {
+  document.getElementById("modal-edicao").style.display = "none";
+}
+
+// 3. Renderiza os ícones dentro do modal
+function renderizarOpcoesIcones() {
+  const container = document.getElementById("icon-selector");
+  // container.innerHTML = "";
+
+  // listaIcones.forEach(path => {
+  //     const img = document.createElement("img");
+  //     img.src = path;
+  //     img.className = "icon-option";
+  //     if (path === iconeSelecionadoTemp) img.classList.add("selected");
+
+  //     img.onclick = () => {
+  //         iconeSelecionadoTemp = path;
+  //         renderizarOpcoesIcones(); // Re-renderiza para mostrar o destaque
+  //     };
+  //     container.appendChild(img);
+  // });
+}
+
+document.getElementById("btn-confirmar-edicao").onclick = async () => {
+  const novoNome = document.getElementById("input-editar-nome").value;
+
+  const deckAtual = colecaoDeDecks[deckAtualIndex]
+
+  if (novoNome.trim() === "") {
+    alert("O nome não pode ser vazio!");
+    return;
+  }
+
+  // Atualiza no objeto local
+  deckAtual.nome = novoNome;
+  // colecaoDeDecks[deckAtualIndex].icone = iconeSelecionadoTemp;
+
+  const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+
+  if (!token) {
+    alert('Você precisa estar logado no banco')
+    return
+  }
+  
+  try {
+
+    const res = await fetch(`/decks/${deckAtual._id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': "application/json",
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        nome: deckAtual.nome,
+        cartas: deckAtual.cartas,
+        mago: deckAtual.mago
+      })
+    })
+
+    const data = await res.json()
+
+    if (data.success) {
+      salvarDados()
+      atualizarSelectDecks()
+      alert(data.content)
+    } else {
+      alert("Erro ao salvar")
+    }
+  } catch (error) {
+    console.error(error)
+  }
+
+  salvarDados(); // Sua função que salva no localStorage
+  renderDeck();  // Atualiza o nome no cabeçalho
+  atualizarSelectDecks(); // Atualiza o nome no seletor
+  fecharModalEdicao();
+};
+
 
 
 renderDeck()

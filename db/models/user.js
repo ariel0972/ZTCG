@@ -1,4 +1,5 @@
 const mongoose = require('mongoose')
+const decks = require('./decks')
 
 const userSchema = new mongoose.Schema({
     nome: { type: String, required: true },

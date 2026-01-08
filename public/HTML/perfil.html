@@ -23,8 +23,8 @@
             <a href="perfil.html">Perfil</a>
         </div>
         <div class="sign" id="auth-links">
-            <a href="#" class="auth">Login</a>
-            <a href="#" class="auth">Registrar</a>
+            <a href="login.html" class="auth">Login</a>
+            <a href="register.html" class="auth">Registrar</a>
         </div>
     </nav>
 
@@ -51,14 +51,14 @@
                 <label for=""></label>
                 <input type="file" id="input-foto">
             </div>
-            <button onclick="salvarAlteracoes()">Salvar Alteração</button>
+            <button onclick="salvarAlteracoes()" class=".btn-salvar-perfil">Salvar Alteração</button>
         </div>
 
         <h3>Meus Baralhos</h3>
         <div id="lista-decks" class="grid-decks">
         </div>
     </div>
-    
+    <script src="../JS/auth.js"></script>
 </body>
 
 </html>

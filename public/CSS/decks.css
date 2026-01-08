@@ -316,3 +316,61 @@ button:active {
   color: #6a5acd;
   font-weight: bold;
 }
+
+/* Estilo do Modal (Overlay) */
+.modal-container {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.modal-content {
+    background: #fff;
+    padding: 30px;
+    border-radius: 15px;
+    width: 400px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+/* Grade de Seleção de Ícones */
+.icon-grid-selector {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin: 15px 0;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+}
+
+.icon-option {
+    width: 50px;
+    height: 50px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    transition: 0.2s;
+    object-fit: contain;
+}
+
+.icon-option:hover {
+    background: #f0f0f0;
+    transform: scale(1.1);
+}
+
+.icon-option.selected {
+    border-color: #5170ff;
+    background: #d1d8ff;
+}
+
+.btn-save {
+    background-color: #5170ff !important;
+    color: white;
+}
