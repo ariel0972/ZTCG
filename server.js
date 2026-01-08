@@ -13,7 +13,8 @@ app.use(express.json())
 app.use(require('cors')())
 
 app.get("/", (req, res) => {
-    res.status(200).send({ mag: "Conexão bem suscedida" })
+    res.sendFile("deckbuilder.html")
+    res.status(200).send({ msg: "Conexão bem suscedida" })
 })
 
 app.get('/user/:id', checkToken, async (req, res) => {
