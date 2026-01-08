@@ -6,8 +6,8 @@ const Deck = require('./db/models/decks')
 const bcrypt = require("bcrypt")
 const jwt = require('jsonwebtoken')
 
-const { checkAdmin } = require('./middlewares/checkAdmin')
-const { checkToken } = require('./middlewares/checktoken')
+const { checkAdmin } = require('./middlewares/checkAdmin.js')
+const { checkToken } = require('./middlewares/checkToken.js')
 
 const userRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes');
