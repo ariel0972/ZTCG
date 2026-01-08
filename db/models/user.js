@@ -7,7 +7,8 @@ const userSchema = new mongoose.Schema({
     avatarURL: { type: String, default: '../assets/avatar.png' },
     nivel: { type: Number, default: 1 },
     vitorias: { type: Number, default: 0 },
-    partidas: { type: Number, default: 0 }
+    partidas: { type: Number, default: 0 },
+    admin: { type: Boolean, default: false}
 })
 
 module.exports = mongoose.model('UserTCG', userSchema)

@@ -2,7 +2,7 @@ let deckAtualIndex = 0
 let cardSelect = null
 let playerProfile = JSON.parse(localStorage.getItem("playerProfile")) || {
     nome: "Novo Duelista",
-    avatarURL: "../assets/avatar.png",
+    avatarURL: "public/assets/avatar.png",
     nivel: 1,
     xp: 0,
     vitorias: 0,

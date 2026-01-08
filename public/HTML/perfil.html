@@ -12,16 +12,25 @@
 <body>
     <div class="overlay"></div>
     <nav class="navbar">
-        <a href="index.html">Jogar</a>
-        <a href="deckbuilder.html">Decks</a>
-        <a href="">Cartas</a>
-        <a href="">Regras</a>
-        <a href="perfil.html">Perfil</a>
+        <div class="logo">
+            <img src="public/assets/avatar.png" style="width: 50px;">
+        </div>
+        <div class="links">
+            <a href="">Jogar</a>
+            <a href="deckbuilder.html">Decks</a>
+            <a href="">Cartas</a>
+            <a href="">Regras</a>
+            <a href="perfil.html">Perfil</a>
+        </div>
+        <div class="sign" id="auth-links">
+            <a href="#" class="auth">Login</a>
+            <a href="#" class="auth">Registrar</a>
+        </div>
     </nav>
 
     <div class="perfil-container">
         <div class="perfil-header">
-            <img id="player-avatar" src="../assets/avatar.png" alt="Avatar">
+            <img id="player-avatar" src="" alt="Avatar">
             <div class="info-texto">
                 <h2 id="player-name">Nome do Jogador</h2>
                 <p>Nível: <span id="player-level">1</span></p>

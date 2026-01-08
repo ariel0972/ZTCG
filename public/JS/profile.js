@@ -51,7 +51,7 @@ function finalizarSalvamento() {
 
 function renderPerfil() {
     document.getElementById("player-name").innerText = playerProfile.nome
-    document.getElementById("player-avatar").src = playerProfile.avatarURL || "../assets/avatar.png";
+    document.getElementById("player-avatar").src = playerProfile.avatarURL || "public/assets/avatar.png";
 
     const decks = document.getElementById('lista-decks')
     decks.innerHTML = ``
