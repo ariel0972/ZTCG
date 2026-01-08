@@ -388,7 +388,7 @@ const allCards = [
     id: 28,
     name: "Aprendiz de mago",
     type: "mago",
-    image: "../assets/Cards/Aprendiz de mago.png",
+    image: "../assets/Cards/Aprendiz de Mago.png",
     hp: 18
   },
   {
