@@ -28,12 +28,12 @@ async function syncDB() {
     console.log(user)
     try {
         // 1. Busca Dados do Usuário (Nome, Nível, XP)
-        const resUser = await fetch(`/user/${user._id}`, {
+        const resUser = await fetch(`/user/${user.id}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const dataUser = await resUser.json();
 
-        const resDecks = await fetch(`/decks/user/${user._id}`, {
+        const resDecks = await fetch(`/decks/user/${user.id}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const dataDecks = await resDecks.json();
