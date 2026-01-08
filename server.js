@@ -12,8 +12,10 @@ const app = express()
 app.use(express.json())
 app.use(require('cors')())
 
+app.use(express.static('public'))
+
 app.get("/", (req, res) => {
-    res.sendFile("deckbuilder.html")
+    res.sendFile('')
     res.status(200).send({ msg: "Conexão bem suscedida" })
 })
 
