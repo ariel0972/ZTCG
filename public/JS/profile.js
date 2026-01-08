@@ -1,6 +1,12 @@
-let playerProfile = JSON.parse(localStorage.getItem("playerProfile")) || JSON.parse(sessionStorage.getItem("playerProfile"))
+let playerProfile = JSON.parse(localStorage.getItem("playerProfile")) || JSON.parse(sessionStorage.getItem("playerProfile")) || {
+  nome: "Novo Duelista",
+  avatarURL: "../assets/avatar.png",
+  nivel: 1,
+  vitorias: 0,
+  decks: []
+}
 
-let colecaoDeDecks = playerProfile.decks;
+let colecaoDeDecks = playerProfile.decks
 
 function salvarDados() {
     playerProfile.decks = colecaoDeDecks;

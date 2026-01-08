@@ -326,14 +326,14 @@ document.getElementById("btn-novo-deck").onclick = async () => {
   }
 };
 
-document.getElementById("btn-principal").onclick = () => {
-  // Salva o ID ou o índice do deck principal no perfil do jogador
-  playerProfile.deckPrincipalIndex = deckAtualIndex;
+// document.getElementById("btn-principal").onclick = () => {
+//   // Salva o ID ou o índice do deck principal no perfil do jogador
+//   playerProfile.deckPrincipalIndex = deckAtualIndex;
 
-  salvarDados(); // Usa sua função que já salva o playerProfile no localStorage
-  alert(`O deck "${colecaoDeDecks[deckAtualIndex].nome}" agora é o seu principal!`);
-  atualizarSelectDecks(); // Para mostrar algum destaque visual, se quiser
-};
+//   salvarDados(); // Usa sua função que já salva o playerProfile no localStorage
+//   alert(`O deck "${colecaoDeDecks[deckAtualIndex].nome}" agora é o seu principal!`);
+//   atualizarSelectDecks(); // Para mostrar algum destaque visual, se quiser
+// };
 
 function showPreview(card) {
   const container = document.querySelector(".preview-sidebar")

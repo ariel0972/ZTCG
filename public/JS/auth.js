@@ -25,7 +25,6 @@ async function syncDB() {
 
     if (!token || !user) return
 
-    console.log(user)
     try {
         // 1. Busca Dados do Usuário (Nome, Nível, XP)
         const resUser = await fetch(`/user/${user.id}`, {
@@ -40,7 +39,7 @@ async function syncDB() {
 
         if (dataUser.success && dataDecks.success) {
             playerProfile = {
-                id: dataUser.user.id,
+                id: dataUser.user._id,
                 nome: dataUser.user.nome,
                 avatarURL: dataUser.user.avatarURL,
                 nivel: dataUser.user.nivel,
