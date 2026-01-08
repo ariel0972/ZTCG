@@ -4,7 +4,7 @@ const User = require('../db/models/user')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const Deck = require('../db/models/decks')
-const { checkToken } = require('../middlewares/checktoken')
+const { checkToken } = require('../middlewares/temp')
 
 
 router.post('/registrar', async (req, res) => {
