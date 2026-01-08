@@ -115,7 +115,7 @@ const allCards = [
     name: "Espada dos Mil Mortos",
     type: "arma",
     cost: 2,
-    image: 'public/assets/cards/espada dos mil mortos.png',
+    image: '../assets/cards/espada dos mil mortos.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
