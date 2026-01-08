@@ -54,6 +54,7 @@ async function syncDB() {
             salvarDados();
             atualizarSelectDecks();
             renderDeck();
+            renderPerfil()
 
             alert("Sincronização Completa")
         }
