@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Montar Deck</title>
+    <link rel="stylesheet" href="../CSS/decks.css">
+    <script src="../js/cards.js" defer></script>
+    <script src="../js/deckbuilder.js" defer></script>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="logo">
+            <img src="../Assets/avatar.png" style="width: 50px;">
+        </div>
+        <div class="links">
+            <a href="index.html">Jogar</a>
+            <a href="">Decks</a>
+            <a href="">Cartas</a>
+            <a href="">Regras</a>
+            <a href="perfil.html">Perfil</a>
+        </div>
+        <div class="sign">
+            <a href="">Login</a>
+            <a href="">Registrar</a>
+        </div>
+    </nav>
+
+    <section class="deckbuilder-container">
+        <main class="editor-area">
+            <section class="cards-pool">
+                <h2>Cartas Disponíveis</h2>
+                <div class="tabs-container">
+                    <button onclick="renderCards('todos')">Todos</button>
+                    <button onclick="renderCards('criatura')">Tropas</button>
+                    <button onclick="renderCards('feitiço')">Feitiços</button>
+                    <button onclick="renderCards('mago')">Magos</button>
+                    <button onclick="renderCards('torre')">Estrutura</button>
+                    <button onclick="renderCards('arma')">Armamento</button>
+                </div>
+                <div id="card-list" class="grid-cartas"></div>
+            </section>
+
+            <section class="current-deck">
+                <div class="deck-header">
+                    <h2>Baralho: <span id="actual-deck">Meu Novo Deck</span> (<span id="deck-count">0</span>/40)</h2>
+                    <select id="seletor-decks" class="select"></select>
+                </div>
+                <div id="deck-cards" class="grid-cartas">
+                </div>
+                <div id="mage-container" class="mage">
+                </div>
+            </section>
+        </main>
+
+        <aside class="preview-sidebar">
+            <div id="card-preview" class="card-large">
+                <p>Selecione um carta</p>
+            </div>
+            <button id="addMago">Definir como Mago</button>
+            <button id="btn-new-card">Adicionar no Deck</button>
+            <button id="save-deck">Salvar Deck</button>
+            <button id="btn-novo-deck">Novo Deck</button>
+            <button onclick="exportDeck()">Exporta</button>
+        </aside>
+    </section>
+
+    <div id="export-area" class="export-hidden">
+        <h1 id="export-deck-name">Nome</h1>
+
+        <div class="export-main-container">
+            <div id="export-grid" class="export-grid"></div>
+
+            <div id="export-mago-preview" class="export-mago-container">
+            </div>
+        </div>
+
+        <p class="export-credits">Feito por Player</p>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</body>
+
+</html>

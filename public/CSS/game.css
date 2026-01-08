@@ -1,0 +1,33 @@
+* {
+    margin: 0;
+    top: 0;
+    padding: 0;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.navbar {
+    position: fixed;
+    /* Fixa no topo da janela */
+    top: 0;
+    width: 100%;
+    background-color: #5170ff;
+    padding: 15px 0;
+    text-align: center;
+    align-content: center;
+    z-index: 1000;
+    /* Garante que fique acima de tudo */
+
+    /* O Segredo da Animação */
+    /* transform: translateY(-100%); */
+    /* Move a barra totalmente para cima (fora da visão) */
+    /* transition: transform 0.3s ease-in-out; */
+    /* Suaviza a entrada e saída */
+    /* box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); */
+}
+
+.navbar a {
+    text-decoration: none;
+    color: white;
+    padding-inline: 5px;
+}
+

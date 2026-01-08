@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Jogo de Cartas</title>
+    <link rel="stylesheet" href="../CSS/perfil.css">
+    <script src="../JS/profile.js" defer></script>
+
+</head>
+
+<body>
+    <div class="overlay"></div>
+    <nav class="navbar">
+        <a href="index.html">Jogar</a>
+        <a href="deckbuilder.html">Decks</a>
+        <a href="">Cartas</a>
+        <a href="">Regras</a>
+        <a href="perfil.html">Perfil</a>
+    </nav>
+
+    <div class="perfil-container">
+        <div class="perfil-header">
+            <img id="player-avatar" src="../assets/avatar.png" alt="Avatar">
+            <div class="info-texto">
+                <h2 id="player-name">Nome do Jogador</h2>
+                <p>Nível: <span id="player-level">1</span></p>
+                <p>Vitórias: <span id="player-wins">0</span></p>
+            </div>
+            <button onclick="editarPerfil()">Editar Perfil</button>
+        </div>
+
+        <div id="edit-container" class="edit-panel">
+            <div class="edit-painel-header">
+                <h2>Edite seu Perfil</h2>
+                <p onclick="fecharPainel()" class="close-painel">Fechar</p>
+            </div>
+            
+            <div>
+                <label for="">Nome de Usuário</label>
+                <input type="text" id="input-nome">
+                <label for=""></label>
+                <input type="file" id="input-foto">
+            </div>
+            <button onclick="salvarAlteracoes()">Salvar Alteração</button>
+        </div>
+
+        <h3>Meus Baralhos</h3>
+        <div id="lista-decks" class="grid-decks">
+        </div>
+    </div>
+
+</body>
+
+</html>

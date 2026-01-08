@@ -1,0 +1,278 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #f3f3f3;
+  margin-top: 120px;
+}
+
+.navbar {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  gap: 165px;
+  position: fixed;
+  top: 0;
+  width: 100%;
+  background-color: #5170ff;
+  color: white;
+  padding: 15px 0;
+  text-align: center;
+  z-index: 1000;
+}
+
+.sign a:hover {
+  color: #6a5acd;
+  background-color: #f3f3f3;
+  padding: 5px;
+}
+
+a {
+  text-decoration: none;
+  color: white;
+  padding-inline: 5px;
+  transition: all 0.2s;
+}
+
+.card-img {
+  width: 120px;
+}
+
+.card-large img {
+  width: 450px;
+}
+
+.deckbuilder-container {
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  /* 3 partes para o editor, 1 para o preview */
+  gap: 20px;
+  padding: 20px;
+  height: 90vh;
+  margin: 50px auto;
+}
+
+.grid-cartas {
+  display: flex;
+  flex-wrap: wrap;
+  /* Faz as cartas "pularem" para a linha de baixo */
+  gap: 10px;
+  background: #ccc;
+  /* Cor de fundo igual à imagem */
+  padding: 15px;
+  min-height: 150px;
+  overflow-y: auto;
+  border-radius: 15px;
+  /* Adiciona scroll se tiver muitas cartas */
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+.preview-sidebar {
+  background: #bbb;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-radius: 12px;
+}
+
+/* Container principal - Adicione flex-wrap para o cabeçalho pular linha */
+.current-deck {
+  margin-top: 25px;
+  display: flex;
+  flex-wrap: wrap;
+  /* ESSENCIAL: permite que o header ocupe a linha de cima */
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 25px;
+  background: #e8e8e8;
+  padding: 20px;
+  border-radius: 15px;
+}
+
+/* Garante que o cabeçalho ocupe 100% da largura no topo */
+.deck-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #ccc;
+  padding-bottom: 10px;
+  gap: 20px;
+}
+
+/* Ajuste do Slot do Mago para não ser esmagado */
+#mage-container {
+  flex: 0 0 300px; /* Aumentei um pouco para caber melhor a carta */
+  min-height: 420px;
+  border: 3px dashed #5170ff;
+  border-radius: 15px;
+  background: rgba(81, 112, 255, 0.05);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: sticky;
+}
+
+/* Ajuste no Grid de Cartas para ocupar o resto do espaço */
+#deck-cards {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-content: flex-start;
+}
+
+/* Imagem do Mago dentro do container */
+.mago {
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.2));
+  transition: transform 0.3s ease;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0);
+  border: 1px solid #ccc;
+  position: relative;
+  padding: 8px;
+  cursor: pointer;
+  width: 120px;
+  text-align: center;
+  transition: 0.2s;
+}
+
+.card-counter {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(0, 0, 0, 0.7);
+  /* Fundo escuro semi-transparente */
+  color: white;
+  font-size: 2rem;
+  font-weight: bold;
+  padding: 5px 10px;
+  border-radius: 5px;
+  z-index: 10;
+  pointer-events: none;
+  /* Deixa o clique passar para a carta abaixo */
+}
+
+.card:hover {
+  background: #ffeaa7;
+}
+
+.selected {
+  border: 2px solid #5170ff;
+  background: #d1d8ff;
+  transform: scale(1.05);
+  box-shadow: 0 4px 15px rgba(81, 112, 255, 0.4);
+}
+
+.select {
+  margin: 20px ;
+  border: 2px solid black;
+  border-radius: 8px;
+  padding: 10px 15px;
+  font-size: 15px;
+}
+
+button {
+  margin-top: 8px;
+  margin-bottom: 5px;
+  padding: 10px;
+  font-size: 16px;
+  border: 2px solid black;
+  border-radius: 8px;
+  background-color: #ccc;
+  transition: 0.2s;
+}
+
+button:hover {
+  background-color: #d1d8ff;
+}
+
+button:active {
+  background-color: #adc7ff;
+  transform: scale(0.85);
+}
+
+#btn-new-card,
+#addMago {
+  display: none;
+}
+
+.export-hidden {
+  position: absolute;
+  left: -5000px;
+  width: 1200px;
+  min-height: 675px;
+  background: linear-gradient(180deg, #a5c7ff 0%, #e0c3fc 60%, #a5c7ff 100%);
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#export-deck-name {
+  font-size: 80px;
+  color: #6a5acd;
+  margin-bottom: 20px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+
+}
+
+.export-main-container {
+  display: flex;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 30px;
+  padding: 30px;
+  gap: 40px;
+  width: 100%;
+}
+
+.export-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  /* 6 colunas como na imagem */
+  gap: 15px;
+  flex: 2;
+}
+
+.export-mago-container {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Estilo da carta com contador centralizado */
+.export-card-wrapper {
+  position: relative;
+  width: 120px;
+}
+
+.export-card-counter {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(0, 0, 0, 0.7);
+  /* Fundo escuro semi-transparente */
+  color: white;
+  font-size: 2rem;
+  font-weight: bold;
+  padding: 5px 10px;
+  border-radius: 5px;
+  z-index: 10;
+}
+
+.export-credits {
+  margin-top: 20px;
+  font-size: 30px;
+  color: #6a5acd;
+  font-weight: bold;
+}

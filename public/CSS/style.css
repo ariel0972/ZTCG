@@ -1,0 +1,145 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #f3f3f3;
+  margin: 20px;
+}
+
+.navbar {
+  position: fixed;
+  /* Fixa no topo da janela */
+  top: 0;
+  width: 100%;
+  background-color: #5170ff;
+  color: white;
+  padding: 15px 0;
+  text-align: center;
+  align-content: center;
+  z-index: 1000;
+  /* Garante que fique acima de tudo */
+
+  /* O Segredo da Animação */
+  /* transform: translateY(-100%); */
+  /* Move a barra totalmente para cima (fora da visão) */
+  /* transition: transform 0.3s ease-in-out; */
+  /* Suaviza a entrada e saída */
+  /* box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); */
+}
+
+a {
+  text-decoration: none;
+  color: white;
+  padding-inline: 5px;
+}
+
+.card-img {
+  width: 120px;
+}
+
+#status-turno {
+  padding: 10px;
+  font-weight: bold;
+  text-align: center;
+  border-radius: 5px;
+  margin-bottom: 10px;
+  transition: background 0.3s;
+}
+
+.turno-jogador { background-color: #d4edda; color: #155724; }
+.turno-oponente { background-color: #f8d7da; color: #721c24; }
+
+.deckbuilder-container {
+  display: grid;
+  grid-template-columns: 3fr 1fr; /* 3 partes para o editor, 1 para o preview */
+  gap: 20px;
+  padding: 20px;
+  height: 90vh;
+}
+
+.grid-cartas {
+  display: flex;
+  flex-wrap: wrap; /* Faz as cartas "pularem" para a linha de baixo */
+  gap: 10px;
+  background: #ccc; /* Cor de fundo igual à imagem */
+  padding: 15px;
+  min-height: 150px;
+  overflow-y: auto; /* Adiciona scroll se tiver muitas cartas */
+}
+
+.preview-sidebar {
+  background: #bbb;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.card {
+  background: white;
+  border: 1px solid #ccc;
+  padding: 8px;
+  cursor: pointer;
+  width: 150px;
+  text-align: center;
+  transition: 0.2s;
+}
+
+.card:hover {
+  background: #ffeaa7;
+}
+
+button {
+  margin-top: 20px;
+  padding: 10px;
+  font-size: 16px;
+}
+
+.campo,
+.mao {
+  display: flex;
+  gap: 10px;
+  margin: 10px 0px;
+}
+
+.campo-cards {
+  text-align: center;
+  margin: 0 auto;
+  width: 50%;
+}
+
+.card {
+  background: white;
+  border: 1px solid #ccc;
+  padding: 8px;
+  cursor: pointer;
+  width: 120px;
+  text-align: center;
+}
+
+.card:hover {
+  background: #ffeaa7;
+}
+
+/* Classe que será adicionada via JS */
+.shake {
+  animation: shake-animation 0.4s ease-in-out;
+}
+
+@keyframes shake-animation {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-10px, 5px); border-color: red; color: red;}
+  40% { transform: translate(10px, -5px); }
+  60% { transform: translate(-10px, 5px); }
+  80% { transform: translate(10px, -5px); }
+  100% { transform: translate(0, 0); }
+}
+
+/* Opcional: Efeito visual para o HP diminuindo */
+.dano-hp {
+  color: red;
+  transition: color 0.3s;
+  font-weight: bold;
+}
+
+#hp-jogador, #hp-oponente, .card {
+  display: inline-block; /* Essencial para o transform funcionar */
+}

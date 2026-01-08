@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Jogo de Cartas</title>
+    <link rel="stylesheet" href="../CSS/style.css">
+    <link rel="stylesheet" href="../CSS/game.css">
+    <script src="../js/cards.js" defer></script>
+    <script src=".//js/game.js" defer></script>
+</head>
+
+<body>
+    <nav class="navbar">
+        <a href="index.html">Jogar</a>
+        <a href="deckbuilder.html">Decks</a>
+        <a href="">Cartas</a>
+        <a href="">Regras</a>
+        <a href="perfil.html">Perfil</a>
+    </nav>
+
+
+    <h1>Jogo de Cartas</h1>
+    <section class="game-container">
+
+        <div id="status-turno" class="turno-jogador">Sua Vez!</div>
+    
+        <div id="status">
+            <p>Turno: <span id="turno">1</span></p>
+            <p>HP Jogador: <span id="hp-jogador">20</span></p>
+            <p>HP Oponente: <span id="hp-oponente">20</span></p>
+        </div>
+        <div class="campo-cards">
+            <div id="mago-inimigo" class="mage campo"></div>
+    
+            <h2>Campo do Oponente</h2>
+            <div id="campo-oponente" class="campo"></div>
+    
+            <h2>Campo do Jogador</h2>
+            <div id="campo-jogador" class="campo"></div>
+    
+            <div id="mago-jogador" class="mage campo"></div>
+        </div>
+    
+        <h2>Sua Mão</h2>
+        <div id="mao-jogador" class="mao"></div>
+    
+        <button id="passar-turno">Passar Turno</button>
+    </section>
+</body>
+
+</html>

@@ -1,0 +1,129 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+    position: relative;
+    background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(255, 255, 255, 0.35)), url("/Assets/fundo site.png");
+    backdrop-filter: blur(8px);
+}
+
+.login-form {
+    width: 400px;
+    background-color: #d1d8ffc5;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    color: white;
+    border: 1px solid rgb(255, 255, 255);
+    border-radius: 15px;
+    padding: 35px;
+    backdrop-filter: blur(10px);
+}
+
+.login-form h1 {
+    font-weight: bold;
+    font-size: 25px;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.box-form {
+    position: relative;
+    margin-bottom: 13px;
+}
+
+.box-form input {
+    width: 100%;
+    height: 50px;
+    border: none;
+    border-radius: 8px;
+    outline: none;
+    color: white;
+    background-color: #637aff3b;
+    font-size: 18px;
+    padding: 0 40px;
+}
+
+.box-form input::placeholder {
+    color: white;
+}
+
+.box-form i {
+    position: absolute;
+    right: 15px;
+    font-size: 20px;
+    top: 30%;
+}
+
+.box-remember {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 25px;
+    font-size: 15px;
+}
+
+.box-remember label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.box-remember label input {
+    accent-color: #5170ff;
+}
+
+.box-remember a {
+    text-decoration: none;
+    color: white;
+    font-size: 15px;
+}
+
+.box-remember a:hover {
+    text-decoration: underline;
+}
+
+button {
+    width: 100%;
+    height: 50px;
+    background-color: #8799ff4b;
+    border: none;
+    border-radius: 8px;
+    outline: none;
+    cursor: pointer;
+    color: #5170ff;
+    font-size: 18px;
+    font-weight: 700;
+    transition: all 0.2s;
+    margin: 10px 0;
+}
+
+button:hover {
+    background-color: #8799ffbd;
+    transform: translateY(-5px);
+    box-shadow: 0 5px 12px rgba(0, 0, 0, 0.15);
+}
+
+.registro {
+    text-align: center;
+    margin-top: 25px;
+    font-size: 18px;
+}
+
+.registro a {
+    text-decoration: none;
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: bold;
+    transition: all 0.1s;
+}
+
+.registro a:hover {
+    color: rgb(104, 127, 255);
+}
