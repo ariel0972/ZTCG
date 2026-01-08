@@ -2,15 +2,16 @@ let deckAtualIndex = 0
 let cardSelect = null
 let playerProfile = JSON.parse(localStorage.getItem("playerProfile")) || {
     nome: "Novo Duelista",
-    avatar: "assets/avatar/avatar_padrao.png",
+    avatarURL: "../assets/avatar.png",
     nivel: 1,
     xp: 0,
     vitorias: 0,
     decks: [
         { nome: "Deck Inicial", cartas: [], mago: null }
     ]
-};
-let colecaoDeDecks = playerProfile.decks;
+}
+
+let colecaoDeDecks = playerProfile.decks
 
 function salvarDados() {
     // Atualizamos a lista de decks dentro do objeto de perfil antes de salvar
@@ -25,7 +26,6 @@ function definirMago(card) {
   }
   colecaoDeDecks[deckAtualIndex].mago = card
   renderDeck()
-  alert(`${card.name} é o seu novo Mago!`)
 }
 
 function renderCards(filtro = "todos") {
@@ -82,6 +82,7 @@ function renderDeck() {
       <img src="${card.image}" alt="${card.name}" class="card-img">
     `;
     div.onclick = () => {
+      console.log(deckAtual.cartas)
       removeFromDeck(card.id);
     }
     deckContainer.appendChild(div);
@@ -168,6 +169,7 @@ document.getElementById("save-deck").onclick = () => {
 };
 
 function atualizarSelectDecks() {
+
   const select = document.getElementById("seletor-decks");
   select.innerHTML = "";
   colecaoDeDecks.forEach((deck, index) => {
@@ -251,6 +253,7 @@ async function exportDeck() {
   const deck = colecaoDeDecks[deckAtualIndex];
   const grid = document.getElementById("export-grid");
   const magoContainer = document.getElementById("export-mago-preview");
+  const autor = document.querySelector('.export-credits')
   
   // 1. Atualiza Nome e Limpa containers
   document.getElementById("export-deck-name").innerText = `${deck.nome}`;
@@ -283,6 +286,8 @@ async function exportDeck() {
     `;
   }
 
+  autor.innerText = `Feito por ${playerProfile.nome}`
+
   // 5. Tira o print com html2canvas
   const areaExport = document.getElementById("export-area");
   const canvas = await html2canvas(areaExport, { 
@@ -296,6 +301,74 @@ async function exportDeck() {
   link.href = canvas.toDataURL("image/png");
   link.click();
 }
+
+// Função para carregar o conteúdo do CSV
+async function carregarCSV() {
+    try {
+        const response = await fetch('../assets/cards.csv'); // Caminho do seu arquivo
+        const texto = await response.text();
+        return texto;
+    } catch (erro) {
+        console.error("Erro ao carregar o CSV:", erro);
+    }
+}
+
+// 1. Sua lógica de sincronização (melhorada)
+function exportarCSV(csvContent, cardsArray) {
+    const counts = {};
+    cardsArray.forEach(card => {
+        const name = card.name.toLowerCase().trim();
+        counts[name] = (counts[name] || 0) + 1;
+    });
+
+    const lines = csvContent.split('\n');
+    const header = lines[0];
+    const updatedRows = lines.slice(1).map(line => {
+        if (!line.trim()) return line;
+        const columns = line.split(',');
+        const cardLabel = columns[1].toLowerCase().trim();
+        
+        // Atualiza o item-count (coluna 2)
+        columns[2] = counts[cardLabel] || 0;
+        return columns.join(',');
+    });
+
+    return [header, ...updatedRows].join('\n');
+}
+
+// 2. Função que será chamada pelo botão
+async function handleUpdateClick() {
+    // Array de exemplo (no seu caso, viria do estado do seu deck/inventário)
+    const deckInput = colecaoDeDecks[deckAtualIndex].cartas
+
+    // Passo A: Lê o arquivo original
+    const csvOriginal = await carregarCSV();
+
+    if (csvOriginal) {
+        // Passo B: Processa os dados
+        const csvFinal = exportarCSV(csvOriginal, deckInput);
+
+        // Passo C: Cria um link de download automático para o usuário
+        downloadCSV(csvFinal, "ztcg_atualizado.csv");
+    }
+}
+
+// 3. Função auxiliar para baixar o arquivo resultante
+function downloadCSV(content, fileName) {
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", fileName);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// 4. Adicionando o evento ao botão
+document.getElementById('btn-atualizar-csv').addEventListener('click', handleUpdateClick);
 
 
 renderDeck()

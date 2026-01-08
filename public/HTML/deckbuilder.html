@@ -21,9 +21,9 @@
             <a href="">Regras</a>
             <a href="perfil.html">Perfil</a>
         </div>
-        <div class="sign">
-            <a href="">Login</a>
-            <a href="">Registrar</a>
+        <div class="sign" id="auth-links">
+            <a href="login.html" class="auth">Login</a>
+            <a href="register.html" class="auth">Registrar</a>
         </div>
     </nav>
 
@@ -58,11 +58,14 @@
             <div id="card-preview" class="card-large">
                 <p>Selecione um carta</p>
             </div>
-            <button id="addMago">Definir como Mago</button>
-            <button id="btn-new-card">Adicionar no Deck</button>
-            <button id="save-deck">Salvar Deck</button>
-            <button id="btn-novo-deck">Novo Deck</button>
-            <button onclick="exportDeck()">Exporta</button>
+            <div class="btn-container">
+                <button id="addMago">Definir como Mago</button>
+                <button id="btn-new-card">Adicionar no Deck</button>
+                <button id="save-deck">Salvar Deck</button>
+                <button id="btn-novo-deck">Novo Deck</button>
+                <button onclick="exportDeck()">Exporta</button>
+                <button id="btn-atualizar-csv">Atualizar e Baixar CSV</button>
+            </div>
         </aside>
     </section>
 
@@ -80,6 +83,7 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="../JS/auth.js"></script>
 </body>
 
 </html>

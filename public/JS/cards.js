@@ -13,7 +13,7 @@ const allCards = [
   },
   {
     id: 2,
-    name: "Jato d'água",
+    name: "Jato da água",
     type: "feitiço",
     cost: 2,
     image: '../assets/cards/Jato da água.png',

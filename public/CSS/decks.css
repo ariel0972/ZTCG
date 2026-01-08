@@ -12,6 +12,7 @@ body {
   position: fixed;
   top: 0;
   width: 100%;
+  height: 60px;
   background-color: #5170ff;
   color: white;
   padding: 15px 0;
@@ -19,10 +20,42 @@ body {
   z-index: 1000;
 }
 
-.sign a:hover {
-  color: #6a5acd;
-  background-color: #f3f3f3;
-  padding: 5px;
+.sign {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+}
+
+.sign .auth:hover{
+  background-color: #adc7ff;
+  padding: 4px;
+}
+
+.nav-avatar {
+  width: 50px;
+  border-radius: 50px;
+  border: 2px white solid;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.nav-avatar:hover {
+  box-shadow: 0 0 15px rgba(255, 255, 255);
+  border: 3px white solid;
+}
+
+.nav-profile {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.sign button{
+  background: none;
+}
+
+.sign button:hover{
+  background: none;
 }
 
 a {
@@ -64,7 +97,6 @@ a {
   /* Adiciona scroll se tiver muitas cartas */
   max-height: 420px;
   overflow-y: auto;
-  padding-right: 5px;
 }
 
 .preview-sidebar {
@@ -74,6 +106,13 @@ a {
   flex-direction: column;
   align-items: center;
   border-radius: 12px;
+  justify-content: space-around;
+  width: 480px;
+}
+
+.btn-container {
+  display: flex;
+  flex-direction: column;
 }
 
 /* Container principal - Adicione flex-wrap para o cabeçalho pular linha */
@@ -104,7 +143,8 @@ a {
 
 /* Ajuste do Slot do Mago para não ser esmagado */
 #mage-container {
-  flex: 0 0 300px; /* Aumentei um pouco para caber melhor a carta */
+  flex: 0 0 300px;
+  /* Aumentei um pouco para caber melhor a carta */
   min-height: 420px;
   border: 3px dashed #5170ff;
   border-radius: 15px;
@@ -172,7 +212,7 @@ a {
 }
 
 .select {
-  margin: 20px ;
+  margin: 20px;
   border: 2px solid black;
   border-radius: 8px;
   padding: 10px 15px;

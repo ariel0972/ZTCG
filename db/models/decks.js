@@ -1,14 +1,10 @@
-const Database = require('better-sqlite3');
+const mongoose = require('mongoose')
 
-const createTable = `
-    CREATE TABLE IF NOT EXISTS decks (
-        id TEXT PRIMARY KEY,
-        nome TEXT NOT NULL,
-        cartas TEXT,
-        mago TEXT NOT NULL,
-        userId INTERGER,
-        FOREIGN KEY (userId) REFERENCES users(id)
-    )
-`
+const deckSchema = new mongoose.Schema({
+    nome: { type: String, required: true },
+    cartas: { type: String }, // Você pode continuar salvando como String JSON
+    mago: { type: String, required: true },
+    userId: { type: String, ref: 'User' } // Referência ao ID do usuário
+})
 
-db.exec(createTable)
+module.exports = mongoose.model('Deck', deckSchema)

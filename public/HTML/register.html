@@ -14,23 +14,23 @@
     <div class="login-container">
         <div class="login-form">
             <h1>Registro</h1>
-            <form action="#">
+            <form action="#" id="form">
                 <div class="box-form">
-                    <input placeholder="Nome de usuário" type="text" required>
+                    <input placeholder="Nome de usuário" type="text" name="username" required>
                     <i class='bx bxs-user'></i>
                 </div>
 
                 <div class="box-form">
-                    <input placeholder="Email" type="email" required>
-                    <i class='bx bxs-user'></i>
+                    <input placeholder="Email" type="email" name="email" required>
+                    <i class='bx bx-at'></i>
                 </div>
 
                 <div class="box-form">
-                    <input placeholder="Senha" type="password" required>
+                    <input placeholder="Senha" type="password" name="senha" required>
                     <i class='bx bxs-lock-alt'></i>
                 </div>
                 <div class="box-form">
-                    <input placeholder="Confirme a Senha" type="password" required>
+                    <input placeholder="Confirme a Senha" type="password" name="confirmPassword" required>
                     <i class='bx bxs-lock-alt'></i>
                 </div>
 
@@ -42,6 +42,43 @@
             </form>
         </div>
     </div>
+
+    <script>
+        const form = document.querySelector('#form');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault(); // Impede a página de recarregar
+
+            const userData = {
+                nome: form.username.value,
+                email: form.email.value,
+                senha: form.senha.value,
+                confirmPassword: form.confirmPassword.value
+            };
+
+            try {
+                const response = await fetch('http://localhost:3000/auth/registrar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(userData) // Transforma o objeto em texto JSON
+                });
+    
+                if (!response) {
+                    return console.log('Deu erro')
+                }
+                const data = await response.json()
+                
+                setTimeout(() => {
+                    window.location.href = "login.html"
+                }, 1200);
+
+            } catch (error) {
+                console.log(error)
+            }
+        })
+    </script>
 </body>
 
 </html>

@@ -12,7 +12,7 @@ body {
     min-height: 100vh;
     overflow: hidden;
     position: relative;
-    background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(255, 255, 255, 0.35)), url("/Assets/fundo site.png");
+    background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(255, 255, 255, 0.35)), url("../assets/fundo site.png");
     backdrop-filter: blur(8px);
 }
 

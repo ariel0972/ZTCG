@@ -14,20 +14,20 @@
     <div class="login-container">
         <div class="login-form">
             <h1>Login</h1>
-            <form action="#">
+            <form action="#" id="form">
                 <div class="box-form">
-                    <input placeholder="Nome de usuário" type="text" required>
+                    <input placeholder="Nome de usuário" type="text" name="email" required>
                     <i class='bx bxs-user'></i>
                 </div>
 
                 <div class="box-form">
-                    <input placeholder="Senha" type="password" required>
+                    <input placeholder="Senha" type="password" name="senha" required>
                     <i class='bx bxs-lock-alt'></i>
                 </div>
 
                 <div class="box-remember">
                     <label>
-                        <input type="checkbox" name="" id="remeber">
+                        <input type="checkbox" name="lembrar" id="remeber">
                         Lembrar
                     </label>
                     <a href="#">Esqueceu a senha?</a>
@@ -41,6 +41,45 @@
             </form>
         </div>
     </div>
+    <script>
+        const form = document.querySelector('#form');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault(); // Impede a página de recarregar
+
+            const userData = {
+                email: form.email.value,
+                senha: form.senha.value,
+            }
+
+
+            const response = await fetch('http://localhost:3000/auth/logar', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(userData) // Transforma o objeto em texto JSON
+            });
+
+            if (!response) {
+                return console.log('Deu erro!')
+            }
+            const data = await response.json()
+
+            // No momento do sucesso do login:
+            if (data.success) {
+                const lembrar = form.lembrar.checked; // Pega o checkbox
+                const storage = form.lembrar.checked ? localStorage : sessionStorage;
+
+                storage.setItem("token", data.token);
+                storage.setItem("playerProfile", JSON.stringify(data.user));
+
+                window.location.href = "perfil.html"; // Redireciona após o sucesso 
+            }
+        })
+
+
+    </script>
 </body>
 
 </html>

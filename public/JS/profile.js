@@ -1,13 +1,4 @@
-let playerProfile = JSON.parse(localStorage.getItem("playerProfile")) || {
-    nome: "Novo Duelista",
-    avatar: "assets/avatar.png",
-    nivel: 1,
-    xp: 0,
-    vitorias: 0,
-    decks: [
-        { nome: "Deck Inicial", cartas: [], mago: null }
-    ]
-}
+let playerProfile = JSON.parse(localStorage.getItem("playerProfile")) || JSON.parse(sessionStorage.getItem("playerProfile"))
 
 let colecaoDeDecks = playerProfile.decks;
 
@@ -41,7 +32,7 @@ function salvarAlteracoes() {
         const leitor = new FileReader();
 
         leitor.onload = function (e) {
-            playerProfile.avatar = e.target.result;
+            playerProfile.avatarURL = e.target.result;
             finalizarSalvamento();
         };
 
@@ -59,8 +50,8 @@ function finalizarSalvamento() {
 }
 
 function renderPerfil() {
-    document.getElementById("player-name").innerText = playerProfile.nome;
-    document.getElementById("player-avatar").src = playerProfile.avatar || "assets/avatar.png";
+    document.getElementById("player-name").innerText = playerProfile.nome
+    document.getElementById("player-avatar").src = playerProfile.avatarURL || "../assets/avatar.png";
 
     const decks = document.getElementById('lista-decks')
     decks.innerHTML = ``
