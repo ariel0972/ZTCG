@@ -12,11 +12,10 @@ const app = express()
 app.use(express.json())
 app.use(require('cors')())
 
-app.use(express.static('public'))
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.get("/", (req, res) => {
-    res.sendFile('/HTML/deckbuilder.html')
-    res.status(200).send({ msg: "Conexão bem suscedida" })
+    res.sendFile(path.join(__dirname, 'public', 'HTML', 'deckbuilder.html'));
 })
 
 app.get('/user/:id', checkToken, async (req, res) => {
