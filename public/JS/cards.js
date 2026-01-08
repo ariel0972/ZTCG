@@ -5,7 +5,7 @@ const allCards = [
     name: "Bola de fogo",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/Bola de Fogo.png',
+    image: '../assets/Cards/Bola de fogo.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
