@@ -287,7 +287,7 @@ document.getElementById("btn-novo-deck").onclick = async () => {
 
   if (!token) {
     alert("Você precisa estar logado para criar um deck!")
-    window.location.href = "login.html"
+    window.location.href = "/HTML/login.html"
     return
   }
 

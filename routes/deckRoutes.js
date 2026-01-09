@@ -43,7 +43,7 @@ router.put("/:id", async (req, res) => {
         )
 
         if (!deck) {
-            return res.status(403).json({ success: false, content: "Deck não encontrado" });
+            return res.status(404).json({ success: false, content: "Deck não encontrado" });
         }
 
         res.status(200).json({ success: true, content: "Deck Atualizado", deck: deck });

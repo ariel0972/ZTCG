@@ -1,24 +1,40 @@
 const express = require('express')
 const dotenv = require('dotenv').config()
 const path = require('path')
+const cors = require('cors')
+
+// Modesl
 const User = require('./db/models/user')
 const Deck = require('./db/models/decks')
-const bcrypt = require("bcrypt")
-const jwt = require('jsonwebtoken')
 
-const { checkAdmin } = require('./middlewares/checkAdmin.js')
-const { checkToken } = require('./middlewares/checkToken.js')
-
+// Rotas
 const userRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const deckRoutes = require('./routes/deckRoutes');
 
+//Middlewares
+const { checkAdmin } = require('./middlewares/checkAdmin.js')
+const { checkToken } = require('./middlewares/checkToken.js')
+
+// Conex'ao com o Banco de Dados
+const dbConnect = require('./lib/mongodb') 
 
 const app = express()
-app.use(express.json())
-app.use(require('cors')())
 
+app.use(express.json())
+app.use(cors())
 app.use(express.static(path.join(__dirname, 'public')));
+
+const conectarBancoMiddleware = async (req, res, next) => {
+    try {
+        await dbConnect();
+        next(); // Se conectou, segue para a rota
+    } catch (error) {
+        res.status(500).json({ success: false, content: "Erro ao conectar ao banco" });
+    }
+}
+
+app.use(conectarBancoMiddleware)
 
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'HTML', 'deckbuilder.html'));
@@ -36,20 +52,13 @@ app.get('/user/:id', checkToken, async (req, res) => {
     res.status(200).json({ success: true, user })
 })
 
-// Rotas de Autenticação
+
 app.use('/auth', userRoutes)
-
-// Rotas de Admin
 app.use('/admin', adminRoutes)
-
 app.use('/decks', checkToken, deckRoutes)
 
 app.listen(process.env.PORT, () => {
     console.log(`Ligado na porta ${process.env.PORT}`)
 })
 
-const mongoose = require('mongoose');
-
-mongoose.connect(process.env.MONGO_URL)
-    .then(() => console.log('Conectado ao MongoDB!'))
-    .catch(err => console.error('Erro ao conectar:', err));
+module.exports = app

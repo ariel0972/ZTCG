@@ -7,7 +7,7 @@ function renderNavbar() {
 
     if (profile) {
         authLinks.innerHTML = `
-            <a href="perfil.html" class="nav-profile">
+            <a href="/HTML/perfil.html" class="nav-profile">
                 <img src="${profile.avatarURL}" alt="Avatar" class="nav-avatar">
                 <span>${profile.nome}</span>
             </a>
