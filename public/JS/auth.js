@@ -23,7 +23,10 @@ async function syncDB() {
 
     const user = JSON.parse(localStorage.getItem("playerProfile")) || JSON.parse(sessionStorage.getItem("playerProfile"))
 
-    if (!token || !user) return
+    if (!token || !user) {
+        alert('Seu acesso foi negado, expirado ou excluído')
+        return
+    }
 
     try {
         // 1. Busca Dados do Usuário (Nome, Nível, XP)
@@ -49,11 +52,15 @@ async function syncDB() {
             };
             
             colecaoDeDecks = playerProfile.decks;
+            if (window.location.pathname === "/HTML/deckbuilder.html" || window.location.pathname === "/") {
+                atualizarSelectDecks()
+                renderDeck()
+            }
 
-            salvarDados();
-            atualizarSelectDecks();
-            renderDeck();
-            renderPerfil()
+            if (window.location.pathname === '/HTML/perfil.html') renderPerfil()
+
+            salvarDados()
+            
 
             alert("Sincronização Completa")
         }

@@ -508,8 +508,22 @@ document.getElementById('btn-atualizar-csv').addEventListener('click', handleUpd
 
 /* Modal de edição */
 
+// const listaIcones = [
+//     "../assets/icons/fire.png", 
+//     "../assets/icons/water.png", 
+//     "../assets/icons/nature.png",
+//     "../assets/icons/dark.png",
+//     "../assets/icons/light.png",
+//     "../assets/icons/sword.png",
+//     "../assets/icons/shield.png",
+//     "../assets/icons/scroll.png"
+// ];
+
+let iconeSelecionadoTemp = null;
+
 function fecharModalEdicao() {
   document.getElementById("modal-edicao").style.display = "none";
+  iconeSelecionadoTemp = null
 }
 
 // 3. Renderiza os ícones dentro do modal
