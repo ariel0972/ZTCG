@@ -49,7 +49,7 @@ const allCards = [
     name: "Reerguer da Fúria",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/Reerguer da fúria.png',
+    image: '../assets/Cards/Reerguer da Fúria.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -145,10 +145,10 @@ const allCards = [
   },
   {
     id: 120,
-    name: "Chuva ácida",
+    name: "Chuva acida",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/Chuva acida.png',
+    image: '../assets/Cards/Chuva Acida.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -258,7 +258,7 @@ const allCards = [
     name: "Furacão de Areia",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/furacão de areia.png',
+    image: '../assets/Cards/Furacão de Areia.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -302,7 +302,7 @@ const allCards = [
     name: "Esfera de Vórtice",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/Esfera de vórtice.png',
+    image: '../assets/Cards/Esfera de Vórtice.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -313,7 +313,7 @@ const allCards = [
     name: "Sifão de Mana",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/Sifão de mana.png',
+    image: '../assets/Cards/Sifão de Mana.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -324,7 +324,7 @@ const allCards = [
     name: "Lágrima de Zarcos",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/Lágrima de zarcos.png',
+    image: '../assets/Cards/Lágrima de Zarcos.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -335,7 +335,7 @@ const allCards = [
     name: "Raiz Roxa",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/Raiz roxa.png',
+    image: '../assets/Cards/Raiz Roxa.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -346,7 +346,7 @@ const allCards = [
     name: "Fluxo Forte",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/Fluxo forte.png',
+    image: '../assets/Cards/Fluxo Forte.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -357,7 +357,7 @@ const allCards = [
     name: "Cristal Azul",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/Cristal kin - azul.png',
+    image: '../assets/Cards/Cristal Kin - Azul.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -368,7 +368,7 @@ const allCards = [
     name: "Cristal Rosa",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/Cristal kin - rosa.png',
+    image: '../assets/Cards/Cristal Kin - Rosa.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -456,7 +456,7 @@ const allCards = [
     name: "Olho da Verdade",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/Olho da verdade.png',
+    image: '../assets/Cards/Olho da Verdade.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -467,7 +467,7 @@ const allCards = [
     name: "Cheiro de Sangue",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/Cheiro de sangue.png',
+    image: '../assets/Cards/Cheiro de Sangue.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -489,7 +489,7 @@ const allCards = [
     name: "Banir Armamento",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/Banir Armamento.png',
+    image: '../assets/Cards/Banir armamento.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -500,7 +500,7 @@ const allCards = [
     name: "Chamar Armamento",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/Chamar armamento.png',
+    image: '../assets/Cards/Chamar Armamento.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -533,7 +533,7 @@ const allCards = [
     name: "Nome profano",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/Nome profano.png',
+    image: '../assets/Cards/Nome Profano.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -588,7 +588,7 @@ const allCards = [
     name: "Reviver Tropa",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/Reviver tropa.png',
+    image: '../assets/Cards/Reviver Tropa.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -610,7 +610,7 @@ const allCards = [
     name: "Mochila de recursos",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/MOchila de recursos.png',
+    image: '../assets/Cards/Mochila de Recursos.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -621,7 +621,7 @@ const allCards = [
     name: "Chamar Tropa",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/Chamar tropa.png',
+    image: '../assets/Cards/Chamar Tropa.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -643,7 +643,7 @@ const allCards = [
     name: "Toque de Cura",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/Toque de cura.png',
+    image: '../assets/Cards/Toque de Cura.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -665,7 +665,7 @@ const allCards = [
     name: "Busca elemental",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/Busca elemental.png',
+    image: '../assets/Cards/Busca Elemental.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -731,7 +731,7 @@ const allCards = [
     name: "Trazer dos Mortos",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/Trazer dos mortos.png',
+    image: '../assets/Cards/Trazer dos Mortos.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -753,7 +753,7 @@ const allCards = [
     name: "Visão Espectral",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/Visão Espectral.png',
+    image: '../assets/Cards/visão espectral.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -797,7 +797,7 @@ const allCards = [
     name: "Chamar gangue",
     type: "feitiço",
     cost: 2,
-    image: '../assets/Cards/Chamar gangue.png',
+    image: '../assets/Cards/Chamar Gangue.png',
     effect: (teste) => {
       console.log(teste) // enemy = inimigo em geral, tropa = qualquer tropa em campo, any = qualquer um pode receber o efeito, mage = apenas o mago inimigo
     },
@@ -974,7 +974,7 @@ const allCards = [
     name: "Faca de Brinquedo",
     type: "arma",
     cost: 6,
-    image: '../assets/Cards/Faca de brinquedo.png',
+    image: '../assets/Cards/Faca de Brinquedo.png',
     atk: 2,
     hp: 1,
   },
@@ -1001,7 +1001,7 @@ const allCards = [
     name: "Muro de terra",
     type: "torre",
     cost: 6,
-    image: '../assets/Cards/Muro de terra.png',
+    image: '../assets/Cards/Muro de Terra.png',
     atk: 2,
     hp: 1,
   },
@@ -1019,7 +1019,7 @@ const allCards = [
     name: "Canhão de Mana Instável",
     type: "torre",
     cost: 6,
-    image: '../assets/Cards/Canhão de mana Instável.png',
+    image: '../assets/Cards/Canhão de Mana Instável.png',
     atk: 2,
     hp: 1,
   },
@@ -1027,7 +1027,7 @@ const allCards = [
     id: 20,
     name: "Assassino",
     type: "criatura",
-    image: '../assets/Cards/assassino.png',
+    image: '../assets/Cards/Assassino.png',
     attackPattern: "front",
     cost: 4,
     atk: 2,
