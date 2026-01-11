@@ -79,5 +79,5 @@ function logout() {
 
 window.addEventListener('load', async () => {
     renderNavbar()
-    await syncDB()
+    // await syncDB()
 })

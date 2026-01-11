@@ -24,7 +24,7 @@ function editarPerfil() {
 function fecharPainel() {
     document.querySelector('.overlay').classList.remove('active');
     document.querySelector('.edit-panel').classList.remove('active');
-}
+}   
 
 // Função auxiliar para ler arquivos como Promessa (Promise)
 const lerArquivo = (arquivo) => new Promise((resolve, reject) => {

@@ -5,20 +5,24 @@
 /* Ajustes para Tablets e Telas Médias (até 1024px) */
 @media (max-width: 1024px) {
     .navbar {
-        gap: 20px; /* Reduz o espaço exagerado da navbar */
+        gap: 20px;
+        /* Reduz o espaço exagerado da navbar */
         justify-content: space-between;
         padding: 0 20px;
     }
 
     .deckbuilder-container {
-        grid-template-columns: 1fr; /* Muda de 2 colunas para 1 */
+        grid-template-columns: 1fr;
+        /* Muda de 2 colunas para 1 */
         height: auto;
         margin-top: 80px;
     }
 
     .preview-sidebar {
-        width: 100%; /* Sidebar ocupa largura total abaixo do editor */
-        order: 2; /* Garante que o preview fique abaixo das cartas */
+        width: 100%;
+        /* Sidebar ocupa largura total abaixo do editor */
+        order: 2;
+        /* Garante que o preview fique abaixo das cartas */
     }
 
     .editor-area {
@@ -29,28 +33,84 @@
 /* Ajustes para Celulares (até 768px) */
 @media (max-width: 768px) {
     body {
-        margin-top: 80px;
+        margin: 80px 0 0 0;
+    }
+
+    .deckbuilder-container {
+        grid-template-columns: 1fr;
+        /* Força uma coluna */
+        justify-items: center;
+        margin-top: 70px;
+        padding: 0 0 60px 0;
+        /* Espaço para a nav inferior */
+    }
+
+    .navbar {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+        padding: auto;
+    }
+
+    .sign {
+        margin-right: 50px;
+        gap: 20px;
+    }
+
+    .sign span {
+        display: none;
+    }
+
+    .sign button {
+        padding: 3px 10px;
+        background-color: red;
+        color: white;
+        border: none;
+    }
+
+    .nav-avatar {
+        width: 35px;
     }
 
     /* Navbar Mobile */
     .links {
-        display: none; /* Esconde links de texto em telas muito pequenas (opcional) */
+        display: none;
+        /* Esconde links de texto em telas muito pequenas (opcional) */
     }
 
+
     .deck-header {
-        flex-direction: column; /* Stack de informações no topo do deck */
+        flex-direction: column;
+        /* Stack de informações no topo do deck */
         align-items: flex-start;
         gap: 10px;
+    }
+
+    #deck-cards {
+        display: flex;
+        justify-content: center;
     }
 
     /* Grid de Cartas Adaptável */
     .grid-cartas {
         justify-content: center;
         max-height: 350px;
+        padding: 5px;
+        justify-content: flex-start;
     }
 
-    .card, .card-img {
-        width: 100px; /* Diminui levemente as cartas para caberem mais */
+    .card-img {
+        width: 800px;
+    }
+
+    .preview-sidebar {
+        width: 90%;
+    }
+
+    .card,
+    .card-img {
+        width: 100px;
+        /* Diminui levemente as cartas para caberem mais */
     }
 
     /* Área do Mago e Decks */
@@ -63,37 +123,41 @@
         width: 100%;
         max-width: 250px;
         min-height: 350px;
-        position: static; /* Remove o sticky no mobile para não atrapalhar o scroll */
+        position: static;
+        /* Remove o sticky no mobile para não atrapalhar o scroll */
     }
 
     /* Modais Responsivos */
     .modal-content {
-        width: 90%; /* Modal ocupa quase toda a tela lateralmente */
+        width: 90%;
+        /* Modal ocupa quase toda a tela lateralmente */
         padding: 20px;
     }
 
     .icon-grid-selector {
-        grid-template-columns: repeat(3, 1fr); /* Menos colunas de ícones */
+        grid-template-columns: repeat(3, 1fr);
+        /* Menos colunas de ícones */
     }
 
     /* Sidebar de Preview no Mobile */
     .card-large img {
-        width: 100%; /* Imagem da carta se ajusta à largura do celular */
-        max-width: 300px;
+        width: 100%;
+        /* Imagem da carta se ajusta à largura do celular */
+        max-width: 350px;
     }
 
     .export-main-container {
-        flex-direction: column; /* Exportação também precisa ser vertical */
+        flex-direction: column;
+        /* Exportação também precisa ser vertical */
     }
-}
 
-/* Ajuste fino para telas muito pequenas (até 480px) */
-@media (max-width: 480px) {
-    .logo span {
-        display: none; /* Esconde nome do site se estiver muito apertado */
+    /* Perfil */
+
+    .perfil-container {
+        width: 80%;
     }
-    
-    .btn-container button {
-        width: 100%; /* Botões ocupam largura total para facilitar o toque */
+
+    .perfil-header {
+       justify-content: space-between;
     }
 }

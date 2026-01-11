@@ -63,7 +63,12 @@ function renderDeck() {
   const deckContainer = document.getElementById("deck-cards");
   deckContainer.innerHTML = "";
 
-  const deckAtual = colecaoDeDecks[deckAtualIndex]
+  const deckAtual = colecaoDeDecks[deckAtualIndex];
+
+  const iconHTML = deckAtual.icone ? `<img src="${deckAtual.icone}" style="width:30px; vertical-align:middle; margin-right:10px;">` : "";
+
+  document.getElementById("actual-deck").innerHTML = `${iconHTML} ${deckAtual.nome} `;
+  document.getElementById("deck-count").innerText = deckAtual.cartas.length;
 
   const count = {};
   deckAtual.cartas.forEach(card => {
@@ -99,7 +104,7 @@ function renderDeck() {
   }
 
   document.getElementById("deck-count").innerText = colecaoDeDecks[deckAtualIndex].cartas.length;
-  document.getElementById("actual-deck").innerText = colecaoDeDecks[deckAtualIndex].nome
+  // document.getElementById("actual-deck").innerText = colecaoDeDecks[deckAtualIndex].nome
 }
 
 function addToDeck(card) {
@@ -206,6 +211,7 @@ document.getElementById("edit-deck").onclick = async () => {
   const deckAtual = colecaoDeDecks[deckAtualIndex];
   document.getElementById("modal-edicao").style.display = "flex";
   document.getElementById("input-editar-nome").value = deckAtual.nome
+  iconeSelecionadoTemp = deckAtual.icone || listaIcones[0];
 
   const token = localStorage.getItem("token") || sessionStorage.getItem("token");
 
@@ -218,48 +224,48 @@ document.getElementById("edit-deck").onclick = async () => {
 }
 
 document.getElementById("delete-deck").onclick = async () => {
- const deckAtual = colecaoDeDecks[deckAtualIndex];
+  const deckAtual = colecaoDeDecks[deckAtualIndex];
 
-    // Segurança: Não deixa deletar se for o único deck
-    if (colecaoDeDecks.length <= 1) {
-        alert("Você precisa ter pelo menos um deck!")
-        return
+  // Segurança: Não deixa deletar se for o único deck
+  if (colecaoDeDecks.length <= 1) {
+    alert("Você precisa ter pelo menos um deck!")
+    return
+  }
+
+  const confirmar = confirm(`Tem certeza que deseja excluir o deck "${deckAtual.nome}"?`);
+  if (!confirmar) return;
+
+  const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+
+  try {
+    const res = await fetch(`/decks/${deckAtual._id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      alert(data.content);
+
+      // 1. Remove do array local
+      colecaoDeDecks.splice(deckAtualIndex, 1);
+
+      // 2. Ajusta o índice para não apontar para o vazio
+      deckAtualIndex = 0;
+
+      // 3. Atualiza tudo na tela
+      salvarDados(); // Salva no LocalStorage
+      atualizarSelectDecks();
+      renderDeck();
+    } else {
+      alert("Erro: " + data.content);
     }
-
-    const confirmar = confirm(`Tem certeza que deseja excluir o deck "${deckAtual.nome}"?`);
-    if (!confirmar) return;
-
-    const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-
-    try {
-        const res = await fetch(`/decks/${deckAtual._id}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        const data = await res.json();
-
-        if (data.success) {
-            alert(data.content);
-
-            // 1. Remove do array local
-            colecaoDeDecks.splice(deckAtualIndex, 1);
-
-            // 2. Ajusta o índice para não apontar para o vazio
-            deckAtualIndex = 0; 
-            
-            // 3. Atualiza tudo na tela
-            salvarDados(); // Salva no LocalStorage
-            atualizarSelectDecks();
-            renderDeck();
-        } else {
-            alert("Erro: " + data.content);
-        }
-    } catch (error) {
-        console.error("Erro na requisição:", error);
-    }
+  } catch (error) {
+    console.error("Erro na requisição:", error);
+  }
 };
 
 function atualizarSelectDecks() {
@@ -508,16 +514,16 @@ document.getElementById('btn-atualizar-csv').addEventListener('click', handleUpd
 
 /* Modal de edição */
 
-// const listaIcones = [
-//     "../assets/icons/fire.png", 
-//     "../assets/icons/water.png", 
-//     "../assets/icons/nature.png",
-//     "../assets/icons/dark.png",
-//     "../assets/icons/light.png",
-//     "../assets/icons/sword.png",
-//     "../assets/icons/shield.png",
-//     "../assets/icons/scroll.png"
-// ];
+const listaIcones = [
+  "../assets/icons/fogo.svg",
+  "../assets/icons/agua.svg",
+  "../assets/icons/terra.svg",
+  "../assets/icons/ar.svg",
+  "../assets/icons/neutro.svg",
+  "../assets/icons/zarcos.svg",
+  "../assets/icons/feitiço.svg",
+  "../assets/icons/tropa.svg"
+];
 
 let iconeSelecionadoTemp = null;
 
@@ -526,23 +532,24 @@ function fecharModalEdicao() {
   iconeSelecionadoTemp = null
 }
 
+
 // 3. Renderiza os ícones dentro do modal
 function renderizarOpcoesIcones() {
   const container = document.getElementById("icon-selector");
-  // container.innerHTML = "";
+  container.innerHTML = "";
 
-  // listaIcones.forEach(path => {
-  //     const img = document.createElement("img");
-  //     img.src = path;
-  //     img.className = "icon-option";
-  //     if (path === iconeSelecionadoTemp) img.classList.add("selected");
+  listaIcones.forEach(path => {
+    const img = document.createElement("img");
+    img.src = path;
+    img.className = "icon-option";
+    if (path === iconeSelecionadoTemp) img.classList.add("selected");
 
-  //     img.onclick = () => {
-  //         iconeSelecionadoTemp = path;
-  //         renderizarOpcoesIcones(); // Re-renderiza para mostrar o destaque
-  //     };
-  //     container.appendChild(img);
-  // });
+    img.onclick = () => {
+      iconeSelecionadoTemp = path;
+      renderizarOpcoesIcones(); // Re-renderiza para mostrar o destaque
+    };
+    container.appendChild(img);
+  });
 }
 
 document.getElementById("btn-confirmar-edicao").onclick = async () => {
@@ -557,7 +564,7 @@ document.getElementById("btn-confirmar-edicao").onclick = async () => {
 
   // Atualiza no objeto local
   deckAtual.nome = novoNome;
-  // colecaoDeDecks[deckAtualIndex].icone = iconeSelecionadoTemp;
+  deckAtual.icone = iconeSelecionadoTemp;
 
   const token = localStorage.getItem("token") || sessionStorage.getItem("token");
 
@@ -577,7 +584,8 @@ document.getElementById("btn-confirmar-edicao").onclick = async () => {
       body: JSON.stringify({
         nome: deckAtual.nome,
         cartas: deckAtual.cartas,
-        mago: deckAtual.mago
+        mago: deckAtual.mago,
+        icone: deckAtual.icone
       })
     })
 

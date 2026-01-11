@@ -14,6 +14,7 @@
     <div class="login-container">
         <div class="login-form">
             <h1>Registro</h1>
+            <span id="message"></span>
             <form action="#" id="form">
                 <div class="box-form">
                     <input placeholder="Nome de usuário" type="text" name="username" required>
@@ -70,9 +71,6 @@
                 }
                 const data = await response.json()
                 
-                setInterval(() => {
-                    window.location.href = "login.html"
-                }, 1200);
 
             } catch (error) {
                 console.log(error)
