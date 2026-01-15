@@ -1090,6 +1090,17 @@ const allCards = [
     mana: 1
   },
   {
+    id: 27,
+    name: "Rato",
+    type: "criatura",
+    image: '../assets/Cards/Rato.png',
+    attackPattern: "front",
+    cost: 4,
+    atk: 2,
+    hp: 1,
+    mana: 1
+  },
+  {
     id: 63,
     name: "Cachorro",
     type: "criatura",
@@ -1160,6 +1171,17 @@ const allCards = [
     name: "Esqueleto",
     type: "criatura",
     image: '../assets/Cards/Esqueleto.png',
+    attackPattern: "front",
+    cost: 4,
+    atk: 2,
+    hp: 1,
+    mana: 1
+  },
+  {
+    id: 98,
+    name: "Palhaço",
+    type: "criatura",
+    image: '../assets/Cards/Palhaço.png',
     attackPattern: "front",
     cost: 4,
     atk: 2,

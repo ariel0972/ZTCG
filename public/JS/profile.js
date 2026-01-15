@@ -1,9 +1,9 @@
 let playerProfile = JSON.parse(localStorage.getItem("playerProfile")) || JSON.parse(sessionStorage.getItem("playerProfile")) || {
-  nome: "Novo Duelista",
-  avatarURL: "../assets/avatar.png",
-  nivel: 1,
-  vitorias: 0,
-  decks: []
+    nome: "Novo Duelista",
+    avatarURL: "../assets/avatar.png",
+    nivel: 1,
+    vitorias: 0,
+    decks: []
 }
 
 let colecaoDeDecks = playerProfile.decks
@@ -24,7 +24,7 @@ function editarPerfil() {
 function fecharPainel() {
     document.querySelector('.overlay').classList.remove('active');
     document.querySelector('.edit-panel').classList.remove('active');
-}   
+}
 
 // Função auxiliar para ler arquivos como Promessa (Promise)
 const lerArquivo = (arquivo) => new Promise((resolve, reject) => {
@@ -46,9 +46,9 @@ async function salvarAlteracoes() {
 
     const novoNome = document.getElementById("input-nome").value;
     const inputFoto = document.getElementById("input-foto");
-    
+
     // Feedback visual (opcional)
-    if(btnSalvar) btnSalvar.textContent = "Salvando...";
+    if (btnSalvar) btnSalvar.textContent = "Salvando...";
 
     let avatarParaEnviar = playerProfile.avatarURL; // Mantém o atual por padrão
 
@@ -59,7 +59,7 @@ async function salvarAlteracoes() {
         // DICA: Validar tamanho (ex: máx 200KB para não pesar no MongoDB)
         if (arquivo.size > 200 * 1024) {
             alert("A imagem é muito grande! Escolha uma menor que 200KB.");
-            if(btnSalvar) btnSalvar.textContent = "Salvar";
+            if (btnSalvar) btnSalvar.textContent = "Salvar";
             return;
         }
 
@@ -103,9 +103,9 @@ async function salvarAlteracoes() {
         console.error("Erro na requisição:", error);
         alert("Erro ao conectar com o servidor.");
     } finally {
-        if(btnSalvar) btnSalvar.textContent = "Salvar";
+        if (btnSalvar) btnSalvar.textContent = "Salvar";
     }
-}   
+}
 
 function finalizarSalvamento() {
     localStorage.setItem("playerProfile", JSON.stringify(playerProfile));
@@ -116,17 +116,30 @@ function finalizarSalvamento() {
 function renderPerfil() {
     document.getElementById("player-name").innerText = playerProfile.nome
     document.getElementById("player-avatar").src = playerProfile.avatarURL || "public/assets/avatar.png";
+    const profile = document.querySelector('.info-texto')
 
     const decks = document.getElementById('lista-decks')
     decks.innerHTML = ``
 
-    colecaoDeDecks.forEach(deck => {
-        const p = document.createElement("p")
-        p.classList.add("deck-profil-list")
-        p.innerHTML = `${deck.nome} - ${deck.mago.name}`
+    colecaoDeDecks.forEach((deck, index) => {
+        const p = document.createElement("div")
+        p.classList.add("deck-profile-list")
+        p.innerHTML = `
+        <img src="${deck.icone || 'public/assets/icons/neutro.svg'}" class="deck-icon">
+        <span>${deck.nome} - ${deck.mago.name}</span>
+        `
+        p.onclick = () => {
+            localStorage.setItem("ultimoDeckSelecionado", index);
+            window.location.href = "deckbuilder.html";
+        }
 
         decks.appendChild(p)
     });
+
+    profile.innerHTML = `
+        <p>Nível: ${playerProfile.nivel}</p>
+        <h3>Partidas: ${playerProfile.partidas} / Vitórias: ${playerProfile.vitorias}</h3>
+    `
 }
 
 

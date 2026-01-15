@@ -1,7 +1,7 @@
 body {
   font-family: Arial, sans-serif;
   background: #f3f3f3;
-  margin-top: 120px;
+  margin: 120px 0;
 }
 
 .navbar {
@@ -231,6 +231,7 @@ button {
   border-radius: 8px;
   background-color: #ccc;
   transition: 0.2s;
+  max-width: 200px;
 }
 
 button:hover {

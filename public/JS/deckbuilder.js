@@ -65,7 +65,7 @@ function renderDeck() {
 
   const deckAtual = colecaoDeDecks[deckAtualIndex];
 
-  const iconHTML = deckAtual.icone ? `<img src="${deckAtual.icone}" style="width:30px; vertical-align:middle; margin-right:10px;">` : "";
+  const iconHTML = deckAtual.icone ? `<img src="${deckAtual.icone}"style="width:40px; vertical-align:middle; margin-right:5px;">` : "";
 
   document.getElementById("actual-deck").innerHTML = `${iconHTML} ${deckAtual.nome} `;
   document.getElementById("deck-count").innerText = deckAtual.cartas.length;

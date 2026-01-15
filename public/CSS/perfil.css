@@ -1,6 +1,7 @@
 body {
   font-family: Arial, sans-serif;
   background: #f3f3f3;
+  margin: 0;
 }
 
 .navbar {
@@ -25,7 +26,7 @@ body {
   gap: 6px;
 }
 
-.sign .auth:hover{
+.sign .auth:hover {
   background-color: #adc7ff;
   padding: 4px;
 }
@@ -49,11 +50,11 @@ body {
   gap: 20px;
 }
 
-.sign button{
+.sign button {
   background: none;
 }
 
-.sign button:hover{
+.sign button:hover {
   background: none;
 }
 
@@ -69,42 +70,45 @@ a {
   padding: 20px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   max-width: 800px;
-  margin: 80px auto;
+  margin: 120px auto;
 }
 
 .overlay {
-  display: none; /* Escondido por padrão */
+  display: none;
+  /* Escondido por padrão */
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.6); 
+  background: rgba(0, 0, 0, 0.6);
   z-index: 999;
 }
 
 /* O painel de edição propriamente dito */
 .edit-panel {
-  display: none; /* Escondido por padrão */
+  display: none;
+  /* Escondido por padrão */
   position: fixed;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%); /* Centraliza perfeitamente */
+  transform: translate(-50%, -50%);
+  /* Centraliza perfeitamente */
   background: white;
   padding: 30px;
   border-radius: 15px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   z-index: 1000;
   width: 90%;
   max-width: 500px;
 }
 
 .edit-painel-header {
-    display: flex;
-    justify-content: space-between;
+  display: flex;
+  justify-content: space-between;
 }
 
-.close-painel{
+.close-painel {
   color: red;
   cursor: pointer;
 }
@@ -118,6 +122,10 @@ a {
   display: block !important;
 }
 
+.player-info {
+  margin-right: 300px;
+}
+
 .perfil-header {
   display: flex;
   align-items: center;
@@ -125,6 +133,7 @@ a {
   border-bottom: 2px solid #5170ff;
   padding-bottom: 20px;
   margin-bottom: 20px;
+  justify-content: space-around;
 }
 
 #player-avatar {
@@ -156,4 +165,26 @@ button:hover {
 button:active {
   background-color: #adc7ff;
   transform: scale(0.85);
+}
+
+.deck-profile-list {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 200px;
+  background-color: #e8ddff;
+  padding: 8px;
+  border-radius: 13px;
+  cursor: pointer;
+  transition: all 0.5s;
+}
+
+.deck-profile-list:hover {
+  box-shadow: 0 6px 4px #0d014e5d;
+  transform: translateY(-8%);
+  filter: brightness(1.05);
+}
+
+.deck-icon {
+  width: 50px;
 }
