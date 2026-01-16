@@ -127,3 +127,16 @@ button:hover {
 .registro a:hover {
     color: rgb(104, 127, 255);
 }
+
+#msg-form {
+    width: 100%;
+    background-color: rgba(255, 0, 0, 0.1);
+    border-radius: 10px;
+    padding: 6px;
+    /* color: rgb(255, 0, 0); */
+    font-size: 18px;
+    border: 1px solid red;
+    text-align: center;
+    margin: 10px 0;
+    display: none;
+}

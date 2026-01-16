@@ -4,7 +4,7 @@ const User = require('../db/models/user')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 
-router.get("users", async (req, res) => {
+router.get("/users", async (req, res) => {
     try {
         // Buscamos o usuário logado para confirmar se ele é admin
         const requester = await User.findById(req.userId);

@@ -18,55 +18,119 @@ function renderNavbar() {
 
 // Sincroniza o banco de dados com os do navegador
 async function syncDB() {
-    const token = localStorage.getItem("token") ||
-        sessionStorage.getItem("token")
-
+    const token = localStorage.getItem("token") || sessionStorage.getItem("token")
     const user = JSON.parse(localStorage.getItem("playerProfile")) || JSON.parse(sessionStorage.getItem("playerProfile"))
 
     if (!token || !user) {
-        alert('Seu acesso foi negado, expirado ou excluído')
+        console.log('Usuário não excontrado')
         return
     }
 
     try {
-        // 1. Busca Dados do Usuário (Nome, Nível, XP)
-        const resUser = await fetch(`/user/${user.id}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const dataUser = await resUser.json();
 
-        const resDecks = await fetch(`/decks/user/${user.id}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const [resUser, resDecks] = await Promise.all([
+            fetch(`/user/${user.id}`, { headers: { 'Authorization': `Bearer ${token}` } }),
+            fetch(`/decks/user/${user.id}`, { headers: { 'Authorization': `Bearer ${token}` } })
+        ])
+        const dataUser = await resUser.json()
         const dataDecks = await resDecks.json();
 
         if (dataUser.success && dataDecks.success) {
-            playerProfile = {
-                id: dataUser.user._id,
-                nome: dataUser.user.nome,
-                avatarURL: dataUser.user.avatarURL,
-                nivel: dataUser.user.nivel,
-                vitorias: dataUser.user.vitorias,
-                partidas: dataUser.user.partidas,
-                decks: dataDecks.decks
-            };
+            const serverDecks = dataDecks.decks
+            const localDecks = user.decks || []
+
+            // const decksParaSubir = localDecks.filter(local => 
+            //     !serverDecks.some(server => server._id === local._id) && !local._id
+            // );
+
+            // // 3. Sincroniza os decks faltantes para o banco
+            // if (decksParaSubir.length > 0) {
+            //     alert(`Sincronizando ${decksParaSubir.length} novos decks locais...`);
+            //     for (const deck of decksParaSubir) {
+            //         await fetch(`/decks/user`, {
+            //             method: 'POST',
+            //             headers: { 
+            //                 'Content-Type': 'application/json',
+            //                 'Authorization': `Bearer ${token}` 
+            //             },
+            //             body: JSON.stringify({
+            //                 nome: deck.nome,
+            //                 cartas: deck.cartas,
+            //                 mago: deck.mago,
+            //                 icone: deck.icone
+            //             })
+            //         });
+            //     }
+            //     // Recarrega os decks do servidor após o upload para pegar os novos IDs
+            //     return syncDB(); 
+            // }
+
+            // // 4. Atualiza o estado global com a verdade vinda do servidor
+            // playerProfile = {
+            //     id: dataUser.user._id,
+            //     nome: dataUser.user.nome,
+            //     avatarURL: dataUser.user.avatarURL,
+            //     nivel: dataUser.user.nivel,
+            //     vitorias: dataUser.user.vitorias,
+            //     partidas: dataUser.user.partidas,
+            //     decks: serverDecks // O servidor é a fonte da verdade final
+            // };
+
+            // colecaoDeDecks = playerProfile.decks;
             
-            colecaoDeDecks = playerProfile.decks;
-            if (window.location.pathname === "/HTML/deckbuilder.html" || window.location.pathname === "/") {
-                atualizarSelectDecks()
-                renderDeck()
+            // // Renderização condicional por página
+            // const path = window.location.pathname;
+            // if (path.includes("deckbuilder.html") || path === "/") {
+            //     atualizarSelectDecks();
+            //     renderDeck();
+            // }
+            // if (path.includes("perfil.html")) renderPerfil();
+
+            // salvarDados();
+            // showSync(true)
+            // console.log("Sincronização Completa!");
+
+            playerProfile = {
+                ...dataUser.user,
+                id: dataUser.user._id,
+                decks: serverDecks
             }
 
-            if (window.location.pathname === '/HTML/perfil.html') renderPerfil()
+            colecaoDeDecks = playerProfile.decks
 
             salvarDados()
-            
 
-            alert("Sincronização Completa")
+            const path = window.location.pathname
+            if (path.includes("deckbuilder.html") || path === "/") {
+                atualizarSelectDecks();
+                renderDeck();
+            }
+
+            if (path.includes("perfil.html")) renderPerfil()
+
+            showSync(true)
         }
 
     } catch (error) {
-        console.error("Erro na sincronização dupla:", error);
+        console.error("Erro na sincronização dupla:", error)
+    }
+}
+
+function showSync(sucesso) {
+    const indicator = document.getElementById("sync-indicator");
+    const text = document.getElementById("sync-text");
+    
+    if (!indicator) return;
+
+    if (sucesso) {
+        indicator.className = "sync-success";
+        text.innerText = "Sincronizado";
+        setTimeout(() => {
+            indicator.style.display = 'none'
+        }, 3000);
+    } else {
+        indicator.className = "sync-error";
+        text.innerText = "Erro de Sincronização";
     }
 }
 
@@ -79,5 +143,5 @@ function logout() {
 
 window.addEventListener('load', async () => {
     renderNavbar()
-    // await syncDB()
+    await syncDB()
 })

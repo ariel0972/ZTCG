@@ -189,7 +189,8 @@ document.getElementById("save-deck").onclick = async () => {
       body: JSON.stringify({
         nome: deckAtual.nome,
         cartas: deckAtual.cartas,
-        mago: deckAtual.mago
+        mago: deckAtual.mago,
+        icone: deckAtual.icone
       })
     })
 

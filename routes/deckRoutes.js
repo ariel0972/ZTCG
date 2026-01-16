@@ -30,14 +30,15 @@ router.post('/user', async (req, res) => {
 
 router.put("/:id", async (req, res) => {
     try {
-        const { nome, cartas, mago } = req.body
+        const { nome, cartas, mago, icone } = req.body
 
         const deck = await Deck.findOneAndUpdate(
             { _id: req.params.id, userId: req.userId },
             {
                 nome,
                 cartas,
-                mago
+                mago,
+                icone
             },
             { new: true }
         )

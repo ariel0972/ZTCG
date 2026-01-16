@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Painel Admin ZTCG</title>
+    <style>
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h1>Usuários Cadastrados</h1>
+    <table id="user-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>Nível</th>
+                <th>Decks</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token")
+
+
+        async function carregarUsuarios() {
+            const response = await fetch('http://localhost:3000/admin/users', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            const data = await response.json();
+            
+            const tbody = document.querySelector("#user-table tbody");
+            tbody.innerHTML = "";
+
+            if(data.success) {
+                data.users.forEach(user => {
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td>${user._id}</td>
+                        <td>${user.nome}</td>
+                        <td>${user.email}</td>
+                        <td>${user.nivel}</td>
+                        <td>${user.decks}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+        carregarUsuarios();
+    </script>
+</body>
+</html>

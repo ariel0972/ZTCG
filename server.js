@@ -54,7 +54,7 @@ app.get('/user/:id', checkToken, async (req, res) => {
 
 
 app.use('/auth', userRoutes)
-app.use('/admin', adminRoutes)
+app.use('/admin', checkToken, checkAdmin, adminRoutes)
 app.use('/decks', checkToken, deckRoutes)
 
 app.listen(process.env.PORT, () => {

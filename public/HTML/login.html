@@ -14,9 +14,10 @@
     <div class="login-container">
         <div class="login-form">
             <h1>Login</h1>
+            <p id="msg-form"></p>
             <form action="#" id="form">
                 <div class="box-form">
-                    <input placeholder="Nome de usuário" type="text" name="email" required>
+                    <input placeholder="Email" type="text" name="email" required>
                     <i class='bx bxs-user'></i>
                 </div>
 
@@ -43,8 +44,10 @@
     </div>
     <script>
         const form = document.querySelector('#form');
+        const msg = document.getElementById('msg-form')
 
         form.addEventListener('submit', async (e) => {
+            msg.style.display = 'none'
             e.preventDefault(); // Impede a página de recarregar
 
             const userData = {
@@ -60,11 +63,19 @@
                 },
                 body: JSON.stringify(userData) // Transforma o objeto em texto JSON
             });
-
             if (!response) {
                 return console.log('Deu erro!')
             }
             const data = await response.json()
+
+            if (data.content == 'Senha inválida') {
+                msg.style.display = "block"
+                msg.innerText = "Senha Incorreta"
+            }
+            if (data.content == "Conta inexistente") {
+                msg.style.display = "block"
+                msg.innerText = "Esse Email não existe"
+            }
 
             // No momento do sucesso do login:
             if (data.success) {
@@ -73,7 +84,9 @@
                 storage.setItem("token", data.token);
                 storage.setItem("playerProfile", JSON.stringify(data.user));
 
-                window.location.href = "perfil.html"; // Redireciona após o sucesso 
+                setInterval(() => {
+                    window.location.href = "perfil.html"
+                }, 2000);
             }
         })
 

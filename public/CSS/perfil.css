@@ -23,7 +23,7 @@ body {
 .sign {
   align-items: center;
   display: flex;
-  gap: 6px;
+  gap: 15px;
 }
 
 .sign .auth:hover {
@@ -187,4 +187,30 @@ button:active {
 
 .deck-icon {
   width: 50px;
+}
+
+#sync-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    padding: 5px 10px;
+    border-radius: 20px;
+    background: rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+.sync-idle { color: #ffcc00; }    /* Amarelo - Sincronizando */
+.sync-success { color: #00ff88; } /* Verde - Sincronizado */
+.sync-error { color: #ff4757; }   /* Vermelho - Erro */
+
+#sync-icon {
+    font-size: 16px;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
 }

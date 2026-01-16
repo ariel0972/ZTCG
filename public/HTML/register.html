@@ -14,7 +14,7 @@
     <div class="login-container">
         <div class="login-form">
             <h1>Registro</h1>
-            <span id="message"></span>
+            <p id="msg-form"></p>
             <form action="#" id="form">
                 <div class="box-form">
                     <input placeholder="Nome de usuário" type="text" name="username" required>
@@ -46,8 +46,10 @@
 
     <script>
         const form = document.querySelector('#form');
+        const msg = document.getElementById('msg-form')
 
         form.addEventListener('submit', async (e) => {
+            msg.style.display = "none"
             e.preventDefault(); // Impede a página de recarregar
 
             const userData = {
@@ -65,13 +67,32 @@
                     },
                     body: JSON.stringify(userData) // Transforma o objeto em texto JSON
                 });
-    
+
                 if (!response) {
                     return console.log('Deu erro')
                 }
                 const data = await response.json()
-                
 
+                if (data.content == "As senhas são diferentes") {
+                    msg.style.display = "block"
+                    msg.innerText = "Senhas não se coincidem"
+                }
+                if (data.content == "Email já existe") {
+                    msg.style.display = "block"
+                    msg.innerText = "Já possui uma conta nesse Email"
+                }
+
+                if (data.success){
+                    msg.style.display = "block"
+                    msg.style.backgroundColor = "#1eff001a"
+                    msg.style.borderColor = "green"
+                    msg.innerText = "Conta criada com Sucesso"
+
+                    setInterval(() => {
+                        window.location.href = "login.html"
+                    }, 2000);
+                }
+                
             } catch (error) {
                 console.log(error)
             }
