@@ -42,19 +42,12 @@ function renderCards(filtro = "todos") {
     div.innerHTML = `
       <img src="${card.image}" alt="${card.name}" class="card-img">
     `;
-    div.onclick = () => {
-      if (cardSelect === div) {
-        console.log(cardSelect)
-        clearPreview()
-      } else {
-        if (cardSelect) {
-          cardSelect.classList.remove("selected")
-        }
-        div.classList.add("selected")
-        cardSelect = div
-        showPreview(card)
-      }
-    }
+
+    div.onmouseenter = () => ativarZoom(card.image)
+    div.onmouseleave = () => desativarZoom()
+
+    div.onclick = () => addToDeck(card)
+    
     container.appendChild(div);
   });
 }
@@ -613,3 +606,30 @@ renderDeck()
 renderCards()
 atualizarSelectDecks()
 
+
+let timer
+function ativarZoom(card) {
+  const oL = document.getElementById('zoom-overlay')
+  const img = document.getElementById('zoom-img')
+  
+  clearTimeout(timer)
+
+  document.addEventListener('mousemove', function(e) {
+    const mouseX = e.pageX
+    const mouseY = e.pageY
+
+    oL.style.transform = `translate(${mouseX - oL.offsetWidth / 2}px, ${mouseY - oL.offsetHeight / 2}px)`
+  })
+
+
+  timer = setTimeout(() => {
+    img.src = card
+    oL.classList.add('zoom-active')
+  }, 1000);
+}
+
+function desativarZoom() {
+    const overlay = document.getElementById("zoom-overlay");
+    clearTimeout(timer);
+    overlay.classList.remove("zoom-active");
+}

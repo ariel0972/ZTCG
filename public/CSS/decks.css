@@ -1,414 +1,198 @@
-body {
-  font-family: Arial, sans-serif;
-  background: #f3f3f3;
-  margin: 120px 0;
+/* ============================================================
+   1. CONFIGURAÇÕES GERAIS (RESET)
+   ============================================================ */
+* {
+    box-sizing: border-box; /* Garante que padding não aumente o tamanho dos itens */
+    margin: 0;
+    padding: 0;
 }
 
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f0f2f5;
+    color: #333;
+    line-height: 1.6;
+    padding-top: 80px; /* Espaço para a navbar fixa */
+}
+
+/* ============================================================
+   2. NAVBAR (FLUIDA E MODERNA)
+   ============================================================ */
 .navbar {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  gap: 165px;
-  position: fixed;
-  top: 0;
-  width: 100%;
-  height: 60px;
-  background-color: #5170ff;
-  color: white;
-  padding: 15px 0;
-  text-align: center;
-  z-index: 1000;
+    display: flex;
+    justify-content: space-between; /* Espalha os itens pelas pontas */
+    align-items: center;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    height: 70px;
+    background-color: #5170ff;
+    color: white;
+    padding: 0 5%; /* Respiro lateral dinâmico */
+    z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.links {
+    display: flex;
+    gap: 20px;
 }
 
 .sign {
-  align-items: center;
-  display: flex;
-  gap: 15px;
-}
-
-.sign .auth:hover {
-  background-color: #adc7ff;
-  padding: 4px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
 }
 
 .nav-avatar {
-  width: 50px;
-  border-radius: 50px;
-  border: 2px white solid;
-  cursor: pointer;
-  transition: all 0.2s;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid white;
+    transition: 0.3s;
 }
 
-.nav-avatar:hover {
-  box-shadow: 0 0 15px rgba(255, 255, 255);
-  border: 3px white solid;
-}
-
-.nav-profile {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.sign button {
-  padding: 5px;
-  font-size: 12px;
-  border: 2px solid black;
-  border-radius: 8px;
-  background-color: #ccc;
-  transition: 0.2s;
-  background: none;
-}
-
-.sign button:hover {
-  background: none;
-}
-
-a {
-  text-decoration: none;
-  color: white;
-  padding-inline: 5px;
-  transition: all 0.2s;
-}
-
-.card-img {
-  width: 120px;
-}
-
-.card-large img {
-  width: 450px;
-}
-
+/* ============================================================
+   3. DECKBUILDER (LAYOUT 2 COLUNAS CENTRALIZADO)
+   ============================================================ */
 .deckbuilder-container {
-  display: grid;
-  grid-template-columns: 3fr 1fr;
-  gap: 20px;
-  padding: 20px;
-  max-width: 1450px;
-  /* Define um limite de largura */
-  margin: 80px auto 0 auto;
-  /* O 'auto' nas laterais centraliza o container */
-  width: 95%;
+    max-width: 1400px; /* Limite de largura para telas ultra-wide */
+    margin: 0 auto;    /* Centraliza o container principal */
+    padding: 20px;
 }
 
+.editor-area {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Divide a tela em duas metades iguais */
+    gap: 30px;
+    align-items: start;
+}
+
+/* Grids de Cartas */
 .grid-cartas {
-  display: flex;
-  flex-wrap: wrap;
-  /* Faz as cartas "pularem" para a linha de baixo */
-  gap: 10px;
-  background: #ccc;
-  /* Cor de fundo igual à imagem */
-  padding: 15px;
-  min-height: 150px;
-  overflow-y: auto;
-  border-radius: 15px;
-  /* Adiciona scroll se tiver muitas cartas */
-  max-height: 420px;
-  overflow-y: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    background: #e0e0e0;
+    padding: 20px;
+    border-radius: 12px;
+    min-height: 500px;
+    max-height: 70vh;
+    overflow: visible;
+    overflow-y: auto;
+     /* Necessário para o zoom não cortar nas laterais */
 }
 
-.preview-sidebar {
-  background: #bbb;
-  margin: 0 10px;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  border-radius: 12px;
-  justify-content: space-around;
-  width: 480px;
-}
-
-.btn-container {
-  display: flex;
-  flex-direction: column;
-}
-
-/* Container principal - Adicione flex-wrap para o cabeçalho pular linha */
-.current-deck {
-  margin-top: 25px;
-  display: flex;
-  flex-wrap: wrap;
-  /* ESSENCIAL: permite que o header ocupe a linha de cima */
-  flex-direction: row;
-  align-items: flex-start;
-  gap: 25px;
-  background: #e8e8e8;
-  padding: 20px;
-  border-radius: 15px;
-}
-
-/* Garante que o cabeçalho ocupe 100% da largura no topo */
-.deck-header {
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  border-bottom: 2px solid #ccc;
-  padding-bottom: 10px;
-  gap: 20px;
-}
-
-/* Ajuste do Slot do Mago para não ser esmagado */
-#mage-container {
-  flex: 0 0 300px;
-  /* Aumentei um pouco para caber melhor a carta */
-  min-height: 420px;
-  border: 3px dashed #5170ff;
-  border-radius: 15px;
-  background: rgba(81, 112, 255, 0.05);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: sticky;
-}
-
-/* Ajuste no Grid de Cartas para ocupar o resto do espaço */
-#deck-cards {
-  flex: 1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-content: flex-start;
-}
-
-/* Imagem do Mago dentro do container */
-.mago {
-  width: 100%;
-  height: auto;
-  filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.2));
-  transition: transform 0.3s ease;
-}
-
+/* ============================================================
+   4. SISTEMA DE CARTAS E HOVER ZOOM (PEDIDO DO USUÁRIO)
+   ============================================================ */
 .card {
-  background: rgba(255, 255, 255, 0);
-  border: 1px solid #ccc;
-  position: relative;
-  padding: 8px;
-  cursor: pointer;
-  width: 120px;
-  text-align: center;
-  transition: 0.2s;
-}
-
-.card-counter {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background-color: rgba(0, 0, 0, 0.7);
-  /* Fundo escuro semi-transparente */
-  color: white;
-  font-size: 2rem;
-  font-weight: bold;
-  padding: 5px 10px;
-  border-radius: 5px;
-  z-index: 10;
-  pointer-events: none;
-  /* Deixa o clique passar para a carta abaixo */
+    position: relative;
+    width: 110px;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 1;
+    
 }
 
 .card:hover {
-  background: #ffeaa7;
+    z-index: 100;          /* Garante que a carta fique acima de tudo */
+    box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+    cursor: pointer;
 }
 
-.selected {
-  border: 2px solid #5170ff;
-  background: #d1d8ff;
-  transform: scale(1.05);
-  box-shadow: 0 4px 15px rgba(81, 112, 255, 0.4);
+.card-img {
+    width: 100%;
+    /* border-radius: 8px; */
+    display: block;
 }
 
-.select {
-  margin: 20px;
-  border: 2px solid black;
-  border-radius: 8px;
-  padding: 10px 15px;
-  font-size: 15px;
+/* Contador de cartas dentro do deck */
+.card-counter {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background: #ff4757;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: bold;
+    font-size: 14px;
+    z-index: 101;
+}
+
+/* ============================================================
+   5. GERENCIAMENTO E INTERFACE (UX)
+   ============================================================ */
+.management-menu {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    background: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.current-deck {
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+.deck-header {
+    margin-bottom: 20px;
+    border-bottom: 2px solid #f0f2f5;
+    padding-bottom: 15px;
 }
 
 button {
-  margin-top: 8px;
-  margin-bottom: 5px;
-  padding: 10px;
-  font-size: 16px;
-  border: 2px solid black;
-  border-radius: 8px;
-  background-color: #ccc;
-  transition: 0.2s;
-  max-width: 200px;
+    padding: 10px 18px;
+    border-radius: 6px;
+    border: none;
+    background: #5170ff;
+    color: white;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.2s;
 }
 
 button:hover {
-  background-color: #d1d8ff;
+    background: #3b5bdb;
+    transform: translateY(-2px);
 }
 
-button:active {
-  background-color: #adc7ff;
-  transform: scale(0.85);
-}
-
-#btn-new-card,
-#addMago {
-  display: none;
-}
-
-.export-hidden {
-  position: absolute;
-  left: -5000px;
-  width: 1200px;
-  min-height: 675px;
-  background: linear-gradient(180deg, #a5c7ff 0%, #e0c3fc 60%, #a5c7ff 100%);
-  padding: 40px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-#export-deck-name {
-  font-size: 80px;
-  color: #6a5acd;
-  margin-bottom: 20px;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
-
-}
-
-.export-main-container {
-  display: flex;
-  background: rgba(255, 255, 255, 0.4);
-  border-radius: 30px;
-  padding: 30px;
-  gap: 40px;
-  width: 100%;
-}
-
-.export-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  /* 6 colunas como na imagem */
-  gap: 15px;
-  flex: 2;
-}
-
-.export-mago-container {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-/* Estilo da carta com contador centralizado */
-.export-card-wrapper {
-  position: relative;
-  width: 120px;
-}
-
-.export-card-counter {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background-color: rgba(0, 0, 0, 0.7);
-  /* Fundo escuro semi-transparente */
-  color: white;
-  font-size: 2rem;
-  font-weight: bold;
-  padding: 5px 10px;
-  border-radius: 5px;
-  z-index: 10;
-}
-
-.export-credits {
-  margin-top: 20px;
-  font-size: 30px;
-  color: #6a5acd;
-  font-weight: bold;
-}
-
-/* Estilo do Modal (Overlay) */
-.modal-container {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 2000;
-}
-
-.modal-content {
-  background: #fff;
-  padding: 30px;
-  border-radius: 15px;
-  width: 400px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-}
-
-/* Grade de Seleção de Ícones */
-.icon-grid-selector {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  margin: 15px 0;
-  max-height: 200px;
-  overflow-y: auto;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-}
-
-.icon-option {
-  width: 50px;
-  height: 50px;
-  cursor: pointer;
-  border: 2px solid transparent;
-  border-radius: 8px;
-  transition: 0.2s;
-  object-fit: contain;
-}
-
-.icon-option:hover {
-  background: #f0f0f0;
-  transform: scale(1.1);
-}
-
-.icon-option.selected {
-  border-color: #5170ff;
-  background: #d1d8ff;
-}
-
-.btn-save {
-  background-color: #5170ff !important;
-  color: white;
-}
-
+/* Indicador de Sincronia */
 #sync-indicator {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 12px;
-    padding: 5px 10px;
+    background: rgba(255,255,255,0.1);
+    padding: 5px 12px;
     border-radius: 20px;
-    background: rgba(0, 0, 0, 0.2);
-    transition: all 0.3s ease;
 }
 
-.sync-idle { color: #ffcc00; }    /* Amarelo - Sincronizando */
-.sync-success { color: #00ff88; } /* Verde - Sincronizado */
-.sync-error { color: #ff4757; }   /* Vermelho - Erro */
-
-#sync-icon {
-    font-size: 16px;
-    animation: pulse 2s infinite;
+#zoom-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: none;
+    pointer-events: none; /* Importante para não bloquear eventos do mouse */
+    transition: transform 0.1s ease-out; /* Suaviza o movimento */
+    z-index: 9999; /* Garante que fique por cima */
 }
 
-@keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.5; }
-    100% { opacity: 1; }
+#zoom-img {
+    height: 80vh; /* A carta ocupa 80% da altura da tela */
+    border-radius: 15px;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+    border: 5px solid white;
+}
+
+/* Classe para mostrar a div */
+.zoom-active {
+    display: flex !important;
+    opacity: 1;
 }

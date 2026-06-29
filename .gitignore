@@ -3,3 +3,5 @@ gemini.html
 package-lock.json
 /node_modules
 .env
+dist/
+*.js.map

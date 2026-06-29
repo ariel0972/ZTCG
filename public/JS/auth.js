@@ -40,9 +40,8 @@ async function syncDB() {
             const localDecks = user.decks || []
 
             // const decksParaSubir = localDecks.filter(local => 
-            //     !serverDecks.some(server => server._id === local._id) && !local._id
+            //     serverDecks.some(server => server._id === local._id) && !local._id
             // );
-
             // // 3. Sincroniza os decks faltantes para o banco
             // if (decksParaSubir.length > 0) {
             //     alert(`Sincronizando ${decksParaSubir.length} novos decks locais...`);

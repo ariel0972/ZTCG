@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Montar Deck</title>
+    <title>Moldando o UX</title>
     <link rel="stylesheet" href="../CSS/decks.css">
     <link rel="stylesheet" href="../CSS/responsive.css">
 
@@ -15,6 +15,9 @@
 </head>
 
 <body>
+    <div id="zoom-overlay" class="zoom-hidden">
+    <img id="zoom-img" src="" alt="Carta Ampliada">
+</div>
     <nav class="navbar">
         <div class="logo">
             <img src="../assets/avatar.png" style="width: 50px;">
@@ -38,47 +41,43 @@
 
     <section class="deckbuilder-container">
         <main class="editor-area">
-            <section class="cards-pool">
-                <h2>Cartas Disponíveis</h2>
-                <div class="tabs-container">
-                    <button onclick="renderCards('todos')">Todos</button>
-                    <button onclick="renderCards('criatura')">Tropas</button>
-                    <button onclick="renderCards('feitiço')">Feitiços</button>
-                    <button onclick="renderCards('mago')">Magos</button>
-                    <button onclick="renderCards('torre')">Estrutura</button>
-                    <button onclick="renderCards('arma')">Armamento</button>
+            <section class="cards-pool active-tab" id="tab-pool">
+                <div class="pool-header">
+                    <h2>Cartas Disponíveis</h2>
+                    <select id="filtro-tipo" onchange="renderCards(this.value)">
+                        <option value="todos">Todos</option>
+                        <option value="criatura">Tropas</option>
+                        <option value="feitiço">Feitiços</option>
+                        <option value="torre">Estruturas</option>
+                        <option value="arma">Armamentos</option>
+                        <option value="mago">Magos</option>
+                    </select>
                 </div>
                 <div id="card-list" class="grid-cartas"></div>
             </section>
 
-            <section class="current-deck">
+            <section class="current-deck" id="tab deck">
                 <div class="deck-header">
                     <h2>Baralho: <span id="actual-deck">Meu Novo Deck</span> (<span id="deck-count">0</span>/40)</h2>
-                    <select id="seletor-decks" class="select"></select>
-                    <button id="edit-deck">Editar Deck</button>
+                    <div class="management-menu">
+                        <select id="seletor-decks" class="select"></select>
+                        <button id="save-deck">Salvar Deck</button>
+                        <button id="btn-novo-deck">Novo Deck</button>
+                        <button id="edit-deck">Editar Deck</button>
+                        <button onclick="exportDeck()">Exporta</button>
+                        <button id="btn-atualizar-csv">Atualizar e Baixar CSV</button>
+                    </div>
+                </div>
+
+                <div id="deck-cards" class="grid-cartas"></div>
+
+
+                <div class="deck-footer">
+                    <div id="mage-container" class="mage-slot"></div>
                     <button id="delete-deck">Excluir Deck</button>
-                    <!-- <button id="btn-principal" class="btn-favorito">⭐ Definir como Principal</button> -->
-                </div>
-                <div id="deck-cards" class="grid-cartas">
-                </div>
-                <div id="mage-container" class="mage">
                 </div>
             </section>
         </main>
-
-        <aside class="preview-sidebar">
-            <div id="card-preview" class="card-large">
-                <p>Selecione um carta</p>
-            </div>
-            <div class="btn-container">
-                <button id="addMago">Definir como Mago</button>
-                <button id="btn-new-card">Adicionar no Deck</button>
-                <button id="save-deck">Salvar Deck</button>
-                <button id="btn-novo-deck">Novo Deck</button>
-                <button onclick="exportDeck()">Exporta</button>
-                <button id="btn-atualizar-csv">Atualizar e Baixar CSV</button>
-            </div>
-        </aside>
     </section>
 
     <div id="modal-edicao" class="modal-container" style="display: none;">
