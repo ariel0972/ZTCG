@@ -1,60 +1,109 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <title>Painel Admin ZTCG</title>
-    <style>
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-    </style>
-</head>
-<body>
-    <h1>Usuários Cadastrados</h1>
-    <table id="user-table">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Nome</th>
-                <th>Email</th>
-                <th>Nível</th>
-                <th>Decks</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-
-    <script>
-        const token = localStorage.getItem("token") || sessionStorage.getItem("token")
-
-
-        async function carregarUsuarios() {
-            const response = await fetch('http://localhost:3000/admin/users', {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            const data = await response.json();
-            
-            const tbody = document.querySelector("#user-table tbody");
-            tbody.innerHTML = "";
-
-            if(data.success) {
-                data.users.forEach(user => {
-                    const tr = document.createElement("tr");
-                    tr.innerHTML = `
-                        <td>${user._id}</td>
-                        <td>${user.nome}</td>
-                        <td>${user.email}</td>
-                        <td>${user.nivel}</td>
-                        <td>${user.decks}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            }
-        }
-        carregarUsuarios();
-    </script>
-</body>
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Conta · Zacornia</title>
+    <link rel="icon" href="/assets/icons/favicon.svg" />
+    <link rel="stylesheet" href="/CSS/app.css" />
+    <script type="module" src="/JS/admin.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">ZACORNIA <small>TRADING CARD GAME</small></a>
+      <nav aria-label="Principal">
+        <a href="/">Decks</a><a href="/HTML/index.html">Jogar</a
+        ><a href="/HTML/perfil.html">Perfil</a>
+      </nav>
+      <div id="account" class="account"></div>
+    </header>
+    <main class="page">
+      <p class="eyebrow">ADMINISTRAÇÃO</p>
+      <h1>Catálogo e regras de cartas</h1>
+      <p class="muted">
+        Cada entrada guarda a definição da carta. Efeitos e habilidades precisam
+        estar implementados no motor para publicar.
+      </p>
+      <div class="page-grid">
+        <section class="surface">
+          <label>Localizar carta<select id="catalog-select"></select></label>
+          <div class="toolbar">
+            <label
+              >Nova entrada<select id="new-type">
+                <option>Mago</option>
+                <option>Tropa</option>
+                <option>Feitico</option>
+                <option>Estrutura</option>
+                <option>Armamento</option>
+              </select></label
+            ><button id="new-card">Criar modelo</button
+            ><label class="file-button"
+              >Importar JSON<input
+                id="import-card"
+                type="file"
+                accept=".json,application/json"
+            /></label>
+          </div>
+          <p id="editor-help" class="hint">
+            Edite atributos, efeitos e habilidades no JSON. Use publicado:false
+            durante a revisão. numeroCatalogo identifica a entrada.
+          </p>
+          <div class="toolbar">
+            <label
+              >Modelo de passiva<select
+                id="passive-template"
+                aria-label="Modelo de passiva"
+              ></select></label
+            ><button id="add-passive" type="button">
+              Adicionar passiva ao JSON
+            </button>
+          </div>
+          <p class="hint">
+            Os modelos são reutilizáveis. Ajuste elemento, direção, status e
+            valor no JSON; valide e salve a carta para aplicar.
+          </p>
+          <textarea
+            id="card-json"
+            class="admin-editor"
+            aria-label="Definição JSON da carta"
+            spellcheck="false"
+          ></textarea>
+          <div class="toolbar">
+            <button id="validate-card">Validar</button
+            ><button id="save-card" class="primary">Salvar entrada</button>
+          </div>
+          <p id="validation" class="preline"></p>
+        </section>
+        <section class="surface">
+          <h2>Campos e efeitos disponíveis</h2>
+          <p class="hint">
+            Não coloque funções JavaScript no catálogo. Uma habilidade ativa
+            pode ter alvo e uma lista de efeitos declarativos. Gatilhos passivos
+            possuem um efeito identificado pelo nome.
+          </p>
+          <pre id="capabilities" class="preline"></pre>
+          <h3>Exemplo de efeito</h3>
+          <p class="hint">
+            Use descricao na carta, na habilidade ou na passiva para o texto
+            exibido ao jogador. O comportamento é definido por efeitos; o texto
+            não executa regras.
+          </p>
+          <pre class="preline">
+{ "descricao": "Escolha um aliado e cure 3 de vida." }</pre>
+          <pre class="preline">{ "id": "damage", "valor": 3 }</pre>
+          <pre class="preline">
+{ "id": "status", "status": "Cego", "duracao": 2 }</pre>
+          <h3>Exemplo de habilidade ativa</h3>
+          <pre class="preline">
+{ "id": "curaAliada", "nome": "Curar", "custoMana": 2, "alvo": "UnicoAliado", "efeitos": [{ "id": "heal", "valor": 3 }] }</pre>
+          <p class="hint">
+            Para um comportamento novo, implemente sua regra e testes antes de
+            registrá-lo como suportado. As partidas iniciadas conservam uma
+            cópia das definições.
+          </p>
+        </section>
+      </div>
+    </main>
+    <p id="message" class="message" role="status" aria-live="polite" hidden></p>
+  </body>
 </html>

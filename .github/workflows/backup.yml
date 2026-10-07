@@ -1,0 +1,26 @@
+name: Encrypted database backup
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    environment: backups
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --omit=dev
+      - run: node scripts/backup.mjs
+        env:
+          MONGO_URL: ${{ secrets.BACKUP_MONGO_URL }}
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: encrypted-database-${{ github.run_id }}
+          path: backups/*.enc
+          retention-days: 30
+          if-no-files-found: error

@@ -1,0 +1,31 @@
+name: Deploy verified production
+on: workflow_dispatch
+permissions:
+  contents: read
+concurrency:
+  group: production
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+        env:
+          NODE_OPTIONS: --max-old-space-size=2048
+      - name: Check credentials
+        run: test -n "$VERCEL_TOKEN" && test -n "$VERCEL_ORG_ID" && test -n "$VERCEL_PROJECT_ID"
+      - run: npx --yes vercel@62.4.0 pull --yes --environment=production --token="$VERCEL_TOKEN"
+      - run: npx --yes vercel@62.4.0 deploy --prod --yes --token="$VERCEL_TOKEN"
+      - name: Smoke test
+        run: curl --fail --retry 3 https://ztcg.vercel.app/ready && curl --fail https://ztcg.vercel.app/HTML/index.html

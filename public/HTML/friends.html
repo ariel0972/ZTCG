@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Amigos · Zacornia</title>
+    <link rel="stylesheet" href="/CSS/app.css" />
+    <script type="module" src="/JS/friends.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">ZACORNIA <small>TRADING CARD GAME</small></a>
+      <nav aria-label="Principal">
+        <a href="/">Decks</a><a href="/HTML/index.html">Jogar</a
+        ><a href="/HTML/perfil.html">Perfil</a
+        ><a href="/HTML/friends.html">Amigos</a>
+      </nav>
+      <div id="account" class="account"></div>
+    </header>
+    <main class="social-page">
+      <p class="eyebrow">JOGUE COM QUEM VOCÊ CONHECE</p>
+      <h1>Amigos</h1>
+      <p id="social-intro">Entre na sua conta para adicionar amigos.</p>
+      <section id="social-controls" hidden>
+        <label
+          >Baralho para os convites<select id="social-deck"></select
+        ></label>
+        <form id="friend-search">
+          <label
+            >Buscar jogador pelo nome<input
+              name="q"
+              minlength="3"
+              maxlength="80"
+              required /></label
+          ><button>Buscar</button>
+        </form>
+        <div id="search-results"></div>
+        <h2>Amizades e pedidos</h2>
+        <div id="friend-list"></div>
+        <h2>Convites para jogar</h2>
+        <p class="hint">
+          Convites valem por 5 minutos. Escolha seu baralho antes de aceitar.
+        </p>
+        <div id="invite-list"></div>
+        <p><a href="/HTML/index.html">Ir para Jogar</a></p>
+      </section>
+    </main>
+    <p id="message" class="message" role="status" aria-live="polite" hidden></p>
+  </body>
+</html>

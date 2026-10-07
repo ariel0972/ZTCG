@@ -1,75 +1,120 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jogo de Cartas</title>
-    <link rel="stylesheet" href="../CSS/perfil.css">
-    <link rel="stylesheet" href="../CSS/responsive.css">
-
-    <link rel="shortcut icon" href="../assets/icons/favicon.svg" type="image/x-icon">
-    
-    <script src="../JS/profile.js" defer></script>
-
-</head>
-
-<body>
-    <div class="overlay"></div>
-    <nav class="navbar">
-        <div class="logo">
-            <img src="../assets/avatar.png" style="width: 50px;">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Conta · Zacornia</title>
+    <link rel="icon" href="/assets/icons/favicon.svg" />
+    <link rel="stylesheet" href="/CSS/app.css" />
+    <link rel="stylesheet" href="/CSS/battle.css" />
+    <link rel="stylesheet" href="/CSS/profile.css" />
+    <script type="module" src="/JS/profile.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">ZACORNIA <small>TRADING CARD GAME</small></a>
+      <nav aria-label="Principal">
+        <a href="/">Decks</a><a href="/HTML/index.html">Jogar</a
+        ><a href="/HTML/perfil.html">Perfil</a>
+      </nav>
+      <div id="account" class="account"></div>
+    </header>
+    <main class="page profile-page">
+      <section class="profile-hero" aria-label="Perfil do duelista">
+        <div class="profile-cover">
+          <p class="eyebrow">ZACORNIA · DUELISTAS</p>
+          <span class="cover-rune" aria-hidden="true">✧</span>
         </div>
-        <div class="links">
-            <!-- <a href="">Jogar</a> -->
-            <a href="deckbuilder.html">Decks</a>
-            <!-- <a href="">Cartas</a> -->
-            <!-- <a href="">Regras</a> -->
-            <a href="perfil.html">Perfil</a>
+        <div class="profile-identity">
+          <img
+            id="avatar"
+            class="profile-avatar"
+            src="/assets/avatar.png"
+            alt="Avatar do jogador"
+          />
+          <div>
+            <p class="eyebrow">SUA JORNADA</p>
+            <h1 id="player-name">Carregando…</h1>
+            <p id="profile-subtitle" class="muted"></p>
+          </div>
+          <div class="level-medal">
+            <small>NÍVEL</small><strong id="level">1</strong>
+          </div>
         </div>
-        <div id="sync-indicator" class="sync-idle" title="Status de Sincronização">
-            <span id="sync-icon">●</span>
-            <span id="sync-text">Conectando...</span>
+        <div
+          id="stats"
+          class="profile-stats"
+          aria-label="Estatísticas do jogador"
+        ></div>
+        <div class="level-track">
+          <div>
+            <strong id="level-label"></strong><span id="level-caption"></span>
+          </div>
+          <progress
+            id="level-progress"
+            value="0"
+            max="10"
+            aria-label="Progresso de nível"
+          ></progress>
+          <p class="hint">Cada 10 partidas concluídas, um novo nível.</p>
         </div>
-        <div class="sign" id="auth-links">
-            <a href="login.html" class="auth">Login</a>
-            <a href="register.html" class="auth">Registrar</a>
+        <nav class="profile-tabs" aria-label="Seções do perfil">
+          <a href="#decks-section">Baralhos</a
+          ><a href="#history-section">Histórico</a
+          ><a href="/HTML/friends.html">Encontrar jogadores</a>
+        </nav>
+      </section>
+      <details id="edit-section" class="surface profile-edit" hidden>
+        <summary>Editar meu perfil</summary>
+        <form id="profile-form">
+          <label
+            >Nome<input
+              id="name"
+              minlength="2"
+              maxlength="80"
+              required /></label
+          ><label
+            >Avatar (PNG, JPG ou WebP; até 200 KB)<input
+              id="photo"
+              type="file"
+              accept="image/png,image/jpeg,image/webp" /></label
+          ><button class="primary">Salvar perfil</button>
+        </form>
+      </details>
+      <section id="decks-section" class="surface profile-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">ESTRATÉGIAS</p>
+            <h2 id="decks-title">Baralhos</h2>
+          </div>
+          <span id="deck-count" class="muted"></span>
         </div>
-    </nav>
-
-    <div class="perfil-container">
-        <div class="perfil-header">
-            <img id="player-avatar" src="../assets/avatar.png" alt="Avatar">
-            <div class="player-info">
-                <h2 id="player-name">Nome do Jogador</h2>
-                <div class="info-texto">
-                    <p>Nível: <span id="player-level">1</span></p>
-                    <p>Vitórias: <span id="player-wins">0</span></p>
-                </div>
-            </div>
-            <button onclick="editarPerfil()">Editar Perfil</button>
+        <p id="deck-privacy" class="hint"></p>
+        <div id="decks" class="profile-decks"></div>
+      </section>
+      <section id="history-section" class="surface profile-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">NO CAMPO DE BATALHA</p>
+            <h2>Histórico de partidas</h2>
+          </div>
+          <span id="history-total" class="muted"></span>
         </div>
-
-        <div id="edit-container" class="edit-panel">
-            <div class="edit-painel-header">
-                <h2>Edite seu Perfil</h2>
-                <p onclick="fecharPainel()" class="close-painel">Fechar</p>
-            </div>
-            
-            <div>
-                <label for="">Nome de Usuário</label>
-                <input type="text" id="input-nome">
-                <label for=""></label>
-                <input type="file" id="input-foto">
-            </div>
-            <button onclick="salvarAlteracoes()" class=".btn-salvar-perfil">Salvar Alteração</button>
+        <div id="history" class="profile-history"></div>
+        <button id="more-history" class="quiet" hidden>
+          Mostrar mais partidas
+        </button>
+      </section>
+      <dialog id="profile-deck-dialog" class="profile-deck-dialog">
+        <div class="section-heading">
+          <h2 id="profile-deck-title"></h2>
+          <button id="close-profile-deck" class="quiet" autofocus>
+            Fechar baralho
+          </button>
         </div>
-
-        <h3>Meus Baralhos</h3>
-        <div id="lista-decks" class="grid-decks">
-        </div>
-    </div>
-    <script src="../JS/auth.js"></script>
-</body>
-
+        <div id="profile-deck-cards" class="profile-card-grid"></div>
+      </dialog>
+    </main>
+    <p id="message" class="message" role="status" aria-live="polite" hidden></p>
+  </body>
 </html>

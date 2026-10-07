@@ -1,118 +1,167 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Moldando o UX</title>
-    <link rel="stylesheet" href="../CSS/decks.css">
-    <link rel="stylesheet" href="../CSS/responsive.css">
-
-    <link rel="shortcut icon" href="../assets/icons/favicon.svg" type="image/x-icon">
-
-    <script src="../JS/cards.js" defer></script>
-    <script src="../JS/deckbuilder.js" defer></script>
-</head>
-
-<body>
-    <div id="zoom-overlay" class="zoom-hidden">
-    <img id="zoom-img" src="" alt="Carta Ampliada">
-</div>
-    <nav class="navbar">
-        <div class="logo">
-            <img src="../assets/avatar.png" style="width: 50px;">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Decks · Zacornia</title>
+    <link rel="icon" href="/assets/icons/favicon.svg" />
+    <link rel="stylesheet" href="/CSS/app.css" />
+    <link rel="stylesheet" href="/CSS/deck-mobile.css" />
+    <link rel="stylesheet" href="/CSS/deck-appearance.css" />
+    <script type="module" src="/JS/deckbuilder.js"></script>
+  </head>
+  <body class="deckbuilder-page">
+    <header class="topbar">
+      <a class="brand" href="/">ZACORNIA <small>TRADING CARD GAME</small></a>
+      <nav aria-label="Principal">
+        <a href="/" aria-current="page">Decks</a
+        ><a href="/HTML/index.html">Jogar</a
+        ><a href="/HTML/perfil.html">Perfil</a>
+      </nav>
+      <div id="account" class="account"></div>
+    </header>
+    <main class="workspace">
+      <aside
+        id="decks-screen"
+        class="deck-sidebar"
+        data-deck-screen="decks"
+        aria-label="Seus baralhos"
+      >
+        <p class="eyebrow">SUA COLEÇÃO</p>
+        <h1>Baralhos</h1>
+        <p class="muted">40 cartas. Um mago. Sua estratégia.</p>
+        <button id="new-deck" class="primary">Novo baralho</button>
+        <div id="deck-list" class="deck-list"></div>
+        <button id="starter" class="quiet">Montar exemplo jogável</button>
+        <p class="hint">
+          O exemplo usa os atributos já definidos. Cartas em rascunho ainda
+          precisam de revisão antes das partidas.
+        </p>
+        <label class="file-button"
+          >Importar JSON<input
+            id="import-deck"
+            type="file"
+            accept="application/json,.json" /></label
+        ><button id="export-deck" class="quiet">Exportar JSON</button>
+      </aside>
+      <section
+        id="cards-screen"
+        class="catalog"
+        data-deck-screen="cards"
+        aria-label="Selecionar cartas"
+      >
+        <p id="mobile-deck-context" class="mobile-deck-context"></p>
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">CONSTRUA SUA ESTRATÉGIA</p>
+            <h2>Catálogo de cartas</h2>
+          </div>
+          <span id="catalog-count" class="muted"></span>
         </div>
-        <div class="links">
-            <!-- <a href="">Jogar</a> -->
-            <a href="">Decks</a>
-            <!-- <a href="">Cartas</a> -->
-            <!-- <a href="">Regras</a> -->
-            <a href="../HTML/perfil.html">Perfil</a>
+        <div class="filters">
+          <label class="search"
+            >Buscar carta<input
+              id="search"
+              type="search"
+              placeholder="Nome, descrição ou habilidade" /></label
+          ><label
+            >Tipo<select id="type">
+              <option value="">Todos os tipos</option>
+              <option>Tropa</option>
+              <option value="Feitico">Feitiço</option>
+              <option>Mago</option>
+              <option>Estrutura</option>
+              <option>Armamento</option>
+            </select></label
+          ><label
+            >Elemento<select id="element">
+              <option value="">Todos</option>
+              <option>Fogo</option>
+              <option value="Agua">Água</option>
+              <option>Terra</option>
+              <option>Ar</option>
+              <option>Zarcos</option>
+              <option>Neutro</option>
+            </select></label
+          ><label
+            >Situação<select id="published">
+              <option value="">Todas</option>
+              <option value="yes">Jogáveis</option>
+              <option value="no">Rascunhos</option>
+            </select></label
+          >
         </div>
-        <div id="sync-indicator" class="sync-idle" title="Status de Sincronização">
-            <span id="sync-icon">●</span>
-            <span id="sync-text">Conectando...</span>
+        <div id="card-list" class="card-grid"></div>
+      </section>
+      <aside
+        id="editor-screen"
+        class="editor"
+        data-deck-screen="editor"
+        aria-label="Baralho em construção"
+      >
+        <h2 class="mobile-editor-title">Meu deck</h2>
+        <p class="eyebrow">BARALHO ATUAL</p>
+        <label
+          >Nome<input id="deck-name" maxlength="80" value="Meu baralho"
+        /></label>
+        <details class="deck-customization">
+          <summary>Personalizar ícone e verso</summary>
+          <div id="deck-appearance"></div>
+        </details>
+        <div class="deck-progress">
+          <strong id="deck-count">0 / 40</strong
+          ><span id="save-status" class="muted">Rascunho local</span>
         </div>
-        <div class="sign" id="auth-links">
-            <a href="../HTML/login.html" class="auth">Login</a>
-            <a href="../HTML/register.html" class="auth">Registrar</a>
+        <progress id="progress" max="40" value="0"></progress>
+        <div id="mage-slot" class="mage-choice"></div>
+        <div id="deck-summary" class="summary"></div>
+        <button id="browse-cards" class="quiet mobile-browse">
+          Adicionar cartas
+        </button>
+        <div id="deck-cards" class="deck-rows"></div>
+        <p id="deck-validity" class="hint"></p>
+        <div class="editor-actions">
+          <button id="save-deck" class="primary">Salvar baralho</button
+          ><button id="play" class="accent">Entrar na fila</button
+          ><button id="delete-deck" class="quiet danger">
+            Excluir baralho
+          </button>
         </div>
+      </aside>
+    </main>
+    <nav
+      id="deck-mobile-nav"
+      class="deck-mobile-nav"
+      aria-label="Construção de baralho"
+      hidden
+    >
+      <button type="button" data-deck-view="decks" aria-controls="decks-screen">
+        <span aria-hidden="true">▤</span>Baralhos
+      </button>
+      <button type="button" data-deck-view="cards" aria-controls="cards-screen">
+        <span aria-hidden="true">✦</span>Cartas
+      </button>
+      <button
+        type="button"
+        data-deck-view="editor"
+        aria-controls="editor-screen"
+      >
+        <span id="mobile-deck-count" aria-hidden="true">0/40</span>Meu deck
+      </button>
     </nav>
-
-    <section class="deckbuilder-container">
-        <main class="editor-area">
-            <section class="cards-pool active-tab" id="tab-pool">
-                <div class="pool-header">
-                    <h2>Cartas Disponíveis</h2>
-                    <select id="filtro-tipo" onchange="renderCards(this.value)">
-                        <option value="todos">Todos</option>
-                        <option value="criatura">Tropas</option>
-                        <option value="feitiço">Feitiços</option>
-                        <option value="torre">Estruturas</option>
-                        <option value="arma">Armamentos</option>
-                        <option value="mago">Magos</option>
-                    </select>
-                </div>
-                <div id="card-list" class="grid-cartas"></div>
-            </section>
-
-            <section class="current-deck" id="tab deck">
-                <div class="deck-header">
-                    <h2>Baralho: <span id="actual-deck">Meu Novo Deck</span> (<span id="deck-count">0</span>/40)</h2>
-                    <div class="management-menu">
-                        <select id="seletor-decks" class="select"></select>
-                        <button id="save-deck">Salvar Deck</button>
-                        <button id="btn-novo-deck">Novo Deck</button>
-                        <button id="edit-deck">Editar Deck</button>
-                        <button onclick="exportDeck()">Exporta</button>
-                        <button id="btn-atualizar-csv">Atualizar e Baixar CSV</button>
-                    </div>
-                </div>
-
-                <div id="deck-cards" class="grid-cartas"></div>
-
-
-                <div class="deck-footer">
-                    <div id="mage-container" class="mage-slot"></div>
-                    <button id="delete-deck">Excluir Deck</button>
-                </div>
-            </section>
-        </main>
-    </section>
-
-    <div id="modal-edicao" class="modal-container" style="display: none;">
-        <div class="modal-content">
-            <h3 class="modal-title">Configurações do Baralho</h3>
-
-            <label for="input-editar-nome">Nome do Deck:</label>
-            <input type="text" id="input-editar-nome" placeholder="Novo nome do deck...">
-            <br><br>
-            <h4>Escolha um Ícone:</h4>
-            <div id="icon-selector" class="icon-grid-selector">
-            </div>
-
-            <div class="modal-actions">
-                <button onclick="fecharModalEdicao()">Cancelar</button>
-                <button id="btn-confirmar-edicao" class="btn-save">Salvar Alterações</button>
-            </div>
+    <p id="message" class="message" role="status" aria-live="polite" hidden></p>
+    <dialog id="card-detail">
+      <div class="dialog-heading">
+        <h2 id="detail-name"></h2>
+        <button id="close-detail" aria-label="Fechar">Fechar</button>
+      </div>
+      <div class="detail-body">
+        <img id="detail-image" alt="Arte da carta" />
+        <div>
+          <p id="detail-text" class="preline"></p>
+          <button id="detail-add" class="primary">Adicionar ao baralho</button>
         </div>
-    </div>
-
-    <div id="export-area" class="export-hidden">
-        <h1 id="export-deck-name">Nome</h1>
-
-        <div class="export-main-container">
-            <div id="export-grid" class="export-grid"></div>
-
-            <div id="export-mago-preview" class="export-mago-container">
-            </div>
-        </div>
-
-        <p class="export-credits">Feito por Player</p>
-    </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="../JS/auth.js"></script>
-</body>
-
+      </div>
+    </dialog>
+  </body>
 </html>

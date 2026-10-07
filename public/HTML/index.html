@@ -1,52 +1,210 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-
-<head>
-    <meta charset="UTF-8">
-    <title>Jogo de Cartas</title>
-    <link rel="stylesheet" href="../CSS/style.css">
-    <link rel="stylesheet" href="../CSS/game.css">
-    <script src="../js/cards.js" defer></script>
-    <script src=".//js/game.js" defer></script>
-</head>
-
-<body>
-    <nav class="navbar">
-        <a href="index.html">Jogar</a>
-        <a href="deckbuilder.html">Decks</a>
-        <a href="">Cartas</a>
-        <a href="">Regras</a>
-        <a href="perfil.html">Perfil</a>
-    </nav>
-
-
-    <h1>Jogo de Cartas</h1>
-    <section class="game-container">
-
-        <div id="status-turno" class="turno-jogador">Sua Vez!</div>
-    
-        <div id="status">
-            <p>Turno: <span id="turno">1</span></p>
-            <p>HP Jogador: <span id="hp-jogador">20</span></p>
-            <p>HP Oponente: <span id="hp-oponente">20</span></p>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Partida · Zacornia</title>
+    <link rel="icon" href="/assets/icons/favicon.svg" />
+    <link rel="stylesheet" href="/CSS/app.css" />
+    <link rel="stylesheet" href="/CSS/battle.css" />
+    <script type="module" src="/JS/game.js"></script>
+  </head>
+  <body class="match-page">
+    <header class="topbar">
+      <a class="brand" href="/">ZACORNIA <small>TRADING CARD GAME</small></a>
+      <nav aria-label="Principal">
+        <a href="/">Decks</a><a href="/HTML/index.html">Jogar</a
+        ><a href="/HTML/perfil.html">Perfil</a>
+      </nav>
+      <div id="account" class="account"></div>
+    </header>
+    <main class="page">
+      <section id="lobby" class="lobby surface">
+        <p class="eyebrow">PARTIDAS ONLINE</p>
+        <h1>Prepare seu baralho</h1>
+        <p class="muted">
+          Encontre outro duelista e jogue com o baralho salvo na sua conta.
+        </p>
+        <label>Baralho<select id="lobby-deck"></select></label>
+        <p id="lobby-validation" class="hint"></p>
+        <div class="toolbar">
+          <button id="join" class="primary">Procurar oponente</button
+          ><button id="cancel" hidden>Cancelar busca</button
+          ><a href="/">Editar baralhos</a>
         </div>
-        <div class="campo-cards">
-            <div id="mago-inimigo" class="mage campo"></div>
-    
-            <h2>Campo do Oponente</h2>
-            <div id="campo-oponente" class="campo"></div>
-    
-            <h2>Campo do Jogador</h2>
-            <div id="campo-jogador" class="campo"></div>
-    
-            <div id="mago-jogador" class="mage campo"></div>
+        <p id="connection" role="status" class="muted">Conectando…</p>
+        <p class="hint">
+          Preparação simultânea com cinco cartas e 5 de mana inicial. A mana do
+          campo é recuperada após a preparação. Ataques, habilidades e feitiços
+          de dano ficam bloqueados também no primeiro turno de cada jogador.
+          Tempo de preparação e turno: 2 minutos. Três turnos consecutivos sem
+          ação causam derrota por inatividade. Em caso de desconexão, você tem
+          90 segundos para retornar.
+        </p>
+      </section>
+      <section id="match" hidden>
+        <div class="match-top">
+          <div>
+            <p class="eyebrow">CAMPO DE BATALHA</p>
+            <h1 id="match-title">Partida</h1>
+          </div>
+          <div class="toolbar">
+            <button id="view-result" hidden>Ver resultado</button>
+            <button id="surrender" class="quiet danger">Desistir</button>
+          </div>
         </div>
-    
-        <h2>Sua Mão</h2>
-        <div id="mao-jogador" class="mao"></div>
-    
-        <button id="passar-turno">Passar Turno</button>
+        <section
+          id="preparation-controls"
+          class="surface preparation-controls"
+          hidden
+        >
+          <p id="preparation-status" role="status"></p>
+          <p class="hint">
+            Cada jogador vê apenas sua mão. Ataques e efeitos de dano são
+            bloqueados. A mobilização respeita o limite do seu mago.
+          </p>
+          <button id="mulligan" class="quiet">Reembaralhar mão (0/3)</button>
+          <div id="bonus-draw-controls" hidden>
+            <p id="bonus-draw-label"></p>
+            <button id="accept-bonus">Comprar 1 carta extra</button>
+            <button id="decline-bonus" class="quiet">
+              Recusar 1 compra extra
+            </button>
+          </div>
+        </section>
+        <div id="battle-arena" class="battle-arena">
+          <div id="enemy-hud" class="player-hud enemy-hud"></div>
+          <div class="battle-board">
+            <div id="enemy-back" class="board-row rear-row"></div>
+            <div id="enemy-front" class="board-row front-row"></div>
+            <div class="arena-divider"><span>✧</span></div>
+            <div class="player-field">
+              <div class="turn-time">
+                <span>Tempo restante</span
+                ><strong id="turn-clock" aria-live="off"></strong>
+              </div>
+              <div class="player-rows">
+                <div id="my-front" class="board-row front-row"></div>
+                <div id="my-back" class="board-row rear-row"></div>
+                <div
+                  id="field-zones"
+                  class="zone-piles"
+                  aria-label="Zonas do seu baralho"
+                >
+                  <button id="deck-zone" class="zone-pile" aria-label="Baralho">
+                    <img src="/assets/card-backs/common.png" alt="" /><span
+                      class="zone-pile-caption"
+                      >Baralho <b id="deck-pile-count">0</b></span
+                    >
+                  </button>
+                  <button
+                    id="graveyard"
+                    class="zone-pile"
+                    aria-label="Cemitério"
+                  >
+                    <img src="/assets/card-backs/common.png" alt="" /><span
+                      class="zone-pile-caption"
+                      >Cemitério <b id="graveyard-pile-count">0</b></span
+                    >
+                  </button>
+                </div>
+              </div>
+              <div class="turn-action">
+                <button id="end-turn" class="primary">Passar turno</button>
+              </div>
+            </div>
+          </div>
+          <div id="my-hud" class="player-hud my-hud"></div>
+          <section class="hand-dock" aria-label="Sua mão">
+            <div class="hand-heading">
+              <h2>Sua mão <span id="hand-count"></span></h2>
+              <span
+                >Arraste para jogar · Clique para ações · Botão direito para
+                ampliar</span
+              >
+            </div>
+            <div id="hand" class="hand"></div>
+          </section>
+        </div>
+        <div class="battle-footer">
+          <div class="toolbar">
+            <span id="footer-zones" hidden
+              ><button id="graveyard-footer">Cemitério</button
+              ><button id="deck-zone-footer">Baralho</button></span
+            >
+            <button id="card-back-settings" class="quiet">Verso e mesa</button>
+            <button id="clear-selection" class="quiet">Cancelar ação</button>
+          </div>
+          <details class="match-history">
+            <summary>Histórico da partida</summary>
+            <div id="log" class="battle-log" aria-live="polite"></div>
+          </details>
+        </div>
+        <p id="selection-help" class="target-cue" role="status" hidden></p>
+      </section>
+    </main>
+    <section
+      id="card-menu"
+      class="card-action-menu"
+      aria-label="Ações da carta"
+      hidden
+    >
+      <div class="card-menu-heading">
+        <strong id="menu-title"></strong
+        ><button id="menu-close" aria-label="Fechar ações">×</button>
+      </div>
+      <div
+        id="action-panel"
+        class="action-panel"
+        role="menu"
+        aria-label="Ações disponíveis"
+      ></div>
     </section>
-</body>
-
+    <dialog
+      id="card-back-dialog"
+      class="card-back-dialog"
+      aria-labelledby="card-back-title"
+    >
+      <div class="dialog-heading">
+        <img
+          class="picker-logo"
+          src="/assets/card-backs/logo.png"
+          alt="Zacornia"
+        />
+        <h2 id="card-back-title">Verso do seu baralho</h2>
+        <button id="card-back-close">Fechar</button>
+      </div>
+      <p class="hint">
+        O verso pertence ao baralho usado nesta partida. Personalize nome, ícone
+        e verso no construtor de baralhos.
+      </p>
+      <label class="pile-toggle"
+        ><input type="checkbox" id="piles-on-field" checked /> Mostrar baralho e
+        cemitério como pilhas no campo</label
+      >
+      <div id="card-back-picker" class="card-back-picker"></div>
+    </dialog>
+    <dialog id="zone-dialog">
+      <div class="dialog-heading">
+        <h2 id="zone-title">Cartas</h2>
+        <button id="zone-close">Fechar</button>
+      </div>
+      <div id="zone-cards" class="zone-grid"></div>
+    </dialog>
+    <dialog
+      id="result-dialog"
+      class="match-result"
+      aria-labelledby="result-title"
+    >
+      <p class="eyebrow">PARTIDA ENCERRADA</p>
+      <div id="result-symbol" class="result-symbol" aria-hidden="true"></div>
+      <h2 id="result-title"></h2>
+      <p id="result-reason"></p>
+      <div class="result-actions">
+        <button id="new-match" class="primary" hidden>Nova partida</button>
+      </div>
+      <button id="result-close" class="quiet">Ver campo de batalha</button>
+    </dialog>
+    <p id="message" class="message" role="status" aria-live="polite" hidden></p>
+  </body>
 </html>

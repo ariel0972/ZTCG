@@ -1,97 +1,52 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-
-<head>
-    <meta charset="UTF-8">
-    <title>Login</title>
-    <link rel="stylesheet" href="../CSS/login.css">
-    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-    <script src="../JS/profile.js" defer></script>
-
-</head>
-
-<body>
-    <div class="login-container">
-        <div class="login-form">
-            <h1>Login</h1>
-            <p id="msg-form"></p>
-            <form action="#" id="form">
-                <div class="box-form">
-                    <input placeholder="Email" type="text" name="email" required>
-                    <i class='bx bxs-user'></i>
-                </div>
-
-                <div class="box-form">
-                    <input placeholder="Senha" type="password" name="senha" required>
-                    <i class='bx bxs-lock-alt'></i>
-                </div>
-
-                <div class="box-remember">
-                    <label>
-                        <input type="checkbox" name="lembrar" id="remeber">
-                        Lembrar
-                    </label>
-                    <a href="#">Esqueceu a senha?</a>
-                </div>
-
-                <button type="submit">Entrar</button>
-
-                <div class="registro">
-                    <p>Não tem uma conta? <a href="register.html">Registrar</a> </p>
-                </div>
-            </form>
-        </div>
-    </div>
-    <script>
-        const form = document.querySelector('#form');
-        const msg = document.getElementById('msg-form')
-
-        form.addEventListener('submit', async (e) => {
-            msg.style.display = 'none'
-            e.preventDefault(); // Impede a página de recarregar
-
-            const userData = {
-                email: form.email.value,
-                senha: form.senha.value,
-            }
-
-
-            const response = await fetch('/auth/logar', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(userData) // Transforma o objeto em texto JSON
-            });
-            if (!response) {
-                return console.log('Deu erro!')
-            }
-            const data = await response.json()
-
-            if (data.content == 'Senha inválida') {
-                msg.style.display = "block"
-                msg.innerText = "Senha Incorreta"
-            }
-            if (data.content == "Conta inexistente") {
-                msg.style.display = "block"
-                msg.innerText = "Esse Email não existe"
-            }
-
-            // No momento do sucesso do login:
-            if (data.success) {
-                const storage = form.lembrar.checked ? localStorage : sessionStorage;
-
-                storage.setItem("token", data.token);
-                storage.setItem("playerProfile", JSON.stringify(data.user));
-
-                setInterval(() => {
-                    window.location.href = "perfil.html"
-                }, 2000);
-            }
-        })
-
-
-    </script>
-</body>
-
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Conta · Zacornia</title>
+    <link rel="icon" href="/assets/icons/favicon.svg" />
+    <link rel="stylesheet" href="/CSS/app.css" />
+    <script type="module" src="/JS/account-form.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">ZACORNIA <small>TRADING CARD GAME</small></a>
+      <nav aria-label="Principal">
+        <a href="/">Decks</a><a href="/HTML/index.html">Jogar</a
+        ><a href="/HTML/perfil.html">Perfil</a>
+      </nav>
+      <div id="account" class="account"></div>
+    </header>
+    <main class="auth-shell">
+      <section class="auth-box">
+        <p class="eyebrow">BEM-VINDO DE VOLTA</p>
+        <h1>Entre na sua conta</h1>
+        <p class="muted">Seus baralhos, prontos para a próxima partida.</p>
+        <form id="auth-form" data-mode="login">
+          <label
+            >Email<input
+              name="email"
+              type="email"
+              autocomplete="email"
+              required /></label
+          ><label
+            >Senha<input
+              name="senha"
+              type="password"
+              autocomplete="current-password"
+              required /></label
+          ><label class="remember"
+            ><input name="lembrar" type="checkbox" />Lembrar nesta
+            máquina</label
+          ><button class="primary">Entrar</button>
+        </form>
+        <p><a href="/HTML/forgot-password.html">Esqueci minha senha</a></p>
+        <p class="hint">
+          Ainda não tem uma conta?
+          <a href="/HTML/register.html">Cadastre-se</a>.
+        </p>
+      </section>
+    </main>
+    <p id="message" class="message" role="status" aria-live="polite" hidden></p>
+  </body>
 </html>

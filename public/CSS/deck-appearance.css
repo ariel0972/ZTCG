@@ -1,0 +1,53 @@
+.deck-customization {
+  margin: 12px 0;
+}
+.deck-customization summary {
+  cursor: pointer;
+}
+.appearance-options {
+  border: 1px solid var(--border, #31434d);
+  margin: 12px 0;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.appearance-options button {
+  min-width: 0;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+}
+.appearance-options button[aria-pressed="true"] {
+  outline: 2px solid #e9be69;
+}
+.appearance-options img {
+  width: 100%;
+  height: 65px;
+  object-fit: contain;
+}
+.appearance-options.icone img {
+  height: 30px;
+}
+.deck-list-icon {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  float: left;
+  margin-right: 10px;
+}
+.appearance-options.icone img,
+.deck-list-icon {
+  background: #cddad7;
+  border-radius: 6px;
+  padding: 3px;
+}
+.appearance-options img[src$="/ar.svg"],
+.appearance-options img[src$="/zarcos.svg"],
+.deck-list-icon[src$="/ar.svg"],
+.deck-list-icon[src$="/zarcos.svg"] {
+  background: #243440;
+}

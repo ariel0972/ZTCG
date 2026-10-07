@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+.git
+.github
+.agents
+.codex
+.vercel
+node_modules
+dist
+tests
+backups
+*.log
+/Assets
+gemini.html

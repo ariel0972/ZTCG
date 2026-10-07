@@ -1,0 +1,644 @@
+ZTCG — GUIA DO PROJETO, ARQUITETURA E PRÓXIMOS PASSOS
+Revisão: 07/10/2026. Escopo: todo o código, configuração, testes e assets próprios
+do projeto. node_modules, dist, .git, .vercel, backups e logs são dependências,
+artefatos gerados ou dados locais; não são fontes do jogo.
+
+1. CONCLUSÃO DA ANÁLISE
+
+O servidor atual usa uma arquitetura autoritativa: o cliente envia intenção; o
+motor verifica identidade, turno, alvos, custos e limites; o coordenador grava
+com comparação de revisão no MongoDB; só então devolve o estado privado.
+O conteúdo e a ordem do baralho adversário nunca fazem parte desse snapshot.
+O próprio baralho é mostrado ordenado por nome, sem revelar a ordem de compra.
+
+Foram preservadas as regras e a aparência atuais, conforme confirmação do autor.
+As mudanças locais já existentes fazem parte do projeto a ser enviado ao GitHub.
+Esta revisão não executa migrações de produção nem sobrescreve cartas no banco.
+
+Correções de prioridade alta aplicadas:
+- Conexão MongoDB: somente tentativas em curso são compartilhadas. Uma promessa
+  antiga resolvida não pode impedir nova conexão após encerramento da conexão.
+- Publicação: efeitos especiais de feitiços não são aceitos em habilidades
+  genéricas que não têm um executor para eles. Rascunhos continuam permitidos.
+- Decks: a entrada na fila e a consulta de deck jogável verificam a execução de
+  cada carta, inclusive registros publicados diretamente fora do administrador.
+- Presença: toda partida nova/revanche recebe seu próprio instante de início;
+  tempo passado na fila ou na tela de resultado não causa abandono imediato.
+- Alvos: Estrutura é normalizada para a instância da estrutura. Seus status não
+  afetam a tropa vinculada; feitiços dirigidos apenas a estruturas não abrem Jato.
+- Transporte: uma ação já confirmada não é reenviada nem exibida como falha por
+  um erro da consulta de sincronização posterior. Mantém IDs nas retentativas.
+
+Arquitetura e limpeza:
+- Separados src/game/state.ts e capabilities.ts do engine.ts. APIs, scripts e
+  testes usam o mesmo validador; passivas importam contratos sem depender do motor.
+- Removidos src/game/socket.ts, matchmaker.ts e tests/socket.test.ts. Eles
+  mantinham uma segunda implementação de fila, relógio e revanche, só em memória,
+  que o servidor atual nunca iniciava. Cobertura pertinente usa DurableGame/HTTP.
+- Removidas dependências socket.io e socket.io-client e a camada timeout fictícia
+  do cliente. Os eventos locais do transporte continuam sendo sua API interna.
+- Removidos public/JS/cards.js e public/assets/cards.csv: eram catálogos antigos
+  sem consumidores; cards.js tinha callbacks ilustrativos e custos divergentes.
+  O catálogo executável local é src/data/catalog.json, com sobreposição do banco.
+- Removidos CSS antigos decks.css, game.css, login.css, perfil.css, responsive.css
+  e style.css, sem imports nem referências nas páginas atuais. CSS atual fica
+  separado por base compartilhada e funcionalidades; não houve redesign.
+- Removidos tipos de deck/carta duplicados sem consumidores e filtro legado
+  comentado dos testes. Eliminada importação direta de uma dependência transitiva
+  mongodb: ObjectId vem de mongoose.Types, já declarado no projeto.
+- Removidos relatórios .md históricos e ALTERACOES_E_PROXIMOS_PASSOS.txt após
+  consolidar instruções vigentes aqui. README.md é o único Markdown próprio.
+- Backups no GitHub passam a acionamento manual, para que enviar os workflows
+  não ative inadvertidamente cópias diárias anteriormente deixadas preparadas.
+- scripts/audit-project.ts e o teste de arquitetura vigiam imports, arquivos
+  estáticos com caixa exata, módulos sem uso e descrição individual neste guia.
+
+2. CAMADAS E LIMITES
+
+Navegador -> rotas HTTP autenticadas -> serviços/coordenador -> motor/contratos.
+MongoGameStore -> MongoDB: lobby central, salas independentes e presença.
+DurableGame -> Game: restaurar, avançar prazos, executar, gravar e projetar.
+Game não importa Express, MongoDB nem DOM. Seus efeitos são declarativos.
+Tipos e capabilities não devem importar rotas, serviços de banco nem navegador.
+
+Mongoose e Zod têm tarefas diferentes: documento persistido e validação de
+entrada. Ao mudar o contrato, alinhe os dois. Não os una em um módulo que faça
+o motor carregar modelos de banco. Também mantenha o banco simulado nos testes.
+
+Não unir estilos por mera redução de arquivos: app.css é base; battle.css é
+compartilhado pela partida e inspeção no perfil; profile.css é específico;
+deck-mobile.css e deck-appearance.css representam funcionalidades distintas.
+Não remover artes sem conferir referência local, banco editável e cartas futuras.
+
+3. MECÂNICAS UTILIZADAS E LIMITAÇÕES
+
+Deck: 40 cartas + 1 mago; Tropa/Feitico até 3 cópias, Estrutura/Armamento até 2.
+Rascunhos incompletos podem ser salvos, mas cartas inexistentes/cópias inválidas
+são rejeitadas. Cartas jogáveis precisam de publicação e capacidade executável.
+Médico da Peste usa 900098; Palhaço usa 098. Objetos legados com nome do Médico
+são convertidos; uma referência isolada 098 continua identificando Palhaço.
+
+Preparação: ambos recebem cinco cartas e cinco mana, mobilizam gratuitamente
+respeitando o mago, e confirmam separadamente. Sem tropas na mão inicial,
+podem reembaralhar até três vezes antes de iniciar ações; cada vez oferece
+uma compra opcional ao oponente. Combate espera confirmações e compensações.
+Ataques, habilidades e ações com dano estão bloqueados na preparação E nos
+turnos 1 e 2 de combate. Essa decisão posterior substitui os textos antigos
+que permitiam habilidades na preparação ou bloqueavam somente o primeiro jogador.
+Recuperação começa no início do turno de combate, somando mago e cartas em campo,
+inclusive flanqueadas; o teto é 20. Uma rodada contém os turnos dos dois jogadores.
+
+Combate: depois de atacar não se mobilizam tropas no mesmo turno. Habilidade uma
+vez por carta por rodada; feitiços comuns e assinaturas têm limites separados.
+Mago ataca apenas sem tropas próprias. Frente mira a coluna visual oposta;
+Diagonal mira adjacentes; Universal lateral mira frente/centro e central mira as
+três colunas. Guardar e Esconder alteram alvos. Tropas congeladas não bloqueiam
+o mago. Estrutura frontal protege sua tropa sem transferir sobra; Abalo desativa
+essa proteção no turno. Estruturas atacam usando o limite de ataques de tropas.
+Armamentos aumentam atributos de cartas vinculadas. Flanquear usa seus slots;
+Herança mantém armamento após morte; Campo livre permite movimento por turno.
+Sacrifício gratuito de tropa é exclusivo do Necromante e consome sua habilidade.
+Ressurreição retorna à mão; banir/esquecer usam zonas irrecuperáveis pelo cemitério.
+
+Fraqueza elemental dobra dano; resistência reduz à metade arredondada para baixo.
+Armadura/escudos se aplicam depois. Veneno: 1 dano por rodada por 3 rodadas,
+reaplicar aumenta duração até 5. Queimado: 1 por 2 rodadas, reaplicar aumenta
+dano até 3 e duração até 5. Sangrando: 1 por 3, reaplicar aumenta dano até 5.
+Congelado expira ao fim do próximo turno global. Dano periódico ocorre no fim
+da rodada. Escudo absorve uma quantidade total; EscudoProtecao bloqueia três
+golpes inteiros e expira em duas rodadas. Não confundir esses dois status.
+
+Reações: Fogo+Água=Vapor (ignora resistência no turno); Ar+Terra=Erosão (descarta
+duas do deck); Água+Terra=Lama (bloqueia campo por duas rodadas); Fogo+Terra=Lava
+(2 nas adjacentes, ignora estruturas); Fogo+Ar=Explosão (sobra ao mago no turno);
+Água+Ar=Congelar; Zarcos+Zarcos=2 mana; Lama+Água=Florescer (+1 vida máxima/atual
+da planta, veneno nas demais). Florescer não encerra a duração restante de Lama.
+Reação consome elemento aplicado, preserva elemento base; Neutro não cria token.
+O botão da interface recebe descrições de reactions.ts, sem outra tabela de regras.
+
+Magos publicados de Fogo/Água:
+- Fogo 016: vida 20, ataque 3, recuperação 3; limites 2 mobilizações, 3 ataques,
+  3 feitiços comuns e 2 assinaturas; fraqueza Água, resistência Ar. +1 dano nos
+  próximos feitiços de Fogo a cada duas conjurações. Recuperar Energia descarta
+  feitiço da mão, recupera 3 mana (teto 20), custa 0 e consome a habilidade.
+- Água 017: vida 20, ataque 3, recuperação 3; limites 3 mobilizações, 1 ataque,
+  3 comuns e 2 assinaturas; fraqueza Terra, resistência Fogo. Conjurar Água cura
+  3 no próprio mago até 26. Proteção Aquática custa 4: cura 3 ou Escudo 3 por 2
+  rodadas em aliado. Cura comum não retira vida extra que já esteja acima do máximo.
+- Magos de Terra/Ar ainda precisam de cadastro e homologação completos. Variações
+  condicionais de feitiços para esses magos são testadas com fixtures.
+
+Feitiços implementados:
+- 001 Bola de Fogo: custo 4, dano 3 em todas as tropas inimigas, inclusive
+  flanqueadas. Com Furacão na rodada, em qualquer ordem, soma dano 6 em tropas e
+  mago inimigos, uma combinação por jogador por rodada.
+- 002 Jato d'água: custo 3, dano 4 em inimigo no próprio turno. Fora do turno,
+  cancela um comum de Fogo dirigido a tropa/mago, inclusive vários alvos, sem
+  causar dano nem aplicar elemento. Não cancela assinaturas nem feitiço só para
+  estrutura. Janela de 20 s; opção de recusar; timeout resolve o feitiço original.
+  Custos, limites e passivas de conjuração são consumidos pelos dois. Não há
+  cadeia de respostas. Pendência e tempo restante do turno sobrevivem a reinício.
+- 003 Ataque Pedregoso: custo 5, cinco pedras de dano 1 distribuídas por tropas
+  vivas da esquerda à direita; pedras restantes vão ao mago se não houver tropas.
+- 004 Furacão: custo 6, devolve tropa à mão e destrói sua estrutura; dano 3 no
+  mago ao fim de duas rodadas.
+- 005 Chuva de Flechas: custo 2, dano 3 em todos os inimigos ao fim de duas
+  rodadas; uma chuva em campo considerando os dois jogadores. Fogo aumenta para
+  5, Água congela tropas, Ar aplica Sangrando, Terra aplica Cego.
+- 006 Escudo Protetor: custo 4, bloqueia três golpes de dano em aliado, quebra
+  no terceiro e dura no máximo duas rodadas. Condições periódicas têm tratamento
+  próprio; não presumir que sejam golpes de ataque/feitiço.
+- 007 Tremor: custo 4, dano 4 em tropas e Incapacitado por duas rodadas; Abalo
+  impede defesa de estruturas no turno, inclusive para este golpe. Com Mago de
+  Terra, dano 6 em tropas/mago e Atordoado nas tropas substitui Incapacitado.
+- 008 Bola de Luz: custo 4, Cego em inimigos por duas rodadas; com Mago de Fogo,
+  também dano 3. Mago Cego não conjura nem responde com Jato.
+- 009 Furacão de Areia: custo 4, Cego por duas rodadas e dano 2 no fim de duas
+  rodadas em todos os inimigos; com Mago de Ar, rouba carta do topo inimigo.
+- 010 Chuva de Meteoros: custo 4, dano 2 em 1–3 tropas escolhidas; com Golém
+  de Terra próprio, todas as tropas são automáticas. Não atinge mago. 025 é
+  reconhecido como Golém de Terra; outras definições exigem nome/elemento compatíveis.
+- 040 Lágrima de Zarcos: custo 0, +3 mana; próxima outra carta Zarcos própria
+  na rodada retorna esta cópia do cemitério à mão uma única vez.
+- 090 Fluxo Forte: custo 2, compra três; próxima outra Zarcos própria na rodada
+  compra mais uma, uma vez por cópia. Compra sem cartas causa derrota no motor.
+
+Passivas: são efeito + gatilho + parâmetros. Salamandra retalia com Envenenado,
+Cágado com Queimado, inclusive em golpe fatal ou sem dano. Dançarina concede
+ataque por ligação a vizinhos elegíveis; bônus recalcula com posição/presença e
+se acumula. Esqueleto em Chamas bloqueia básico de tropa Água OU Frente, sem
+bloquear habilidades/feitiços/magos. Ativas mostradas nas artes dessas tropas
+não foram implementadas só por terem recebido passivas. Não presumir carta completa.
+
+Conta/social: amizade exige consentimento; convite privado dura 5 min e fixa
+decks válidos; aceitação é idempotente. Perfil mostra estatísticas do histórico
+inteiro, 20 partidas por página; nível = 1 + piso(partidas concluídas/10), incluindo
+empates/derrotas. Novos decks e antigos sem publico=true são privados.
+Recuperação existe: hash do token de 32 bytes, 30 min, uso único e revogação de
+sessões antigas. Documentos históricos registram configuração Gmail posterior;
+a revisão atual não confirma entrega real de e-mail. Homologar o fluxo completo.
+
+4. CADASTRAR CARTAS E IMPLEMENTAR COMPORTAMENTOS
+
+Editar texto não implementa mecânica. A definição local é catalog.json; um
+registro válido do banco com mesmo numeroCatalogo prevalece. Partida em curso
+conserva sua definição; editar local não substitui o registro do banco.
+Abra /HTML/admin.html como administrador, revise JSON, Valide e Salve entrada.
+expectedVersion protege edição concorrente; a API incrementa versao no salvamento.
+Comece com publicado=false; publique só após conferir arte/regra e testar.
+
+Exemplo de feitiço declarativo em rascunho:
+{
+  "numeroCatalogo": "900001", "nome": "Faísca de exemplo", "tipo": "Feitico",
+  "custoMana": 2, "elemento": "Fogo", "alvo": "UnicoInimigo", "maxAlvos": 1,
+  "descricao": "Cause 2 de dano e aplique Queimado.",
+  "efeitos": [{ "id": "damage", "valor": 2 },
+              { "id": "status", "status": "Queimado", "duracao": 2 }],
+  "publicado": false, "versao": 1
+}
+
+Genéricos: damage/heal com valor; status com status/duracao, opcional valor;
+draw/mana com Global; searchElemental com Deck; field com campo aliado/inimigo e
+elemento na carta; banish/forget com carta no campo/cemitério, nunca mago.
+Para queimadura, veneno e congelamento, duracao não altera as regras específicas
+de status.ts. Apenas status como Escudo usam os parâmetros de duração/intensidade.
+TodosInimigos inclui tropas, inclusive flanqueadas, e mago, não cada estrutura e
+armamento independente. TodasTropasInimigas exclui mago. Estrutura é a instância
+da estrutura. CampoAliado/Inimigo aceita campo frontal vazio. Cemiterio é próprio;
+Mao serve à habilidade especial Recuperar Energia, não a dano genérico.
+DeckOponente aparece no vocabulário de expansão mas não tem efeito genérico
+publicável correspondente. Enums do schema não prometem suporte a toda combinação.
+
+Especiais stoneVolley, tornado, arrowRain, protectionShield, tremor, lightOrb,
+sandstorm, meteors, zarcosTear e strongFlow representam regras completas.
+Use 003–010, 040 e 090 como exemplos, isolados e com os alvos exigidos.
+valor não necessariamente redefine um dano codificado no executor especial.
+Não podem ser usados em efeitos de habilidades genéricas. Uma ativa declarativa
+pode usar, por exemplo, alvo UnicoAliado e efeitos [{id: heal, valor: 3}].
+
+Modelos de passiva estão em /cards/schema e no seletor administrativo. Adicionar
+modelo só altera JSON do formulário: revise, valide e salve. Descrição própria
+prevalece nos detalhes. Para aura, configure elemento/valor/porVizinho; para
+restrição, elemento OU direcao com filtro opcional tipoAtacante; para retaliação,
+gatilho onAttacked + aplicarStatusAtacante + status/duracao suportados.
+
+Para novo efeito:
+1. Fechar alvo, custo, duração, acúmulo, preparação, estruturas, respostas,
+   fraqueza/resistência, morte e empate com o autor antes de programar.
+2. Alterar types/card.ts e models/Card.ts quando houver novo parâmetro; atualizar
+   capabilities.ts com combinações realmente executáveis, sem liberar placeholders.
+3. Implementar em engine.ts ou módulo puro auxiliar, com alteração atômica.
+4. Atualizar escolha de alvos em game.js/battle-ui.js/card-view.js se necessário.
+   Servidor continua a autoridade; destaque no navegador é só uma sugestão.
+5. Cobrir sucesso, alvo inválido, falta de mana/limite, bloqueio inicial, rollback,
+   duplicata, restauração e privacidade. Rever morte/efeitos simultâneos.
+6. Atualizar catálogo/descrição/arte, documentar arquivo novo e rodar audit/check.
+   Homologar em duas contas isoladas antes de publicar a carta no banco.
+Não aceitar callbacks, eval ou funções do navegador como regra de carta.
+
+5. O QUE FALTA, COMO FAZER E O QUE ESTÁ ESTRANHO
+
+P0 — Homologar conteúdo já publicado. Conferir carta por carta arte, custo,
+atributos, texto, alvo e execução. Atenção às ativas das tropas com passivas novas,
+à divergência histórica da 042 e a placeholders. A auditoria só prova estrutura
+e capacidades, não lê a arte nem decide balanceamento. Usar checklist por carta
+com exemplos e teste de regressão; não corrigir atributos em massa sem decisão.
+
+P0 — Definir regras deliberadamente bloqueadas. Evolução/ligamentos, União,
+Doente, Tremendo, Fraqueza como status e desempate por tropas fortes precisam
+de especificação. Fraqueza elemental já existe e Abalo já foi definido para
+Tremor. Derrota por compra sem cartas é vigente. Não implementar regras novas
+nem mudar números por inferência; apresentar opções concretas ao autor.
+
+P0 — Homologar partidas completas com duas contas, celulares físicos e teclado:
+preparação/reembaralhamento, bloqueios nos turnos 1/2, liberação no 3, alcances,
+estruturas/armamentos, Jato nos 20 s, condições, reação, derrota e revanche.
+Recarregar nos dois lados; simular perda unilateral/simultânea de rede; verificar
+custos/privacidade/resultado e que três turnos ociosos consecutivos causam derrota.
+Essa homologação humana exige jogadores e decisões sobre discrepâncias visuais;
+não foi substituída por fixtures ou alterações automáticas desta revisão.
+
+P1 — Carga sustentada na infraestrutura. Medir tempo da própria confirmação,
+atualização do oponente, SSE abertos, leituras/gravações e tamanho das salas.
+Teste simulado atual cobre 100 jogadores/50 salas/30 duplicatas em 4 coordenadores,
+mas não é benchmark real. Comparar região do banco/servidor, Server-Timing e
+game_command antes de aumentar recursos. Lobby único limita escala; se medições
+justificarem, separar entradas/pareamentos em documentos com reservas atômicas.
+
+P1 — Retenção e limpeza. Tentativas perdedoras de CAS podem deixar salas sem
+claim; lobby.active/generations acumula contas; presença e salas antigas não têm
+TTL de negócio. Definir prazo de histórico/revanche e política de limpeza antes
+de excluir. Criar manutenção paginada, idempotente, sem apagar sala ativa nem
+resultado pendente. Estado da sala é Schema.Mixed: formato precisa de versionamento
+e migração testada se contratos mudarem. Backup antes de migração real.
+
+P1 — Operação. Homologar e-mail real (entrega, spam, uso único, senha nova e sessão
+antiga), cron/alerta e ensaio de backup/restauração isolada. Configuração histórica
+não prova serviço atual. Verificação de e-mail e moderação continuam faltando.
+Limites de requisição são por IP em cada processo; instâncias independentes não
+compartilham esse contador. Caso o uso público exija proteção global, adicionar
+armazenamento compartilhado e testar dois jogadores atrás do mesmo NAT.
+
+P1 — Scripts de migração. update-troop-passives faz backup das propostas antes
+de aplicar; update-spell-rules ainda pode atualizar parcialmente um lote e não
+faz backup próprio. Reestruturar este último em planejamento/validação integral,
+backup e escrita com revisão, preservando campos não solicitados. Nesta revisão
+nenhum --apply foi executado. Operar com banco isolado/backup até refatorar.
+
+P2 — Motor/interface grandes. engine.ts concentra seleção, custos, combate e
+feitiços especiais; game.js concentra interação e coordenação da tela. Próximos
+recortes úteis: funções puras de alcance/alvos, resolução dos especiais, e
+controlador de seleção da interface. Começar por testes das fronteiras; evitar
+extrair métodos com acesso irrestrito ao estado que escondam a ordem de efeitos.
+state.ts/capabilities.ts já foram separados sem alterar execução das regras.
+
+P2 — Coerência de configuração/apresentação. Limites de cópias e versos aparecem
+também no cliente; usar a configuração devolvida pela API em uma futura melhoria.
+User.nivel/vitorias/partidas antigos não são atualizados pelo coordenador atual;
+perfil correto usa histórico completo. Não usar esses campos legados como ranking.
+Rascunho do editor fica no navegador e pode precisar descarte manual ao conflitar
+com revisão da conta. Conteúdo local é recuperável, mas não vira deck salvo sozinho.
+Logout limpa cookie/local, mas JWT emitido continua válido até expirar; recuperação
+de senha revoga com sessionVersion. Revogar todas as abas no logout exige decisão
+de experiência e teste próprio. Stream em curso reautentica na reconexão em até
+45 s; revogação imediata durante stream exigiria uma checagem adicional.
+O transporte tem eventos locais como queue:state: são callbacks internos, não
+Socket.IO. Banco continua sendo necessário, inclusive para carregar catálogo API;
+páginas estáticas e healthcheck funcionam sem ele. Não prometer jogo offline.
+
+Sugestões opcionais de regras/alterações para decidir com o autor:
+- Definir uma convenção única de duração: aplicação conta na rodada corrente?
+  Como agem efeitos periódicos empilhados e mortes simultâneas?
+- Documentar exemplos de alcance em colunas espelhadas, Guardar/Esconder e
+  ataque em coluna vazia com outras tropas presentes.
+- Decidir se card id/número deve continuar habilitando combos específicos ou se
+  combos/respostas futuros terão identificadores declarativos próprios.
+- Estabelecer critérios de evolução/União, desempate e esgotamento de deck antes
+  de liberar essas cartas. Balancear magos/feitiços em partidas registradas.
+- Tutorial, acessibilidade em dispositivos reais, ajustes de arte/feedback,
+  ranking, replay e critérios de pareamento são melhorias posteriores. Aparência
+  atual foi preservada; qualquer redesign deve ser consultado.
+
+6. EXECUÇÃO, INFRAESTRUTURA E TESTES
+
+npm ci instala versões do lock; npm run dev inicia TS; npm run build compila src
+para dist; npm start executa compilado; npm run demo usa fixtures locais na 3187.
+npm run audit não conecta ao banco nem carrega segredos. npm run check faz tipos,
+testes (incluindo auditoria de arquitetura) e build. Formatação: npm run format.
+
+.env: MONGO_URL, SECRET de 32+ caracteres e PORT. ALLOWED_ORIGINS vazio permite
+somente mesma origem via CORS; preencher com origens exatas quando necessário.
+Não registrar URI, token, senha ou mão nos logs. Exemplo público fica em .env.example.
+Criar administrador: npm run admin -- email; isso altera o MongoDB configurado.
+
+SMTP: PUBLIC_APP_URL, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, RESET_EMAIL_FROM;
+alternativa Resend: RESEND_API_KEY + RESET_EMAIL_FROM. Segredos ficam na plataforma,
+nunca no repositório. Configuração não verifica entrega: testar com conta própria.
+Enviar código ao GitHub não garante atualização automática do site se a integração
+Vercel não estiver conectada; conferir o deployment/alias após o push.
+
+/health verifica processo; /ready faz ping real do MongoDB. /ops/metrics e
+/ops/maintenance exigem Bearer CRON_SECRET. Métricas de salas são amostra até 100,
+não censo; manutenção reprocessa resultados e expira prazos. ALERT_WEBHOOK_URL
+é opcional; pendências acima de 5 min geram evento/alerta se configurado.
+Cron Vercel atual: 04:00 UTC diário, mantido. Não é relógio preciso para partidas
+sem jogadores: prazos também avançam em consultas/comandos e streams.
+
+Deploy GitHub manual: ambiente production e VERCEL_TOKEN/ORG_ID/PROJECT_ID;
+verificações rodam em push/PR. Backup manual: ambiente backups e BACKUP_MONGO_URL,
+BACKUP_ENCRYPTION_KEY. Arquivo criptografado AES-256-GCM, EJSON conserva tipos,
+artefato GitHub retido 30 dias. Não foi executado backup real nesta revisão.
+node scripts/backup.mjs cria backup; node scripts/backup.mjs restore <arquivo>
+usa RESTORE_MONGO_URL/RESTORE_DATABASE em banco vazio ztcg_restore_*.
+Esse backup lógico lê coleções sequencialmente e tudo em memória, sem snapshot
+consistente entre coleções durante escrita. Para escala, estudar backup gerenciado.
+
+Integração opcional: MONGO_TEST_URL e MONGO_TEST_DATABASE=ztcg_test_<identificador>
+em banco novo, isolado e vazio. O teste verifica prefixo/vazio antes de criar e
+remove apenas o banco temporário que ele próprio criou. Nunca apontar para produção.
+Não há necessidade de ler ou copiar o .env de produção para executar a suíte normal.
+
+7. INVENTÁRIO ESPECÍFICO DE CADA ARQUIVO
+
+Todos os caminhos abaixo são relativos à raiz. "Em uso" indica caminho de código
+ou arquivo operacional; assets reservados são preservados para conteúdo futuro.
+Para arquivo novo, escrever sua responsabilidade aqui: audit/check exigem a entrada.
+
+- .env.example — Lista variáveis públicas ilustrativas; não contém credenciais reais.
+- .gitattributes — Normalização automática de arquivos de texto pelo Git.
+- .github/workflows/backup.yml — Backup criptografado manual no ambiente backups, artefato com retenção de 30 dias.
+- .github/workflows/deploy.yml — Deploy manual de produção após check, credenciais e smoke test; não dispara em push.
+- .github/workflows/verify.yml — Instala pelo lock e executa check em push/PR ou manualmente.
+- .gitignore — Exclui dependências, dist, credenciais locais, backups, Vercel e logs do versionamento.
+- .prettierignore — Impede formatação de dependências, compilados e assets binários.
+- .vercelignore — Exclui credenciais, testes, ferramentas, backups e logs do pacote da hospedagem.
+- GUIA_DO_PROJETO.txt — Guia consolidado: diagnóstico, regras vigentes, prioridades, operação e inventário individual.
+- README.md — Entrada do projeto: instalação, uso, regras resumidas, comandos e link para este guia.
+- package-lock.json — Versões e integridade exatas da árvore instalada por npm ci; atualizar junto das dependências.
+- package.json — Dependências diretas e comandos npm; transportes legados foram removidos.
+- public/CSS/app.css — Base compartilhada de páginas, navegação, formulários, cards, diálogos e responsividade geral.
+- public/CSS/battle.css — Tabuleiro, mão, slots, cartas ao vivo, inspeção, resultado e avisos; também usado pelo perfil.
+- public/CSS/deck-appearance.css — Seletor de ícones/versos e apresentação da identidade do baralho.
+- public/CSS/deck-mobile.css — Painéis e barra de navegação do construtor em telas pequenas.
+- public/CSS/profile.css — Layout específico de identidade, estatísticas, decks e histórico do perfil.
+- public/HTML/admin.html — Página do editor administrativo de JSON, modelos de passiva e validação/publicação.
+- public/HTML/deckbuilder.html — Página inicial e construtor, filtros, lista, edição, importação/exportação e navegação móvel.
+- public/HTML/forgot-password.html — Solicitação de link de recuperação sem expor cadastro de e-mail.
+- public/HTML/friends.html — Busca de jogadores, pedidos, lista de amizades e convites com escolha de deck.
+- public/HTML/index.html — Lobby e tabuleiro, relógio, zonas, reações, seleção, respostas e resultado da partida.
+- public/HTML/login.html — Formulário de entrada, lembrar sessão e acesso à recuperação.
+- public/HTML/perfil.html — Perfil próprio/visitado, estatísticas, decks, edição do avatar e histórico paginado.
+- public/HTML/register.html — Cadastro com confirmação de senha e navegação comum.
+- public/HTML/reset-password.html — Formulário de senha nova; token vem do fragmento da URL.
+- public/JS/account-form.js — Envio de login/cadastro e armazenamento/redirecionamento da sessão.
+- public/JS/admin.js — Controlador do catálogo: edição/importação JSON, modelos, validação e salvamento com expectedVersion.
+- public/JS/auth.js — API com timeout/renovação, sessão, navbar, avisos temporários e criação segura de elementos.
+- public/JS/battle-events.js — Avisos públicos por sequência de evento sem repetir histórico após reconexão.
+- public/JS/battle-ui.js — Face dinâmica da carta, bônus exibidos, sugestões de destinos e arraste/toque.
+- public/JS/card-backs.js — Lista versos e renderiza pilhas de deck/cemitério; preferência local de disposição da mesa.
+- public/JS/card-inspection.js — Inspeção por hover/foco/I/botão direito/toque, detalhes e imagem integral.
+- public/JS/card-view.js — Tiles, atributos e descrições de efeitos/ativas/passivas para construtor e detalhes.
+- public/JS/deck-appearance.js — Valida/normaliza ícone e verso, e renderiza personalização por deck.
+- public/JS/deck-navigation.js — Navegação entre painéis do construtor no celular e estado de tela acessível.
+- public/JS/deckbuilder.js — Controla rascunhos, filtros, CRUD, limite visual de cópias, modelo, importação e exportação.
+- public/JS/friends.js — Controla busca, pedidos/amizades, convites, atualização e entrada em partida privada.
+- public/JS/game-transport.js — HTTP/SSE, reconexão, fallback, descarte de snapshots antigos e retentativas de eventos com o mesmo ID.
+- public/JS/game.js — Controla lobby, renderização/seleção, menus, comandos, cronômetro, respostas e reconhecimento de resultado.
+- public/JS/match-result.js — Abertura/fechamento do resultado e prevenção de reabertura automática na mesma tela.
+- public/JS/password-recovery.js — Valida token do fragmento, envia recuperação/redefinição e limpa sessão antiga após sucesso.
+- public/JS/profile.js — Carrega perfil/decks/histórico, inspeciona cartas, publica decks e edita nome/avatar.
+- public/assets/Cards/Amaldiçoar Arma.png — Arte utilizada pela definição de 068 Amaldiçoar Arma (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Amaldiçoar Estrutura.png — Arte utilizada pela definição de 128 Amaldiçoar Estrutura (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Antidoto.png — Arte utilizada pela definição de 101 Antidoto (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Aprendiz de Mago.png — Arte utilizada pela definição de 028 Aprendiz de mago (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Arco Elemental.png — Arte utilizada pela definição de 049 Arco Elemental (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Arco de Ranbow.png — Arte utilizada pela definição de 038 Arco de Ranbow (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Armadilha de Urso.png — Arte utilizada pela definição de 129 Armadilha de Urso (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Arqueiro.png — Arte utilizada pela definição de 024 Arqueiro (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Arvore Lanukia.png — Arte utilizada pela definição de 076 Árvore Lanukia (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Asas Incandescentes.png — Arte utilizada pela definição de 103 Asas Incandescentes (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Assassino.png — Arte utilizada pela definição de 020 Assassino (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Ataque de Canivetes.png — Arte utilizada pela definição de 064 Ataque de Canivetes (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Ataque de Pedregulhos.png — Arte utilizada pela definição de 003 Ataque Pedregoso (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Banir armamento.png — Arte utilizada pela definição de 050 Banir Armamento (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Barreira Ígnea.png — Arte utilizada pela definição de 031 Barreira Ignea (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Beija-flor de Fagniz.png — Arte utilizada pela definição de 043 Beija flor de Fagniz (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Bola de Demolição.png — Arte utilizada pela definição de 033 Bola de Demolição (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Bola de fogo.png — Arte utilizada pela definição de 001 Bola de Fogo (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Bola de luz.png — Arte utilizada pela definição de 008 Bola de luz (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Bruxo.png — Arte utilizada pela definição de 029 Bruxo (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Busca Elemental.png — Arte utilizada pela definição de 112 Busca Elemental (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Cachorro.png — Arte utilizada pela definição de 063 Cachorro (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Cagado.png — Arte utilizada pela definição de 110 Cágado de magma (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Canhão de Mana Instável.png — Arte utilizada pela definição de 109 Canhão de Mana Instável (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Canhão.png — Arte utilizada pela definição de 091 Canhão (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Cauterizar.png — Arte utilizada pela definição de 104 Cauterizar (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Cavaleiro.png — Arte utilizada pela definição de 021 Cavaleiro (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Cavalo.png — Arte utilizada pela definição de 074 Cavalo (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Cegueira dos Caídos.png — Arte utilizada pela definição de 073 Cegueira dos Caídos (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Chamar Armamento.png — Arte utilizada pela definição de 051 Chamar Armamento (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Chamar Gangue.png — Arte utilizada pela definição de 065 Chamar gangue (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Chamar Tropa.png — Arte utilizada pela definição de 093 Chamar Tropa (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Cheiro de Sangue.png — Arte utilizada pela definição de 045 Cheiro de Sangue (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Chuva Acida.png — Arte utilizada pela definição de 120 Chuva acida (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Chuva de Flechas.png — Arte utilizada pela definição de 005 Chuva de Flechas (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Chuva de Meteoros.png — Arte utilizada pela definição de 010 Chuva de Meteoros (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Circulo de Invocação.png — Arte utilizada pela definição de 071 Circulo de Invocação (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Congelar.png — Arte utilizada pela definição de 032 Congelar (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Cristal Kin - Azul.png — Arte utilizada pela definição de 096 Cristal Azul (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Cristal Kin - Rosa.png — Arte utilizada pela definição de 124 Cristal Rosa (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Cura de Sangue.png — Arte utilizada pela definição de 082 Cura de Sangue (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Dançarina das Chamas.png — Arte utilizada pela definição de 111 Dançarina das Chamas (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Druida.png — Arte utilizada pela definição de 070 Druida (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Elevar Moral.png — Arte utilizada pela definição de 134 Elevar Moral (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Encantar Armamento.png — Arte utilizada pela definição de 052 Encantar Armamento (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Encanto da Traição.png — Arte utilizada pela definição de 060 Encanto da Traição (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Enxame de Ratos.png — Arte utilizada pela definição de 089 Enxame de Ratos (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Escavação.png — Arte utilizada pela definição de 132 Escavação (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Escudeiro.png — Arte utilizada pela definição de 075 Escudeiro (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Escudo de Proteção.png — Arte utilizada pela definição de 006 Escudo Protetor (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Esfera de Vórtice.png — Arte utilizada pela definição de 094 Esfera de Vórtice (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Espada dos Mil Mortos.png — Arte utilizada pela definição de 037 Espada dos Mil Mortos (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Esqueleto em Chamas.png — Arte utilizada pela definição de 117 Esqueleto em Chamas (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Esqueleto.png — Arte utilizada pela definição de 095 Esqueleto (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Faca de Brinquedo.png — Arte utilizada pela definição de 099 Faca de Brinquedo (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Falar com Mortos.png — Arte utilizada pela definição de 061 Falar com os mortos (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Fluxo Forte.png — Arte utilizada pela definição de 090 Fluxo Forte (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Furacão de Areia.png — Arte utilizada pela definição de 009 Furacão de Areia (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Furacão.png — Arte utilizada pela definição de 004 Furacão (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Furtar.png — Arte utilizada pela definição de 097 Furtar (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Globo de luz.png — Arte original reservada, sem referência no catálogo local atual; conferir banco/planejamento antes de excluir.
+- public/assets/Cards/Goblin Sombrio.png — Arte utilizada pela definição de 077 Goblin Sombrio (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Goblin.png — Arte utilizada pela definição de 022 Goblin (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Golem de água.png — Arte utilizada pela definição de 026 Golém de água (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Golem.png — Arte utilizada pela definição de 025 Golém (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Guerreiro.png — Arte utilizada pela definição de 023 Guerreiro (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Jato da água.png — Arte utilizada pela definição de 002 Jato d'água (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Ladino.png — Arte utilizada pela definição de 088 Ladino (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Lança Chamas.png — Arte utilizada pela definição de 102 Lança Chamas (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Leptospirose.png — Arte utilizada pela definição de 072 Leptospirose (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Lágrima de Zarcos.png — Arte utilizada pela definição de 040 Lágrima de Zarcos (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Lâmina de Vento.png — Arte utilizada pela definição de 057 Lâminas Aéreas (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Machado.png — Arte utilizada pela definição de 048 Machado (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Mago de ar.png — Arte utilizada pela definição de 019 Mago de ar (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Mago de fogo.png — Arte utilizada pela definição de 016 Mago de fogo (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Mago de terra.png — Arte utilizada pela definição de 018 Mago de terra (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Mago de água.png — Arte utilizada pela definição de 017 Mago de água (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Maldição da Destruição.png — Arte utilizada pela definição de 116 Maldição da Destruição (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Maldição da Escolha.png — Arte utilizada pela definição de 062 Maldição da Escolha (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Maldição da Morte.png — Arte utilizada pela definição de 067 Maldição da Morte (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Maldição do Esquecimento.png — Arte utilizada pela definição de 069 Maldição do Esquecimento (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Maresia.png — Arte utilizada pela definição de 118 Maresia (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Mochila de Recursos.png — Arte utilizada pela definição de 092 Mochila de recursos (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Muro de Terra.png — Arte utilizada pela definição de 059 Muro de terra (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Médico da Peste.png — Arte utilizada pela definição de 900098 Médico da Peste (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Necromante.png — Arte utilizada pela definição de 108 Necromante (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Nevoeiro Denso.png — Arte utilizada pela definição de 121 Nevoeiro Denso (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Nome Profano.png — Arte utilizada pela definição de 054 Nome profano (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Nome Sagrado.png — Arte utilizada pela definição de 053 Nome Sagrado (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Olho da Verdade.png — Arte utilizada pela definição de 030 Olho da Verdade (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Pacto.png — Arte utilizada pela definição de 083 Pacto (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Palhaço.png — Arte utilizada pela definição de 098 Palhaço (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Pele de Luokis.png — Arte utilizada pela definição de 047 Pele de Luokis (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Peste Negra - efeito.png — Arte original reservada, sem referência no catálogo local atual; conferir banco/planejamento antes de excluir.
+- public/assets/Cards/Peste Negra.png — Arte utilizada pela definição de 066 Peste Negra (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Picada de Cobra.png — Arte utilizada pela definição de 046 Picada de Cobra (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Piranha.png — Arte utilizada pela definição de 041 Piranha (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Planta Carnívoro.png — Arte utilizada pela definição de 078 Planta Carnivora (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Plantar Arma.png — Arte utilizada pela definição de 081 Plantar arma (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Polinizar.png — Arte utilizada pela definição de 106 Polinizar (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Previsão.png — Arte utilizada pela definição de 113 Previsão (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Prisão de água.png — Arte utilizada pela definição de 119 Prisão de àgua (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Provocar.png — Arte utilizada pela definição de 135 Provocar (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Pulso de mana.png — Arte utilizada pela definição de 126 Pulso de mana (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Raio de luz.png — Arte utilizada pela definição de 011 Raio de luz (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Raiz Roxa.png — Arte utilizada pela definição de 079 Raiz Roxa (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Rato.png — Arte utilizada pela definição de 027 Rato (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Rebelde.png — Arte utilizada pela definição de 130 Rebelde (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Recuar.png — Arte utilizada pela definição de 114 Recuar (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Reerguer da Fúria.png — Arte utilizada pela definição de 085 Reerguer da Fúria (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Reerguer da Tristeza.png — Arte utilizada pela definição de 086 Reeguer da Tristeza (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Reerguer de Impaciência.png — Arte utilizada pela definição de 087 Reerguer da Impaciência (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Reerguer do Orgulho.png — Arte utilizada pela definição de 084 Reerguer do Orgulho (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Refletir.png — Arte utilizada pela definição de 125 Refletir (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Reviver Tropa.png — Arte utilizada pela definição de 080 Reviver Tropa (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Sacrifício.png — Arte utilizada pela definição de 115 Sacrificio (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Salamandra.png — Arte utilizada pela definição de 044 Salamandra (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Sifão de Mana.png — Arte utilizada pela definição de 039 Sifão de Mana (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Splash.png — Arte utilizada pela definição de 105 Splash (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Terremoto.png — Arte utilizada pela definição de 055 Teremoto (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Toque de Cura.png — Arte utilizada pela definição de 100 Toque de Cura (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Tornado de fogo.png — Arte utilizada pela definição de 035 Tornado de Fogo (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Torre.png — Arte utilizada pela definição de 056 Torre (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Torreta.png — Arte utilizada pela definição de 058 Torreta (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Toupeira.png — Arte utilizada pela definição de 042 Enxame de Ratos (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Trazer dos Mortos.png — Arte utilizada pela definição de 131 Trazer dos Mortos (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Tremor.png — Arte utilizada pela definição de 007 Tremor (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Tsunami.png — Arte utilizada pela definição de 123 Tsunami (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Tufão.png — Arte utilizada pela definição de 034 Tufão (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Visão espectral.png — Arte utilizada pela definição de 133 Visão Espectral (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/amplificar.png — Arte utilizada pela definição de 127 Amplificar (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Água curativa.png — Arte utilizada pela definição de 122 Água Curativa (rascunho local); pode ser sobrescrita por imgURL do banco.
+- public/assets/avatar.png — Avatar padrão e fallback visual quando carta/conta não tem imagem.
+- public/assets/card-backs/air.png — Verso air selecionável por baralho e usado nas pilhas da partida.
+- public/assets/card-backs/common.png — Verso common selecionável por baralho e usado nas pilhas da partida.
+- public/assets/card-backs/earth.png — Verso earth selecionável por baralho e usado nas pilhas da partida.
+- public/assets/card-backs/fire.png — Verso fire selecionável por baralho e usado nas pilhas da partida.
+- public/assets/card-backs/logo.png — Logo da apresentação da mesa.
+- public/assets/card-backs/water.png — Verso water selecionável por baralho e usado nas pilhas da partida.
+- public/assets/card-backs/zarcos.png — Verso zarcos selecionável por baralho e usado nas pilhas da partida.
+- public/assets/fundo site.png — Fundo original reservado; não é carregado pelo CSS atual. Preservado como arte disponível para decisões futuras.
+- public/assets/icons/agua.svg — Ícone agua usado em personalização de baralho ou tipo/elemento de carta.
+- public/assets/icons/ar.svg — Ícone ar usado em personalização de baralho ou tipo/elemento de carta.
+- public/assets/icons/favicon.svg — Favicon das páginas.
+- public/assets/icons/feitiço.svg — Ícone feitiço usado em personalização de baralho ou tipo/elemento de carta.
+- public/assets/icons/fogo.svg — Ícone fogo usado em personalização de baralho ou tipo/elemento de carta.
+- public/assets/icons/neutro.svg — Ícone neutro usado em personalização de baralho ou tipo/elemento de carta.
+- public/assets/icons/terra.svg — Ícone terra usado em personalização de baralho ou tipo/elemento de carta.
+- public/assets/icons/tropa.svg — Ícone tropa usado em personalização de baralho ou tipo/elemento de carta.
+- public/assets/icons/zarcos.svg — Ícone zarcos usado em personalização de baralho ou tipo/elemento de carta.
+- scripts/audit-project.ts — Auditoria offline de grafo de imports, módulos usados, assets/capitalização, catálogo e cobertura deste guia.
+- scripts/backup.mjs — Exporta documentos/índices em EJSON e AES-GCM; restaura em banco vazio isolado com prefixo permitido.
+- scripts/make-admin.ts — Concede admin a e-mail existente no MongoDB configurado e encerra conexão.
+- scripts/update-spell-rules.ts — Compara/sincroniza regras de 12 feitiços existentes; dry run padrão, --apply escreve com revisão; pendente backup por lote.
+- scripts/update-troop-passives.ts — Planeja quatro passivas, valida, salva backup e escreve com revisão apenas sob --apply.
+- src/application.ts — Fábrica Express: segurança, estáticos, conexão, montagem das APIs, operações e erros.
+- src/data/catalog.json — 130 definições locais de fallback, referenciadas por numeroCatalogo; banco válido pode substituí-las.
+- src/db/models/Card.ts — Modelo MongoDB das definições de carta, efeitos e habilidades com versionamento.
+- src/db/models/decks.ts — Modelo de deck por dono, referências, nome/ícone/verso, revisão e privacidade.
+- src/db/models/match.ts — Histórico concluído único por matchId e índice de consulta por jogador/data.
+- src/db/models/social.ts — Modelos Friendship e GameInvitation para pedidos, consentimento e convites com prazo.
+- src/db/models/user.ts — Conta com hash de senha oculto, avatar, admin, versão de sessão e recuperação; estatísticas antigas são legadas.
+- src/domain/deck.ts — Referências canônicas/legadas, entrada de deck e regras de quantidade/cópias/publicação.
+- src/game/capabilities.ts — IDs implementados e combinações de efeito/alvo/gatilho permitidas para publicar/jogar.
+- src/game/contracts.ts — Schema estrito de comandos e tipo Command, com UUID de ação e versão.
+- src/game/durable.ts — Coordena fila/convites, CAS, presença, prazos, resposta, recuperação, revanche e projeção de resultados.
+- src/game/engine.ts — Motor atômico: preparação, turnos, alvos, combate, feitiços, habilidades, morte, rollback e snapshot privado.
+- src/game/passives.ts — Auras/restrições puras e modelos administrativos reutilizáveis de passivas.
+- src/game/reactions.ts — Identifica pares elementais e fornece descrições públicas únicas; resolução fica no motor.
+- src/game/state.ts — Contratos de Instance, Slot, Player, State e DeckDefinition; sem banco ou transporte.
+- src/game/status.ts — Normaliza aliases, aplica status/acúmulos e calcula dano/duração por rodada.
+- src/game/store.ts — Contratos de armazenamento e MongoGameStore para lobby, salas, revisões e presença com confirmação por maioria.
+- src/lib/config.ts — Carrega ambiente e valida SECRET, MongoDB, porta e origens.
+- src/lib/errors.ts — AppError transporta status, código e detalhes públicos de falhas esperadas.
+- src/lib/mongodb.ts — Conexão compartilhada somente enquanto em curso, limites de pool e retentativa após falha/desconexão.
+- src/lib/observability.ts — Logs JSON e correlação/duração HTTP; omite corpo e segredos.
+- src/middlewares/checkAdmin.ts — Autoriza acesso administrativo consultando a permissão persistida da conta.
+- src/middlewares/checkToken.ts — Verifica JWT HS256 de acesso, conta e sessionVersion; impede uso de token de renovação na API.
+- src/middlewares/rateLimit.ts — Limitador por IP/processo, janela, limpeza e Retry-After; não distribuído.
+- src/routes/adminRoutes.ts — Diagnósticos administrativos e salvamento/publicação de carta com comparação de versão.
+- src/routes/cardRoutes.ts — Catálogo público, schema/capacidades/modelos e validação de definições.
+- src/routes/deckRoutes.ts — CRUD por dono com revisão otimista e consulta de deck apto a jogar.
+- src/routes/friendRoutes.ts — Busca escapada, pedidos/aceite/remoção, convites e criação idempotente de partida privada.
+- src/routes/gameRoutes.ts — Canal SSE privado de 45 s, estado HTTP e eventos autenticados/validados.
+- src/routes/passwordRoutes.ts — Pedido de recuperação genérico e consumo atômico do token; invalida sessões antigas.
+- src/routes/profileRoutes.ts — Perfil autenticado, decks publicados/privados e histórico paginado com estatísticas completas.
+- src/routes/userRoutes.ts — Cadastro/login, cookie de renovação, logout, dados próprios e edição de nome/avatar.
+- src/server.ts — Entrypoint: valida configuração, exporta app e inicia HTTP/desligamento em execução Node direta.
+- src/services/catalog.ts — Mescla catálogo local e registros válidos do banco; diagnostica registros legados sem apagá-los.
+- src/services/decks.ts — DTO/migração de referências, posse do deck e validação de cartas executáveis para jogar.
+- src/services/profiles.ts — Estatísticas completas e progressão a partir do histórico de partidas.
+- src/services/reset-mail.ts — Valida configuração e envia link por SMTP ou Resend, com TLS/timeouts e token fora da query.
+- src/types/card.ts — Schema Zod e tipos de carta, efeitos, ativas, passivas, elementos, imagens e limites.
+- src/types/index.ts — AuthRequest acrescenta userId autenticado ao Request do Express.
+- tests/architecture.test.ts — Verifica grafo atual, caminhos/caixa dos assets, definições locais e guia individual.
+- tests/battle-ui.test.ts — Faces dinâmicas, ataque exibido, bônus, destinos e arraste/toque no DOM.
+- tests/card-backs.test.ts — Versos/identidade por deck e apresentação das zonas em pilhas/botões.
+- tests/deck-navigation.test.ts — Painéis móveis e transições do construtor.
+- tests/durable-http.test.ts — Duas instâncias HTTP sobre store comum, autenticação/renovação, SSE privado, comandos duplicados e reconhecimento de resultado.
+- tests/durable.test.ts — Fila/partidas persistidas, prazos, CAS, presença, rematch, resposta, resultado e concorrência/carga simulada.
+- tests/engine.test.ts — Contratos/decks, publicação executável, privacidade, rollback, alvos estruturais, combate e idempotência.
+- tests/frontend.test.ts — Interface de construtor/admin em DOM com catálogo, filtros, limite, detalhes, salvamento e segurança de texto.
+- tests/game-performance.test.ts — Snapshot imediato/atrasado, confirmação após falha de consulta e avisos sem repetição.
+- tests/http.test.ts — Contas, decks, revisões, admin/catálogo, posse, rejeição de deck não executável e páginas sem banco.
+- tests/inspection.test.ts — Detalhes por hover/foco/teclado/toque e imagem integral da carta.
+- tests/mages.test.ts — Atributos, ativas/passivas dos magos de Fogo/Água e custo/bônus/cura.
+- tests/match-result.test.ts — Comportamento do diálogo de resultado e não reabertura automática.
+- tests/messages.test.ts — Expiração e renovação de mensagens de sucesso/erro.
+- tests/mongo.integration.test.ts — Integração opcional real em banco novo isolado, concorrência, reinício e resultado recuperável.
+- tests/mongodb.test.ts — Mock do driver para compartilhamento em curso, reconexão e retentativa após falha.
+- tests/passives.test.ts — Auras acumuláveis, retaliação, restrição Água OU Frente e configuração/publicação reutilizável.
+- tests/preview.ts — Servidor demo 3187 com contas fictícias; PREVIEW_PROFILES=1 acrescenta histórico/decks publicados locais.
+- tests/profiles.test.ts — Privacidade/publicação de decks, estatísticas completas, nível e paginação/edição por dono.
+- tests/rules.test.ts — Regras detalhadas de preparação, turnos, abertura, limites, alcance, elementos, status, estruturas/armas e inatividade.
+- tests/social-password.test.ts — Amizade/convite por consentimento e destinatário, expiração/idempotência, recuperação única e revogação.
+- tests/spells.test.ts — Feitiços especiais, combos, Jato/respostas, Zarcos, variações por mago e sacrifício.
+- tests/support/database.ts — Fixtures/mock de modelos e consultas para testes e demo, sem conexão real.
+- tests/support/durable-store.ts — Store simulado compartilhável com serialização, CAS e falhas de escrita/resposta.
+- tsconfig.check.json — Checagem sem emitir arquivos de src, scripts TS e testes.
+- tsconfig.json — Compilação estrita de src para dist, CommonJS e importação de JSON.
+- vercel.json — Framework Express, build, raiz do construtor, cron existente e headers do CDN.
+
+8. VERIFICAÇÃO DESTA REVISÃO
+
+A base anterior passou com 110 testes e uma integração opcional ignorada.
+Verificação final: npm run check aprovado, 111 testes passaram, nenhuma falha e
+1 integração MongoDB opcional ignorada; tipos e compilação aprovados. A auditoria
+verificou 264 arquivos, 130 cartas e 44 publicadas localmente, sem erros de
+imports, referências estáticas, alcance de módulos ou cobertura deste guia.
+Os três assets reservados são Globo de luz.png, Peste Negra - efeito.png e
+fundo site.png; foram preservados. npm ls --depth=0 e git diff --check aprovados.
+O envio ao GitHub é registrado na entrega do chat; o log local
+.codex-architecture-final.log contém a execução final completa.
+Testes simulados não comprovam entrega SMTP, capacidade de produção, fidelidade
+de todas as artes ou experiência em aparelhos físicos.

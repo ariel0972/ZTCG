@@ -1,0 +1,1878 @@
+[
+  {
+    "numeroCatalogo": "001",
+    "nome": "Bola de Fogo",
+    "tipo": "Feitico",
+    "custoMana": 4,
+    "descricao": "Causa 3 de dano a todas as tropas inimigas. Se você também usar Furacão nesta rodada, independentemente da ordem, causa 6 de dano adicionais a todas as tropas e ao mago inimigos. O combo ativa uma vez por rodada.",
+    "imgURL": "/assets/Cards/Bola de fogo.png",
+    "publicado": true,
+    "versao": 3,
+    "alvo": "TodasTropasInimigas",
+    "elemento": "Fogo",
+    "habilidadesAtivas": [],
+    "efeitos": [
+      {
+        "id": "damage",
+        "valor": 3
+      }
+    ],
+    "maxAlvos": 1
+  },
+  {
+    "numeroCatalogo": "008",
+    "nome": "Bola de luz",
+    "tipo": "Feitico",
+    "custoMana": 4,
+    "descricao": "Aplica Cego a todos os inimigos por 2 rodadas. Um mago Cego não pode conjurar feitiços. Com Mago de Fogo, também causa 3 de dano.",
+    "imgURL": "/assets/Cards/Bola de luz.png",
+    "publicado": true,
+    "versao": 2,
+    "alvo": "TodosInimigos",
+    "elemento": "Fogo",
+    "efeitos": [
+      {
+        "id": "lightOrb",
+        "valor": 3
+      }
+    ],
+    "maxAlvos": 1
+  },
+  {
+    "numeroCatalogo": "031",
+    "nome": "Barreira Ignea",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Barreira Ígnea.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "035",
+    "nome": "Tornado de Fogo",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Tornado de fogo.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "085",
+    "nome": "Reerguer da Fúria",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Reerguer da Fúria.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "102",
+    "nome": "Lança Chamas",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Lança Chamas.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "103",
+    "nome": "Asas Incandescentes",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Asas Incandescentes.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "104",
+    "nome": "Cauterizar",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Cauterizar.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "002",
+    "nome": "Jato d'água",
+    "tipo": "Feitico",
+    "custoMana": 3,
+    "descricao": "Causa 4 de dano a um inimigo. Como resposta, custa 3 de mana e cancela um feitiço comum de Fogo direcionado a tropas ou magos, inclusive com vários alvos. Não cancela assinatura. A resposta tem 20 segundos, pausa o turno, respeita o limite comum e não causa dano.",
+    "imgURL": "/assets/Cards/Jato da água.png",
+    "publicado": true,
+    "versao": 3,
+    "alvo": "UnicoInimigo",
+    "elemento": "Agua",
+    "habilidadesAtivas": [],
+    "efeitos": [
+      {
+        "id": "damage",
+        "valor": 4
+      }
+    ],
+    "maxAlvos": 1
+  },
+  {
+    "numeroCatalogo": "032",
+    "nome": "Congelar",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Congelar.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "086",
+    "nome": "Reeguer da Tristeza",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Reerguer da Tristeza.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "105",
+    "nome": "Splash",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Splash.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "119",
+    "nome": "Prisão de àgua",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Prisão de água.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "120",
+    "nome": "Chuva acida",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Chuva Acida.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "121",
+    "nome": "Nevoeiro Denso",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Nevoeiro Denso.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "122",
+    "nome": "Água Curativa",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Água curativa.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "123",
+    "nome": "Tsunami",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Tsunami.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "003",
+    "nome": "Ataque Pedregoso",
+    "tipo": "Feitico",
+    "custoMana": 5,
+    "descricao": "Lança cinco pedras de 1 de dano, alternando as tropas inimigas da esquerda para a direita. Quando não houver tropas, as pedras restantes atingem o mago inimigo.",
+    "imgURL": "/assets/Cards/Ataque de Pedregulhos.png",
+    "publicado": true,
+    "versao": 2,
+    "alvo": "TodasTropasInimigas",
+    "elemento": "Terra",
+    "efeitos": [
+      {
+        "id": "stoneVolley",
+        "valor": 1
+      }
+    ],
+    "maxAlvos": 1
+  },
+  {
+    "numeroCatalogo": "033",
+    "nome": "Bola de Demolição",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Bola de Demolição.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "055",
+    "nome": "Teremoto",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Terremoto.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "084",
+    "nome": "Reerguer do Orgulho",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Reerguer do Orgulho.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "106",
+    "nome": "Polinizar",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Polinizar.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "004",
+    "nome": "Furacão",
+    "tipo": "Feitico",
+    "custoMana": 6,
+    "descricao": "Devolve uma tropa inimiga à mão e destrói sua estrutura. Causa 3 de dano ao mago inimigo no fim de cada rodada, durante 2 rodadas. Com Bola de Fogo na mesma rodada, causa 6 de dano adicionais a todos os inimigos, uma vez por rodada.",
+    "imgURL": "/assets/Cards/Furacão.png",
+    "publicado": true,
+    "versao": 2,
+    "alvo": "UnicoInimigo",
+    "elemento": "Ar",
+    "efeitos": [
+      {
+        "id": "tornado",
+        "valor": 3
+      }
+    ],
+    "maxAlvos": 1
+  },
+  {
+    "numeroCatalogo": "009",
+    "nome": "Furacão de Areia",
+    "tipo": "Feitico",
+    "custoMana": 4,
+    "descricao": "Aplica Cego por 2 rodadas. Causa 2 de dano a todos os inimigos no fim de cada rodada, durante 2 rodadas. Com Mago de Ar, rouba a carta do topo do baralho inimigo.",
+    "imgURL": "/assets/Cards/Furacão de Areia.png",
+    "publicado": true,
+    "versao": 2,
+    "alvo": "TodosInimigos",
+    "elemento": "Ar",
+    "efeitos": [
+      {
+        "id": "sandstorm",
+        "valor": 2
+      }
+    ],
+    "maxAlvos": 1
+  },
+  {
+    "numeroCatalogo": "034",
+    "nome": "Tufão",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Tufão.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "057",
+    "nome": "Lâminas Aéreas",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Lâmina de Vento.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "087",
+    "nome": "Reerguer da Impaciência",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Reerguer de Impaciência.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "094",
+    "nome": "Esfera de Vórtice",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Esfera de Vórtice.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "039",
+    "nome": "Sifão de Mana",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Sifão de Mana.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "040",
+    "nome": "Lágrima de Zarcos",
+    "tipo": "Feitico",
+    "custoMana": 0,
+    "descricao": "Recupera 3 de mana, respeitando o teto de 20. Se você usar outra carta Zarcos depois dela nesta rodada, esta cópia retorna do cemitério à mão. A condição ativa uma vez por cópia e por rodada.",
+    "imgURL": "/assets/Cards/Lágrima de Zarcos.png",
+    "publicado": true,
+    "versao": 2,
+    "alvo": "Global",
+    "elemento": "Zarcos",
+    "efeitos": [
+      {
+        "id": "zarcosTear",
+        "valor": 3
+      }
+    ],
+    "maxAlvos": 1
+  },
+  {
+    "numeroCatalogo": "079",
+    "nome": "Raiz Roxa",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Raiz Roxa.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "090",
+    "nome": "Fluxo Forte",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "Compra 3 cartas. Se você usar outra carta Zarcos depois dela nesta rodada, compra mais 1 carta. A condição ativa uma vez por cópia e por rodada.",
+    "imgURL": "/assets/Cards/Fluxo Forte.png",
+    "publicado": true,
+    "versao": 2,
+    "alvo": "Global",
+    "elemento": "Zarcos",
+    "efeitos": [
+      {
+        "id": "strongFlow",
+        "valor": 3
+      }
+    ],
+    "maxAlvos": 1
+  },
+  {
+    "numeroCatalogo": "096",
+    "nome": "Cristal Azul",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Cristal Kin - Azul.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "124",
+    "nome": "Cristal Rosa",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Cristal Kin - Rosa.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "126",
+    "nome": "Pulso de mana",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Pulso de mana.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "127",
+    "nome": "Amplificar",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/amplificar.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "005",
+    "nome": "Chuva de Flechas",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "Causa 3 de dano a todos os inimigos no fim de cada rodada, durante 2 rodadas. Apenas uma Chuva de Flechas pode permanecer em campo. Mago de Fogo: dano 5; de Água: congela tropas inimigas; de Ar: aplica Sangrando; de Terra: aplica Cego. Neutro não aplica token elemental.",
+    "imgURL": "/assets/Cards/Chuva de Flechas.png",
+    "publicado": true,
+    "versao": 2,
+    "alvo": "TodosInimigos",
+    "elemento": "Neutro",
+    "efeitos": [
+      {
+        "id": "arrowRain",
+        "valor": 3
+      }
+    ],
+    "maxAlvos": 1
+  },
+  {
+    "numeroCatalogo": "006",
+    "nome": "Escudo Protetor",
+    "tipo": "Feitico",
+    "custoMana": 4,
+    "descricao": "Protege um aliado dos próximos 3 golpes de dano, bloqueando cada golpe por completo. Após o terceiro golpe, quebra. Expira após 2 rodadas.",
+    "imgURL": "/assets/Cards/Escudo de Proteção.png",
+    "publicado": true,
+    "versao": 2,
+    "alvo": "UnicoAliado",
+    "elemento": "Neutro",
+    "efeitos": [
+      {
+        "id": "protectionShield",
+        "valor": 3
+      }
+    ],
+    "maxAlvos": 1
+  },
+  {
+    "numeroCatalogo": "007",
+    "nome": "Tremor",
+    "tipo": "Feitico",
+    "custoMana": 4,
+    "descricao": "Causa 4 de dano às tropas inimigas e aplica Incapacitado por 2 rodadas. Aplica Abalo às estruturas: não defendem suas tropas neste turno. Com Mago de Terra, causa 6 de dano às tropas e ao mago inimigos e aplica Atordoado às tropas no lugar de Incapacitado.",
+    "imgURL": "/assets/Cards/Tremor.png",
+    "publicado": true,
+    "versao": 2,
+    "alvo": "TodasTropasInimigas",
+    "elemento": "Neutro",
+    "efeitos": [
+      {
+        "id": "tremor",
+        "valor": 4
+      }
+    ],
+    "maxAlvos": 1
+  },
+  {
+    "numeroCatalogo": "010",
+    "nome": "Chuva de Meteoros",
+    "tipo": "Feitico",
+    "custoMana": 4,
+    "descricao": "Escolha de 1 a 3 tropas inimigas: causa 2 de dano em cada uma. Se você tiver seu Golém de Terra em campo, atinge automaticamente todas as tropas inimigas. Não atinge o mago.",
+    "imgURL": "/assets/Cards/Chuva de Meteoros.png",
+    "publicado": true,
+    "versao": 2,
+    "alvo": "MultiplosInimigos",
+    "elemento": "Neutro",
+    "efeitos": [
+      {
+        "id": "meteors",
+        "valor": 2
+      }
+    ],
+    "maxAlvos": 3
+  },
+  {
+    "numeroCatalogo": "011",
+    "nome": "Raio de luz",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Raio de luz.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "030",
+    "nome": "Olho da Verdade",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Olho da Verdade.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "045",
+    "nome": "Cheiro de Sangue",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Cheiro de Sangue.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "046",
+    "nome": "Picada de Cobra",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Picada de Cobra.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "050",
+    "nome": "Banir Armamento",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Banir armamento.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "051",
+    "nome": "Chamar Armamento",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Chamar Armamento.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "052",
+    "nome": "Encantar Armamento",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Encantar Armamento.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "053",
+    "nome": "Nome Sagrado",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Nome Sagrado.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "054",
+    "nome": "Nome profano",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Nome Profano.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "060",
+    "nome": "Encanto da Traição",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Encanto da Traição.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "061",
+    "nome": "Falar com os mortos",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Falar com Mortos.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "071",
+    "nome": "Circulo de Invocação",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Circulo de Invocação.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "073",
+    "nome": "Cegueira dos Caídos",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Cegueira dos Caídos.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "080",
+    "nome": "Reviver Tropa",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Reviver Tropa.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "082",
+    "nome": "Cura de Sangue",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Cura de Sangue.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "092",
+    "nome": "Mochila de recursos",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Mochila de Recursos.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "093",
+    "nome": "Chamar Tropa",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Chamar Tropa.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "097",
+    "nome": "Furtar",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Furtar.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "100",
+    "nome": "Toque de Cura",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Toque de Cura.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "101",
+    "nome": "Antidoto",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Antidoto.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "112",
+    "nome": "Busca Elemental",
+    "tipo": "Feitico",
+    "custoMana": 4,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Busca Elemental.png",
+    "publicado": true,
+    "versao": 1,
+    "alvo": "Deck",
+    "elemento": "Neutro",
+    "habilidadesAtivas": [],
+    "efeitos": [
+      {
+        "id": "searchElemental"
+      }
+    ]
+  },
+  {
+    "numeroCatalogo": "113",
+    "nome": "Previsão",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Previsão.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "114",
+    "nome": "Recuar",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Recuar.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "115",
+    "nome": "Sacrificio",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Sacrifício.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "125",
+    "nome": "Refletir",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Refletir.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "129",
+    "nome": "Armadilha de Urso",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Armadilha de Urso.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "131",
+    "nome": "Trazer dos Mortos",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Trazer dos Mortos.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "132",
+    "nome": "Escavação",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Escavação.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "133",
+    "nome": "Visão Espectral",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Visão espectral.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "134",
+    "nome": "Elevar Moral",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Elevar Moral.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "135",
+    "nome": "Provocar",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Provocar.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "064",
+    "nome": "Ataque de Canivetes",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Ataque de Canivetes.png",
+    "publicado": true,
+    "versao": 1,
+    "alvo": "UnicoInimigo",
+    "elemento": "Neutro",
+    "habilidadesAtivas": [],
+    "efeitos": [
+      {
+        "id": "damage",
+        "valor": 1
+      },
+      {
+        "id": "status",
+        "status": "Incapacitado",
+        "duracao": 2
+      }
+    ],
+    "maxAlvos": 3
+  },
+  {
+    "numeroCatalogo": "065",
+    "nome": "Chamar gangue",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Chamar Gangue.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "066",
+    "nome": "Peste Negra",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Peste Negra.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "072",
+    "nome": "Leptospirose",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Leptospirose.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "081",
+    "nome": "Plantar arma",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Plantar Arma.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "083",
+    "nome": "Pacto",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Pacto.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "062",
+    "nome": "Maldição da Escolha",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Maldição da Escolha.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "067",
+    "nome": "Maldição da Morte",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Maldição da Morte.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "068",
+    "nome": "Amaldiçoar Arma",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Amaldiçoar Arma.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "069",
+    "nome": "Maldição do Esquecimento",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Maldição do Esquecimento.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "116",
+    "nome": "Maldição da Destruição",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Maldição da Destruição.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "118",
+    "nome": "Maresia",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Maresia.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "128",
+    "nome": "Amaldiçoar Estrutura",
+    "tipo": "Feitico",
+    "custoMana": 2,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Amaldiçoar Estrutura.png",
+    "publicado": false,
+    "versao": 1,
+    "alvo": "UnicoInimigo"
+  },
+  {
+    "numeroCatalogo": "037",
+    "nome": "Espada dos Mil Mortos",
+    "tipo": "Armamento",
+    "custoMana": 6,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Espada dos Mil Mortos.png",
+    "publicado": false,
+    "versao": 1,
+    "bonusAtaque": 2,
+    "bonusHp": 1
+  },
+  {
+    "numeroCatalogo": "038",
+    "nome": "Arco de Ranbow",
+    "tipo": "Armamento",
+    "custoMana": 6,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Arco de Ranbow.png",
+    "publicado": false,
+    "versao": 1,
+    "bonusAtaque": 2,
+    "bonusHp": 1
+  },
+  {
+    "numeroCatalogo": "047",
+    "nome": "Pele de Luokis",
+    "tipo": "Armamento",
+    "custoMana": 6,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Pele de Luokis.png",
+    "publicado": false,
+    "versao": 1,
+    "bonusAtaque": 2,
+    "bonusHp": 1
+  },
+  {
+    "numeroCatalogo": "048",
+    "nome": "Machado",
+    "tipo": "Armamento",
+    "custoMana": 6,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Machado.png",
+    "publicado": false,
+    "versao": 1,
+    "bonusAtaque": 2,
+    "bonusHp": 1
+  },
+  {
+    "numeroCatalogo": "049",
+    "nome": "Arco Elemental",
+    "tipo": "Armamento",
+    "custoMana": 6,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Arco Elemental.png",
+    "publicado": false,
+    "versao": 1,
+    "bonusAtaque": 2,
+    "bonusHp": 1
+  },
+  {
+    "numeroCatalogo": "099",
+    "nome": "Faca de Brinquedo",
+    "tipo": "Armamento",
+    "custoMana": 6,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Faca de Brinquedo.png",
+    "publicado": false,
+    "versao": 1,
+    "bonusAtaque": 2,
+    "bonusHp": 1
+  },
+  {
+    "numeroCatalogo": "056",
+    "nome": "Torre",
+    "tipo": "Estrutura",
+    "custoMana": 6,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Torre.png",
+    "publicado": false,
+    "versao": 1,
+    "hp": 1,
+    "ataque": 2
+  },
+  {
+    "numeroCatalogo": "058",
+    "nome": "Torreta",
+    "tipo": "Estrutura",
+    "custoMana": 6,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Torreta.png",
+    "publicado": false,
+    "versao": 1,
+    "hp": 1,
+    "ataque": 2
+  },
+  {
+    "numeroCatalogo": "059",
+    "nome": "Muro de terra",
+    "tipo": "Estrutura",
+    "custoMana": 6,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Muro de Terra.png",
+    "publicado": false,
+    "versao": 1,
+    "hp": 1,
+    "ataque": 2
+  },
+  {
+    "numeroCatalogo": "091",
+    "nome": "Canhão",
+    "tipo": "Estrutura",
+    "custoMana": 6,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Canhão.png",
+    "publicado": false,
+    "versao": 1,
+    "hp": 1,
+    "ataque": 2
+  },
+  {
+    "numeroCatalogo": "109",
+    "nome": "Canhão de Mana Instável",
+    "tipo": "Estrutura",
+    "custoMana": 6,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Canhão de Mana Instável.png",
+    "publicado": false,
+    "versao": 1,
+    "hp": 1,
+    "ataque": 2
+  },
+  {
+    "numeroCatalogo": "020",
+    "nome": "Assassino",
+    "tipo": "Tropa",
+    "custoMana": 3,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Assassino.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 9,
+    "ataque": 2,
+    "manaGerada": 2,
+    "direcaoAtaque": "Frente",
+    "subtipo": "Humano",
+    "habilidadesPassivas": [
+      {
+        "gatilho": "onStatusApplied",
+        "condicao": "Incapacitado",
+        "efeito": "causarDanoExtra",
+        "valor": 4
+      }
+    ],
+    "habilidadesAtivas": [
+      {
+        "id": "ataqueFurtivo",
+        "nome": "Ataque Furtivo",
+        "custoMana": 4
+      }
+    ]
+  },
+  {
+    "numeroCatalogo": "021",
+    "nome": "Cavaleiro",
+    "tipo": "Tropa",
+    "custoMana": 4,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Cavaleiro.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 12,
+    "ataque": 3,
+    "manaGerada": 3,
+    "direcaoAtaque": "Frente",
+    "habilidadesAtivas": [
+      {
+        "id": "ordemDaEspada",
+        "nome": "A Ordem da Espada",
+        "custoMana": 3
+      },
+      {
+        "id": "armaduraPoderosa",
+        "nome": "Armadura Poderosa",
+        "custoMana": 3
+      }
+    ]
+  },
+  {
+    "numeroCatalogo": "022",
+    "nome": "Goblin",
+    "tipo": "Tropa",
+    "custoMana": 4,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Goblin.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 1,
+    "ataque": 2,
+    "manaGerada": 1,
+    "direcaoAtaque": "Frente"
+  },
+  {
+    "numeroCatalogo": "023",
+    "nome": "Guerreiro",
+    "tipo": "Tropa",
+    "custoMana": 3,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Guerreiro.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 11,
+    "ataque": 3,
+    "manaGerada": 2,
+    "direcaoAtaque": "Universal",
+    "habilidadesAtivas": []
+  },
+  {
+    "numeroCatalogo": "024",
+    "nome": "Arqueiro",
+    "tipo": "Tropa",
+    "custoMana": 4,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Arqueiro.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 1,
+    "ataque": 2,
+    "manaGerada": 1,
+    "direcaoAtaque": "Frente"
+  },
+  {
+    "numeroCatalogo": "025",
+    "nome": "Golém",
+    "tipo": "Tropa",
+    "custoMana": 4,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Golem.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 1,
+    "ataque": 2,
+    "manaGerada": 1,
+    "direcaoAtaque": "Frente"
+  },
+  {
+    "numeroCatalogo": "027",
+    "nome": "Rato",
+    "tipo": "Tropa",
+    "custoMana": 4,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Rato.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 1,
+    "ataque": 2,
+    "manaGerada": 1,
+    "direcaoAtaque": "Frente"
+  },
+  {
+    "numeroCatalogo": "063",
+    "nome": "Cachorro",
+    "tipo": "Tropa",
+    "custoMana": 4,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Cachorro.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 1,
+    "ataque": 2,
+    "manaGerada": 1,
+    "direcaoAtaque": "Frente"
+  },
+  {
+    "numeroCatalogo": "074",
+    "nome": "Cavalo",
+    "tipo": "Tropa",
+    "custoMana": 4,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Cavalo.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 1,
+    "ataque": 2,
+    "manaGerada": 1,
+    "direcaoAtaque": "Frente"
+  },
+  {
+    "numeroCatalogo": "075",
+    "nome": "Escudeiro",
+    "tipo": "Tropa",
+    "custoMana": 4,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Escudeiro.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 1,
+    "ataque": 2,
+    "manaGerada": 1,
+    "direcaoAtaque": "Frente"
+  },
+  {
+    "numeroCatalogo": "077",
+    "nome": "Goblin Sombrio",
+    "tipo": "Tropa",
+    "custoMana": 4,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Goblin Sombrio.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 1,
+    "ataque": 2,
+    "manaGerada": 1,
+    "direcaoAtaque": "Frente"
+  },
+  {
+    "numeroCatalogo": "088",
+    "nome": "Ladino",
+    "tipo": "Tropa",
+    "custoMana": 4,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Ladino.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 1,
+    "ataque": 2,
+    "manaGerada": 1,
+    "direcaoAtaque": "Frente"
+  },
+  {
+    "numeroCatalogo": "089",
+    "nome": "Enxame de Ratos",
+    "tipo": "Tropa",
+    "custoMana": 4,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Enxame de Ratos.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 1,
+    "ataque": 2,
+    "manaGerada": 1,
+    "direcaoAtaque": "Frente"
+  },
+  {
+    "numeroCatalogo": "095",
+    "nome": "Esqueleto",
+    "tipo": "Tropa",
+    "custoMana": 4,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Esqueleto.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 1,
+    "ataque": 2,
+    "manaGerada": 1,
+    "direcaoAtaque": "Frente"
+  },
+  {
+    "numeroCatalogo": "098",
+    "nome": "Palhaço",
+    "tipo": "Tropa",
+    "custoMana": 4,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Palhaço.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 1,
+    "ataque": 2,
+    "manaGerada": 1,
+    "direcaoAtaque": "Frente"
+  },
+  {
+    "numeroCatalogo": "900098",
+    "nome": "Médico da Peste",
+    "tipo": "Tropa",
+    "custoMana": 4,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Médico da Peste.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 1,
+    "ataque": 2,
+    "manaGerada": 1,
+    "direcaoAtaque": "Frente"
+  },
+  {
+    "numeroCatalogo": "130",
+    "nome": "Rebelde",
+    "tipo": "Tropa",
+    "custoMana": 4,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Rebelde.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 1,
+    "ataque": 2,
+    "manaGerada": 1,
+    "direcaoAtaque": "Frente"
+  },
+  {
+    "numeroCatalogo": "044",
+    "nome": "Salamandra",
+    "tipo": "Tropa",
+    "custoMana": 4,
+    "descricao": "Ataca uma vez por rodada. Ao receber um ataque básico, envenena o atacante, mesmo se o golpe não causar dano ou for fatal.",
+    "imgURL": "/assets/Cards/Salamandra.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 12,
+    "ataque": 3,
+    "manaGerada": 3,
+    "direcaoAtaque": "Frente",
+    "subtipo": "Animal",
+    "habilidadesPassivas": [
+      {
+        "gatilho": "onAttacked",
+        "efeito": "aplicarStatusAtacante",
+        "status": "Envenenado",
+        "duracao": 3,
+        "descricao": "Ao receber um ataque básico, envenena o atacante, mesmo se o golpe não causar dano ou for fatal."
+      }
+    ],
+    "elemento": "Fogo",
+    "resistencia": ["Ar"],
+    "fraqueza": ["Agua"]
+  },
+  {
+    "numeroCatalogo": "110",
+    "nome": "Cágado de magma",
+    "tipo": "Tropa",
+    "custoMana": 4,
+    "descricao": "Ataca uma vez por rodada. Ao receber um ataque básico, aplica queimação ao atacante, mesmo se o golpe não causar dano ou for fatal.",
+    "imgURL": "/assets/Cards/Cagado.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 14,
+    "ataque": 2,
+    "manaGerada": 3,
+    "direcaoAtaque": "Frente",
+    "subtipo": "Animal",
+    "habilidadesPassivas": [
+      {
+        "gatilho": "onAttacked",
+        "efeito": "aplicarStatusAtacante",
+        "status": "Queimado",
+        "duracao": 2,
+        "descricao": "Ao receber um ataque básico, aplica queimação ao atacante, mesmo se o golpe não causar dano ou for fatal."
+      }
+    ],
+    "elemento": "Fogo",
+    "resistencia": ["Ar"],
+    "fraqueza": ["Agua"]
+  },
+  {
+    "numeroCatalogo": "111",
+    "nome": "Dançarina das Chamas",
+    "tipo": "Tropa",
+    "custoMana": 4,
+    "descricao": "Ataca uma vez por rodada. Esta carta e cada tropa de Fogo vizinha ganham +2 de ataque básico por ligação. No centro, com duas vizinhas, recebe +4. Auras de outras Dançarinas se acumulam.",
+    "imgURL": "/assets/Cards/Dançarina das Chamas.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 10,
+    "ataque": 2,
+    "manaGerada": 4,
+    "direcaoAtaque": "Universal",
+    "subtipo": "Humano",
+    "habilidadesPassivas": [
+      {
+        "gatilho": "continuous",
+        "efeito": "bonusAtaqueAdjacente",
+        "elemento": "Fogo",
+        "valor": 2,
+        "porVizinho": true,
+        "descricao": "Esta carta e cada tropa de Fogo vizinha ganham +2 de ataque básico por ligação. No centro, com duas vizinhas, recebe +4. Auras de outras Dançarinas se acumulam."
+      }
+    ],
+    "elemento": "Fogo",
+    "resistencia": ["Ar"],
+    "fraqueza": ["Agua"]
+  },
+  {
+    "numeroCatalogo": "117",
+    "nome": "Esqueleto em Chamas",
+    "tipo": "Tropa",
+    "custoMana": 5,
+    "descricao": "Ataca uma vez por rodada. Tropas de Água ou tropas com direção Frontal não podem usar ataque básico contra esta carta. Feitiços e habilidades continuam permitidos.",
+    "imgURL": "/assets/Cards/Esqueleto em Chamas.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 10,
+    "ataque": 3,
+    "manaGerada": 3,
+    "direcaoAtaque": "Frente",
+    "subtipo": "Monstro",
+    "habilidadesPassivas": [
+      {
+        "gatilho": "onTargeted",
+        "efeito": "restringirAtaqueBasico",
+        "tipoAtacante": "Tropa",
+        "elemento": "Agua",
+        "direcao": "Frente",
+        "descricao": "Tropas de Água ou tropas com direção Frontal não podem usar ataque básico contra esta carta. Feitiços e habilidades continuam permitidos."
+      }
+    ],
+    "elemento": "Fogo",
+    "resistencia": ["Ar"],
+    "fraqueza": ["Agua"]
+  },
+  {
+    "numeroCatalogo": "026",
+    "nome": "Golém de água",
+    "tipo": "Tropa",
+    "custoMana": 4,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Golem de água.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 1,
+    "ataque": 2,
+    "manaGerada": 1,
+    "direcaoAtaque": "Frente"
+  },
+  {
+    "numeroCatalogo": "041",
+    "nome": "Piranha",
+    "tipo": "Tropa",
+    "custoMana": 4,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Piranha.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 1,
+    "ataque": 2,
+    "manaGerada": 1,
+    "direcaoAtaque": "Frente"
+  },
+  {
+    "numeroCatalogo": "042",
+    "nome": "Enxame de Ratos",
+    "tipo": "Tropa",
+    "custoMana": 3,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Toupeira.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 12,
+    "ataque": 2,
+    "manaGerada": 3,
+    "direcaoAtaque": "Frente",
+    "habilidadesPassivas": [
+      {
+        "gatilho": "onDeath",
+        "condicao": "aliadoMorre",
+        "efeito": "ganharVida",
+        "valor": 1
+      }
+    ],
+    "habilidadesAtivas": []
+  },
+  {
+    "numeroCatalogo": "076",
+    "nome": "Árvore Lanukia",
+    "tipo": "Tropa",
+    "custoMana": 4,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Arvore Lanukia.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 1,
+    "ataque": 2,
+    "manaGerada": 1,
+    "direcaoAtaque": "Frente"
+  },
+  {
+    "numeroCatalogo": "078",
+    "nome": "Planta Carnivora",
+    "tipo": "Tropa",
+    "custoMana": 4,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Planta Carnívoro.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 1,
+    "ataque": 2,
+    "manaGerada": 1,
+    "direcaoAtaque": "Frente"
+  },
+  {
+    "numeroCatalogo": "043",
+    "nome": "Beija flor de Fagniz",
+    "tipo": "Tropa",
+    "custoMana": 4,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Beija-flor de Fagniz.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 1,
+    "ataque": 2,
+    "manaGerada": 1,
+    "direcaoAtaque": "Frente"
+  },
+  {
+    "numeroCatalogo": "028",
+    "nome": "Aprendiz de mago",
+    "tipo": "Mago",
+    "custoMana": 0,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Aprendiz de Mago.png",
+    "publicado": false,
+    "versao": 1,
+    "hp": 18,
+    "ataque": 0,
+    "recuperacaoMana": 0,
+    "limites": [
+      {
+        "tropasMobilizadas": 0,
+        "tropaAtacam": 0,
+        "feiticosUsados": 0,
+        "feiticosUnicos": 0
+      }
+    ]
+  },
+  {
+    "numeroCatalogo": "016",
+    "nome": "Mago de fogo",
+    "tipo": "Mago",
+    "custoMana": 0,
+    "descricao": "Ignir. A cada 2 feitiços de Fogo conjurados, ganha permanentemente +1 de dano nos próximos feitiços de Fogo.",
+    "imgURL": "/assets/Cards/Mago de fogo.png",
+    "publicado": true,
+    "versao": 2,
+    "hp": 20,
+    "ataque": 3,
+    "recuperacaoMana": 3,
+    "limites": [
+      {
+        "tropasMobilizadas": 2,
+        "tropaAtacam": 3,
+        "feiticosUsados": 3,
+        "feiticosUnicos": 2
+      }
+    ],
+    "elemento": "Fogo",
+    "fraqueza": ["Agua"],
+    "resistencia": ["Ar"],
+    "habilidadesAtivas": [
+      {
+        "id": "recuperarEnergia",
+        "nome": "Recuperar Energia",
+        "custoMana": 0,
+        "alvo": "Mao",
+        "descricao": "Escolha um feitiço da sua mão para sacrificar ao cemitério e recuperar 3 de mana, até o teto de 20. Consome a habilidade do mago na rodada."
+      }
+    ],
+    "habilidadesPassivas": [
+      {
+        "gatilho": "onSpellCast",
+        "efeito": "acumularDanoFogo",
+        "condicao": "Fogo",
+        "descricao": "Conta os feitiços de Fogo conjurados durante toda a partida. A cada 2, aumenta em 1 o bônus permanente de dano dos próximos feitiços de Fogo."
+      }
+    ]
+  },
+  {
+    "numeroCatalogo": "017",
+    "nome": "Mago de água",
+    "tipo": "Mago",
+    "custoMana": 0,
+    "descricao": "Farfun. Cada feitiço de Água conjurado cura 3 de vida deste mago, até 26 de vida.",
+    "imgURL": "/assets/Cards/Mago de água.png",
+    "publicado": true,
+    "versao": 2,
+    "hp": 20,
+    "ataque": 3,
+    "recuperacaoMana": 3,
+    "limites": [
+      {
+        "tropasMobilizadas": 3,
+        "tropaAtacam": 1,
+        "feiticosUsados": 3,
+        "feiticosUnicos": 2
+      }
+    ],
+    "elemento": "Agua",
+    "fraqueza": ["Terra"],
+    "resistencia": ["Fogo"],
+    "habilidadesAtivas": [
+      {
+        "id": "protecaoAquatica",
+        "nome": "Proteção Aquática",
+        "custoMana": 4,
+        "alvo": "UnicoAliado",
+        "descricao": "Escolha um aliado e um modo: curar 3 de vida ou conceder um escudo que absorve até 3 de dano por 2 rodadas."
+      }
+    ],
+    "habilidadesPassivas": [
+      {
+        "gatilho": "onSpellCast",
+        "efeito": "curarMagoAgua",
+        "condicao": "Agua",
+        "descricao": "Após conjurar um feitiço de Água, cura este mago em 3. Pode acumular até 6 de vida acima dos 20 iniciais."
+      }
+    ]
+  },
+  {
+    "numeroCatalogo": "019",
+    "nome": "Mago de ar",
+    "tipo": "Mago",
+    "custoMana": 0,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Mago de ar.png",
+    "publicado": false,
+    "versao": 1,
+    "hp": 18,
+    "ataque": 0,
+    "recuperacaoMana": 0,
+    "limites": [
+      {
+        "tropasMobilizadas": 0,
+        "tropaAtacam": 0,
+        "feiticosUsados": 0,
+        "feiticosUnicos": 0
+      }
+    ]
+  },
+  {
+    "numeroCatalogo": "018",
+    "nome": "Mago de terra",
+    "tipo": "Mago",
+    "custoMana": 0,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Mago de terra.png",
+    "publicado": false,
+    "versao": 1,
+    "hp": 18,
+    "ataque": 0,
+    "recuperacaoMana": 0,
+    "limites": [
+      {
+        "tropasMobilizadas": 0,
+        "tropaAtacam": 0,
+        "feiticosUsados": 0,
+        "feiticosUnicos": 0
+      }
+    ]
+  },
+  {
+    "numeroCatalogo": "029",
+    "nome": "Bruxo",
+    "tipo": "Mago",
+    "custoMana": 0,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Bruxo.png",
+    "publicado": false,
+    "versao": 1,
+    "hp": 18,
+    "ataque": 0,
+    "recuperacaoMana": 0,
+    "limites": [
+      {
+        "tropasMobilizadas": 0,
+        "tropaAtacam": 0,
+        "feiticosUsados": 0,
+        "feiticosUnicos": 0
+      }
+    ]
+  },
+  {
+    "numeroCatalogo": "070",
+    "nome": "Druida",
+    "tipo": "Mago",
+    "custoMana": 0,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Druida.png",
+    "publicado": false,
+    "versao": 1,
+    "hp": 18,
+    "ataque": 0,
+    "recuperacaoMana": 0,
+    "limites": [
+      {
+        "tropasMobilizadas": 0,
+        "tropaAtacam": 0,
+        "feiticosUsados": 0,
+        "feiticosUnicos": 0
+      }
+    ]
+  },
+  {
+    "numeroCatalogo": "108",
+    "nome": "Necromante",
+    "tipo": "Mago",
+    "custoMana": 0,
+    "descricao": "",
+    "imgURL": "/assets/Cards/Necromante.png",
+    "publicado": true,
+    "versao": 1,
+    "hp": 20,
+    "ataque": 2,
+    "recuperacaoMana": 3,
+    "limites": [
+      {
+        "tropasMobilizadas": 3,
+        "tropaAtacam": 2,
+        "feiticosUsados": 2,
+        "feiticosUnicos": 2
+      }
+    ],
+    "elemento": "Zarcos",
+    "habilidadesPassivas": [
+      {
+        "gatilho": "onRevive",
+        "efeito": "comprarCartaCemiterio"
+      },
+      {
+        "gatilho": "onSacrifice",
+        "efeito": "ganharVidaEManaSacrificio"
+      }
+    ],
+    "habilidadesAtivas": [
+      {
+        "id": "enganarAMorte",
+        "nome": "Enganar a Morte",
+        "custoMana": 4
+      },
+      {
+        "id": "ressurreicaoSombria",
+        "nome": "Ressurreição Sombria",
+        "custoMana": 5
+      }
+    ]
+  }
+]

@@ -1,103 +1,59 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-
-<head>
-    <meta charset="UTF-8">
-    <title>Registro</title>
-    <link rel="stylesheet" href="../CSS/login.css">
-    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-    <script src="../JS/profile.js" defer></script>
-
-</head>
-
-<body>
-    <div class="login-container">
-        <div class="login-form">
-            <h1>Registro</h1>
-            <p id="msg-form"></p>
-            <form action="#" id="form">
-                <div class="box-form">
-                    <input placeholder="Nome de usuário" type="text" name="username" required>
-                    <i class='bx bxs-user'></i>
-                </div>
-
-                <div class="box-form">
-                    <input placeholder="Email" type="email" name="email" required>
-                    <i class='bx bx-at'></i>
-                </div>
-
-                <div class="box-form">
-                    <input placeholder="Senha" type="password" name="senha" required>
-                    <i class='bx bxs-lock-alt'></i>
-                </div>
-                <div class="box-form">
-                    <input placeholder="Confirme a Senha" type="password" name="confirmPassword" required>
-                    <i class='bx bxs-lock-alt'></i>
-                </div>
-
-                <button type="submit">Criar Conta</button>
-
-                <div class="registro">
-                    <p>Possui uma conta? <a href="login.html">Logar</a> </p>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <script>
-        const form = document.querySelector('#form');
-        const msg = document.getElementById('msg-form')
-
-        form.addEventListener('submit', async (e) => {
-            msg.style.display = "none"
-            e.preventDefault(); // Impede a página de recarregar
-
-            const userData = {
-                nome: form.username.value,
-                email: form.email.value,
-                senha: form.senha.value,
-                confirmPassword: form.confirmPassword.value
-            };
-
-            try {
-                const response = await fetch('/auth/registrar', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(userData) // Transforma o objeto em texto JSON
-                });
-
-                if (!response) {
-                    return console.log('Deu erro')
-                }
-                const data = await response.json()
-
-                if (data.content == "As senhas são diferentes") {
-                    msg.style.display = "block"
-                    msg.innerText = "Senhas não se coincidem"
-                }
-                if (data.content == "Email já existe") {
-                    msg.style.display = "block"
-                    msg.innerText = "Já possui uma conta nesse Email"
-                }
-
-                if (data.success){
-                    msg.style.display = "block"
-                    msg.style.backgroundColor = "#1eff001a"
-                    msg.style.borderColor = "green"
-                    msg.innerText = "Conta criada com Sucesso"
-
-                    setInterval(() => {
-                        window.location.href = "login.html"
-                    }, 2000);
-                }
-                
-            } catch (error) {
-                console.log(error)
-            }
-        })
-    </script>
-</body>
-
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Conta · Zacornia</title>
+    <link rel="icon" href="/assets/icons/favicon.svg" />
+    <link rel="stylesheet" href="/CSS/app.css" />
+    <script type="module" src="/JS/account-form.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">ZACORNIA <small>TRADING CARD GAME</small></a>
+      <nav aria-label="Principal">
+        <a href="/">Decks</a><a href="/HTML/index.html">Jogar</a
+        ><a href="/HTML/perfil.html">Perfil</a>
+      </nav>
+      <div id="account" class="account"></div>
+    </header>
+    <main class="auth-shell">
+      <section class="auth-box">
+        <p class="eyebrow">COMECE SUA EXPEDIÇÃO</p>
+        <h1>Crie sua conta</h1>
+        <form id="auth-form" data-mode="register">
+          <label
+            >Nome de jogador<input
+              name="nome"
+              minlength="2"
+              maxlength="80"
+              autocomplete="nickname"
+              required /></label
+          ><label
+            >Email<input
+              name="email"
+              type="email"
+              autocomplete="email"
+              required /></label
+          ><label
+            >Senha<input
+              name="senha"
+              type="password"
+              minlength="8"
+              maxlength="72"
+              autocomplete="new-password"
+              required /></label
+          ><label
+            >Confirme a senha<input
+              name="confirmPassword"
+              type="password"
+              autocomplete="new-password"
+              required /></label
+          ><button class="primary">Criar conta</button>
+        </form>
+        <p class="hint">Já tem conta? <a href="/HTML/login.html">Entrar</a>.</p>
+      </section>
+    </main>
+    <p id="message" class="message" role="status" aria-live="polite" hidden></p>
+  </body>
 </html>

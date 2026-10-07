@@ -1,21 +1,26 @@
-import { Response, NextFunction } from 'express'
-import User from '../db/models/user'
-import { AuthRequest } from '../types'
+import { Response, NextFunction } from "express";
+import User from "../db/models/user";
+import { AuthRequest } from "../types";
 
 export async function checkAdmin(
   req: AuthRequest,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> {
   try {
-    const user = await User.findById(req.userId)
+    const user = await User.findById(req.userId);
 
     if (user?.admin) {
-      next()
+      next();
     } else {
-      res.status(401).json({ success: false, content: 'Acesso negado. Apenas administradores.' })
+      res.status(401).json({
+        success: false,
+        content: "Acesso negado. Apenas administradores.",
+      });
     }
   } catch {
-    res.status(500).json({ success: false, content: 'Erro ao validar permissões.' })
+    res
+      .status(500)
+      .json({ success: false, content: "Erro ao validar permissões." });
   }
 }

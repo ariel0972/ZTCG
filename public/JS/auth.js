@@ -1,146 +1,168 @@
-function renderNavbar() {
-    // Busca em ambos (prioridade para session se houver conflito)
-    const profile = JSON.parse(localStorage.getItem("playerProfile")) ||
-        JSON.parse(sessionStorage.getItem("playerProfile"))
-
-    const authLinks = document.getElementById('auth-links');
-
-    if (profile) {
-        authLinks.innerHTML = `
-            <a href="/HTML/perfil.html" class="nav-profile">
-                <img src="${profile.avatarURL}" alt="Avatar" class="nav-avatar">
-                <span>${profile.nome}</span>
-            </a>
-            <button onclick="logout()" class="btn-logout">Sair</button>
-        `;
-    }
+export function token() {
+  return sessionStorage.getItem("token") || localStorage.getItem("token");
 }
-
-// Sincroniza o banco de dados com os do navegador
-async function syncDB() {
-    const token = localStorage.getItem("token") || sessionStorage.getItem("token")
-    const user = JSON.parse(localStorage.getItem("playerProfile")) || JSON.parse(sessionStorage.getItem("playerProfile"))
-
-    if (!token || !user) {
-        console.log('Usuário não excontrado')
-        return
+let refreshing;
+export async function api(path, options = {}, renewed = false) {
+  const controller = new AbortController(),
+    timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    const headers = { "Content-Type": "application/json", ...options.headers };
+    if (token()) headers.Authorization = `Bearer ${token()}`;
+    const response = await fetch(path, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+    const data = await response.json();
+    if (
+      response.status === 401 &&
+      !renewed &&
+      !path.startsWith("/auth/log") &&
+      !path.startsWith("/auth/refresh")
+    ) {
+      clearTimeout(timeout);
+      if (!refreshing)
+        refreshing = api("/auth/refresh", { method: "POST", body: "{}" }, true)
+          .then((session) => {
+            const profile = JSON.parse(
+              sessionStorage.getItem("playerProfile") ||
+                localStorage.getItem("playerProfile") ||
+                "null",
+            );
+            if (profile?.id && profile.id !== session.user.id) {
+              const error = new Error(
+                "Outra conta entrou neste navegador. Entre novamente nesta aba.",
+              );
+              error.status = 401;
+              throw error;
+            }
+            rememberSession(session, !!localStorage.getItem("token"));
+          })
+          .finally(() => {
+            refreshing = null;
+          });
+      await refreshing;
+      return api(path, options, true);
     }
-
-    try {
-
-        const [resUser, resDecks] = await Promise.all([
-            fetch(`/user/${user.id}`, { headers: { 'Authorization': `Bearer ${token}` } }),
-            fetch(`/decks/user/${user.id}`, { headers: { 'Authorization': `Bearer ${token}` } })
-        ])
-        const dataUser = await resUser.json()
-        const dataDecks = await resDecks.json();
-
-        if (dataUser.success && dataDecks.success) {
-            const serverDecks = dataDecks.decks
-            const localDecks = user.decks || []
-
-            // const decksParaSubir = localDecks.filter(local => 
-            //     serverDecks.some(server => server._id === local._id) && !local._id
-            // );
-            // // 3. Sincroniza os decks faltantes para o banco
-            // if (decksParaSubir.length > 0) {
-            //     alert(`Sincronizando ${decksParaSubir.length} novos decks locais...`);
-            //     for (const deck of decksParaSubir) {
-            //         await fetch(`/decks/user`, {
-            //             method: 'POST',
-            //             headers: { 
-            //                 'Content-Type': 'application/json',
-            //                 'Authorization': `Bearer ${token}` 
-            //             },
-            //             body: JSON.stringify({
-            //                 nome: deck.nome,
-            //                 cartas: deck.cartas,
-            //                 mago: deck.mago,
-            //                 icone: deck.icone
-            //             })
-            //         });
-            //     }
-            //     // Recarrega os decks do servidor após o upload para pegar os novos IDs
-            //     return syncDB(); 
-            // }
-
-            // // 4. Atualiza o estado global com a verdade vinda do servidor
-            // playerProfile = {
-            //     id: dataUser.user._id,
-            //     nome: dataUser.user.nome,
-            //     avatarURL: dataUser.user.avatarURL,
-            //     nivel: dataUser.user.nivel,
-            //     vitorias: dataUser.user.vitorias,
-            //     partidas: dataUser.user.partidas,
-            //     decks: serverDecks // O servidor é a fonte da verdade final
-            // };
-
-            // colecaoDeDecks = playerProfile.decks;
-            
-            // // Renderização condicional por página
-            // const path = window.location.pathname;
-            // if (path.includes("deckbuilder.html") || path === "/") {
-            //     atualizarSelectDecks();
-            //     renderDeck();
-            // }
-            // if (path.includes("perfil.html")) renderPerfil();
-
-            // salvarDados();
-            // showSync(true)
-            // console.log("Sincronização Completa!");
-
-            playerProfile = {
-                ...dataUser.user,
-                id: dataUser.user._id,
-                decks: serverDecks
-            }
-
-            colecaoDeDecks = playerProfile.decks
-
-            salvarDados()
-
-            const path = window.location.pathname
-            if (path.includes("deckbuilder.html") || path === "/") {
-                atualizarSelectDecks();
-                renderDeck();
-            }
-
-            if (path.includes("perfil.html")) renderPerfil()
-
-            showSync(true)
+    if (!response.ok || !data.success) {
+      const details = (data.details || [])
+        .map((d) =>
+          typeof d === "string"
+            ? d
+            : `${d.path?.join(".") || "Campo"}: ${d.message}`,
+        )
+        .join("\n");
+      const error = new Error(data.content + (details ? "\n" + details : ""));
+      error.status = response.status;
+      error.code = data.code;
+      throw error;
+    }
+    return data;
+  } catch (error) {
+    if (error.name === "AbortError")
+      throw new Error("O servidor demorou para responder. Tente novamente.");
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+export function rememberSession(data, remember) {
+  for (const storage of [localStorage, sessionStorage]) {
+    storage.removeItem("token");
+    storage.removeItem("playerProfile");
+  }
+  const storage = remember ? localStorage : sessionStorage;
+  storage.setItem("token", data.token);
+  storage.setItem("playerProfile", JSON.stringify(data.user));
+}
+export async function logout() {
+  try {
+    await api("/auth/logout", { method: "POST", body: "{}" });
+  } catch {}
+  for (const storage of [localStorage, sessionStorage]) {
+    storage.removeItem("token");
+    storage.removeItem("playerProfile");
+  }
+  location.href = "/HTML/login.html";
+}
+let messageTimer;
+export function message(text, bad = false) {
+  clearTimeout(messageTimer);
+  const node = document.getElementById("message");
+  if (!node) return;
+  node.textContent = text;
+  node.dataset.error = String(bad);
+  node.hidden = !text;
+  if (text)
+    messageTimer = setTimeout(
+      () => {
+        node.hidden = true;
+        node.textContent = "";
+      },
+      bad ? 8000 : 4500,
+    );
+}
+export function node(tag, text = "", className = "") {
+  const el = document.createElement(tag);
+  el.textContent = text;
+  el.className = className;
+  return el;
+}
+export async function navbar() {
+  const nav = document.querySelector('nav[aria-label="Principal"]');
+  if (nav && !nav.querySelector('a[href="/HTML/friends.html"]')) {
+    const friends = node("a", "Amigos");
+    friends.href = "/HTML/friends.html";
+    nav.append(friends);
+  }
+  const host = document.getElementById("account");
+  if (!host) return null;
+  host.replaceChildren();
+  if (!token()) {
+    const link = node("a", "Entrar");
+    link.href = "/HTML/login.html";
+    host.append(link);
+    return null;
+  }
+  try {
+    const { user } = await api("/auth/me");
+    const link = node("a", user.nome);
+    link.href = "/HTML/perfil.html";
+    host.append(link);
+    if (user.admin) {
+      const admin = node("a", "Catálogo");
+      admin.href = "/HTML/admin.html";
+      host.append(admin);
+    }
+    const button = node("button", "Sair", "quiet");
+    button.onclick = logout;
+    host.append(button);
+    const friendsLink = nav?.querySelector('a[href="/HTML/friends.html"]');
+    if (friendsLink) {
+      const updateInvites = async () => {
+        if (document.hidden || !token()) return;
+        try {
+          const result = await api("/friends/invites");
+          const count = result.invites.filter(
+            (i) => i.to === user.id && i.status === "pending",
+          ).length;
+          friendsLink.textContent = count ? `Amigos (${count})` : "Amigos";
+          friendsLink.title = count
+            ? `${count} convite(s) de partida recebido(s)`
+            : "Amizades e convites";
+        } catch {
+          /* A página atual continua disponível se a consulta falhar. */
         }
-
-    } catch (error) {
-        console.error("Erro na sincronização dupla:", error)
+      };
+      void updateInvites();
+      window.setInterval(updateInvites, 10000);
     }
+    return user;
+  } catch (e) {
+    const link = node("a", "Entrar novamente");
+    link.href = "/HTML/login.html";
+    host.append(link);
+    message(e.message, true);
+    return null;
+  }
 }
-
-function showSync(sucesso) {
-    const indicator = document.getElementById("sync-indicator");
-    const text = document.getElementById("sync-text");
-    
-    if (!indicator) return;
-
-    if (sucesso) {
-        indicator.className = "sync-success";
-        text.innerText = "Sincronizado";
-        setTimeout(() => {
-            indicator.style.display = 'none'
-        }, 3000);
-    } else {
-        indicator.className = "sync-error";
-        text.innerText = "Erro de Sincronização";
-    }
-}
-
-function logout() {
-    localStorage.clear()
-    sessionStorage.clear()
-    window.location.reload(); // Recarrega para voltar ao estado deslogado
-}
-
-
-window.addEventListener('load', async () => {
-    renderNavbar()
-    await syncDB()
-})
