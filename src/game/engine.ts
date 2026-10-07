@@ -1,8 +1,26 @@
 import { playableErrors } from "./capabilities";
 import type { Instance, Slot, Player, State, DeckDefinition } from "./state";
-import { adjacentAttackBonus, restrictedBasicAttack } from "./passives";
+import {
+  adjacentAttackBonus,
+  restrictedBasicAttack,
+  passiveMatches,
+  spellDamageBonus,
+  describePassiveActions,
+  continuousPassiveActive,
+  type PassiveEvent,
+} from "./passives";
+import {
+  normalizePassive,
+  initializeLegacyCounters,
+  synchronizeLegacyCounters,
+} from "./legacy-passives";
 import { randomUUID } from "node:crypto";
-import { Card, Effect, TipoAlvoFeitico } from "../types/card";
+import {
+  Card,
+  Effect,
+  TipoAlvoFeitico,
+  type PassiveAction,
+} from "../types/card";
 import { validateDeck } from "../domain/deck";
 import { AppError } from "../lib/errors";
 import { Command, commandSchema } from "./contracts";
@@ -22,6 +40,8 @@ export type { Status } from "./status";
 export class Game {
   public state: State;
   private processed = new Map<string, number>();
+  private passiveDepth = 0;
+  private passiveSteps = 0;
   exportState() {
     return structuredClone({
       format: 1 as const,
@@ -381,6 +401,7 @@ export class Game {
     attacker?: Instance,
     piercing = false,
     element = attacker?.elemento,
+    source?: Instance,
   ) {
     const slot = this.targetSlot(id);
     if (!slot) this.fail("Alvo não encontrado.");
@@ -442,25 +463,55 @@ export class Game {
       target.tipo === "Tropa"
         ? Math.max(0, remaining - target.hpAtual)
         : 0;
+    const hpBefore = target.hpAtual;
     target.hpAtual -= remaining;
+    const killer = source ?? attacker;
+    if (hpBefore > 0 && target.hpAtual <= 0 && killer)
+      target.killedBy = { ownerId: killer.ownerId, cardId: killer.id };
     if (remaining)
       this.trigger("onDamageTaken", {
         cardId: target.id,
         ownerId: target.ownerId,
+        card: target,
+        attackerId: killer?.id,
       });
     if (excess) this.player(target.ownerId).mage.hpAtual -= excess;
   }
-  private heal(card: Instance, value: number) {
+  private heal(
+    card: Instance,
+    value: number,
+    excess?: number,
+    source?: Instance,
+  ) {
     if (card.hp === undefined)
       this.fail("Este alvo não possui vida para curar.");
     const slot = this.state.slots.find((s) => s.card?.id === card.id);
     const bonus = slot
       ? this.weapons(slot).reduce((n, w) => n + (w.bonusHp ?? 0), 0)
       : 0;
+    const previous = card.hpAtual;
     card.hpAtual = Math.max(
       card.hpAtual,
-      Math.min((card.hp ?? 0) + bonus, card.hpAtual + value),
+      Math.min((card.hp ?? 0) + (excess ?? bonus), card.hpAtual + value),
     );
+    if (card.hpAtual > 0) delete card.killedBy;
+    const healed = card.hpAtual > previous;
+    if (healed) {
+      this.trigger("onHealed", {
+        ownerId: card.ownerId,
+        cardId: card.id,
+        card,
+      });
+      if (source)
+        this.trigger("onHeal", {
+          ownerId: source.ownerId,
+          cardId: source.id,
+          card: source,
+          targetId: card.id,
+          targetCard: card,
+        });
+    }
+    return healed;
   }
   private weaponBeneficiaries(weaponSlot: Slot) {
     if (weaponSlot.id.includes(":arm:back-"))
@@ -479,12 +530,14 @@ export class Game {
     card.moved = false;
     delete card.appliedElement;
     delete card.revivedFromGraveyard;
+    delete card.killedBy;
   }
-  private event(kind: string, card: Instance) {
+  private event(kind: string, card: Instance, message?: string) {
     this.state.eventSequence = (this.state.eventSequence ?? 0) + 1;
     (this.state.events ??= []).push({
       sequence: this.state.eventSequence,
       kind,
+      ...(message ? { message } : {}),
       card: {
         id: card.id,
         nome: card.nome,
@@ -502,13 +555,29 @@ export class Game {
       for (const slot of this.state.slots) {
         const player = this.player(slot.ownerId);
         if (slot.structure && slot.structure.hpAtual <= 0) {
-          this.event("death", slot.structure);
-          player.graveyard.push(slot.structure);
+          const dead = slot.structure;
+          this.event("death", dead);
+          player.graveyard.push(dead);
           slot.structure = null;
           changed = true;
+          this.trigger("onStructureDestroyed", {
+            ownerId: player.id,
+            cardId: dead.id,
+            card: dead,
+            element: dead.elemento,
+            slotId: slot.id,
+          });
+          this.trigger("onDeath", {
+            ownerId: player.id,
+            cardId: dead.id,
+            card: dead,
+            element: dead.elemento,
+            slotId: slot.id,
+          });
         }
         if (slot.card?.tipo === "Tropa" && slot.card.hpAtual <= 0) {
           const dead = slot.card;
+          const killedBy = dead.killedBy;
           this.event("death", dead);
           slot.card = null;
           player.graveyard.push(dead);
@@ -522,8 +591,22 @@ export class Game {
           this.trigger("onDeath", {
             ownerId: player.id,
             cardId: dead.id,
+            card: dead,
+            slotId: slot.id,
             element: dead.elemento,
           });
+          if (killedBy) {
+            const killer = this.findCard(killedBy.cardId);
+            if (killer)
+              this.trigger("onKill", {
+                ownerId: killer.ownerId,
+                cardId: killer.id,
+                card: killer,
+                targetId: dead.id,
+                targetCard: dead,
+                slotId: slot.id,
+              });
+          }
           this.log(`${dead.nome} foi para o cemitério.`);
         }
       }
@@ -538,113 +621,194 @@ export class Game {
           : "Mago derrotado.",
       );
   }
-  private trigger(
-    trigger: string,
-    context: {
-      ownerId: string;
-      cardId?: string;
-      element?: string;
-      status?: string;
-      attackerId?: string;
-    },
-  ) {
-    // Snapshot: alterações de zonas durante um gatilho não mudam os participantes desse evento.
-    const listeners = this.state.slots.flatMap((s) =>
-      [s.card, s.structure].filter((c): c is Instance => c !== null),
-    );
-    for (const card of listeners)
-      for (const passive of card.habilidadesPassivas.filter(
-        (h) => h.gatilho === trigger,
-      )) {
-        const owner = this.player(card.ownerId),
-          value = passive.valor ?? 1;
-        if (trigger === "onAttacked") {
-          if (card.id !== context.cardId || !context.attackerId) continue;
-        }
-        if (trigger === "onStatusApplied") {
-          if (
-            context.ownerId === owner.id ||
-            context.status !== passive.condicao
+  private trigger(trigger: string, context: PassiveEvent) {
+    const root = !(this.passiveDepth ?? 0);
+    if (root) this.passiveSteps = 0;
+    this.passiveDepth = (this.passiveDepth ?? 0) + 1;
+    try {
+      if (this.passiveDepth > 32)
+        this.fail("Ciclo de passivas excedeu o limite.");
+      const event: PassiveEvent = {
+        ...context,
+        card:
+          context.card ??
+          (context.cardId
+            ? (this.findCard(context.cardId) ??
+              this.state.players
+                .flatMap((p) => [...p.hand, ...p.deck, ...p.graveyard])
+                .find((c) => c.id === context.cardId))
+            : undefined),
+      };
+      // Freeze participants, rules and eligibility before any effect changes zones.
+      const listeners = this.state.slots.flatMap((s) =>
+        [s.card, s.structure].filter((c): c is Instance => c !== null),
+      );
+      if (
+        event.card &&
+        ["onDeath", "onStructureDestroyed"].includes(trigger) &&
+        !listeners.some((c) => c.id === event.cardId)
+      )
+        listeners.push(event.card);
+      const activations = listeners.flatMap((source) =>
+        source.habilidadesPassivas
+          .map(normalizePassive)
+          .filter(
+            (rule) =>
+              rule.gatilho === trigger &&
+              passiveMatches(rule, source, event, this.state.slots),
           )
-            continue;
-        } else if (owner.id !== context.ownerId) continue;
-        if (trigger === "onDeath" && context.cardId === card.id) continue;
-        if (
-          passive.condicao === "aliadoMorreTerra" &&
-          context.element !== "Terra"
-        )
-          continue;
-        if (passive.condicao === "aliadoMorreAr" && context.element !== "Ar")
-          continue;
-        if (
-          trigger === "onSpellCast" &&
-          passive.condicao &&
-          passive.condicao !== context.element
-        )
-          continue;
-        switch (passive.efeito) {
-          case "aplicarStatusAtacante":
-            if (context.attackerId && this.findCard(context.attackerId))
-              this.effects(
-                owner.id,
-                [
-                  {
-                    id: "status",
-                    status: passive.status!,
-                    duracao: passive.duracao!,
-                  },
-                ],
-                [context.attackerId],
-              );
-            break;
-          case "acumularDanoFogo":
-            if (context.element === "Fogo") {
-              card.fireSpellsCast = (card.fireSpellsCast ?? 0) + 1;
-              card.fireDamageBonus = Math.floor(card.fireSpellsCast / 2);
+          .map((rule) => ({ source, rule })),
+      );
+      for (const { source, rule } of activations) {
+        let activated = false;
+        const counters = new Set<string>();
+        for (const action of rule.efeitos) {
+          if (++this.passiveSteps > 256)
+            this.fail("Ciclo de passivas excedeu o limite.");
+          if (action.id === "spellDamageBonus") {
+            initializeLegacyCounters(source);
+            if (!counters.has(action.contador)) {
+              const values = (source.passiveCounters ??= {});
+              values[action.contador] = (values[action.contador] ?? 0) + 1;
+              counters.add(action.contador);
             }
-            break;
-          case "curarMagoAgua":
-            if (context.element === "Agua")
-              owner.mage.hpAtual = Math.min(
-                (owner.mage.hp ?? 20) + 6,
-                owner.mage.hpAtual + 3,
-              );
-            break;
-          case "ganharVida":
-            card.hp = (card.hp ?? 0) + value;
-            card.hpAtual += value;
-            break;
-          case "curarMago":
-            this.heal(owner.mage, value);
-            break;
-          case "recuperarMana":
-            owner.mana = Math.min(20, owner.mana + value);
-            break;
-          case "comprarCarta":
-            this.draw(owner, value);
-            break;
-          case "manaCampoVazio":
-            if (!this.front(owner.id).some((s) => s.card))
-              owner.mana = Math.min(20, owner.mana + (passive.valor ?? 5));
-            break;
-          case "comprarCartaCemiterio": {
-            const card = owner.graveyard.pop();
-            if (card) {
-              this.resetCard(card);
-              owner.hand.push(card);
-            }
-            break;
-          }
-          case "ganharVidaEManaSacrificio":
-            owner.mana = Math.min(20, owner.mana + 2);
-            this.heal(owner.mage, 2);
-            break;
-          case "causarDanoExtra":
-            if (context.cardId && this.findCard(context.cardId))
-              this.damage(context.cardId, passive.valor ?? 4);
-            break;
+            synchronizeLegacyCounters(source);
+            activated = true;
+          } else
+            activated = this.passiveEffect(source, action, event) || activated;
         }
+        if (activated)
+          this.event("passive", source, describePassiveActions(rule.efeitos));
       }
+    } finally {
+      this.passiveDepth--;
+    }
+  }
+  private passiveEffect(
+    source: Instance,
+    action: PassiveAction,
+    event: PassiveEvent,
+  ): boolean {
+    const owner = this.player(source.ownerId);
+    if (
+      action.id === "mana" ||
+      action.id === "draw" ||
+      action.id === "recover"
+    ) {
+      const player =
+        action.jogador === "aliado" ? owner : this.opponent(owner.id);
+      if (!action.valor) return false;
+      if (action.id === "mana") {
+        const before = player.mana;
+        player.mana = Math.min(20, player.mana + action.valor);
+        return player.mana !== before;
+      }
+      if (action.id === "draw") {
+        this.draw(player, action.valor);
+        return true;
+      }
+      let recovered = false;
+      for (let i = 0; i < action.valor; i++) {
+        const card = player.graveyard.pop();
+        if (!card) break;
+        this.resetCard(card);
+        player.hand.push(card);
+        recovered = true;
+      }
+      return recovered;
+    }
+    if (action.id === "move" || action.id === "summonFromDeck") {
+      const destination = this.state.slots.find(
+        (s) =>
+          s.id === event.slotId && s.ownerId === owner.id && s.kind === "Tropa",
+      );
+      if (!destination || destination.card || destination.terrain) return false;
+      if (action.id === "move") {
+        const from = this.state.slots.find(
+          (s) => s.card?.id === source.id && s.kind === "Tropa",
+        );
+        if (
+          !from ||
+          source.hpAtual <= 0 ||
+          hasStatus(source.statuses, ["Congelado", "Incapacitado", "Cego"])
+        )
+          return false;
+        this.relocateTroops(from, destination);
+        return true;
+      }
+      const id =
+        action.carta === "mesmaCarta" ? source.numeroCatalogo : action.carta;
+      const index = owner.deck.findIndex(
+        (c) => c.numeroCatalogo === id && c.tipo === "Tropa",
+      );
+      if (index < 0) return false;
+      const card = owner.deck.splice(index, 1)[0];
+      card.hpAtual += this.weapons(destination).reduce(
+        (n, w) => n + (w.bonusHp ?? 0),
+        0,
+      );
+      destination.card = card;
+      this.event("summon", card);
+      this.trigger("onSummon", {
+        ownerId: owner.id,
+        cardId: card.id,
+        card,
+        slotId: destination.id,
+      });
+      return true;
+    }
+    if (!("alvo" in action)) return false; // Continuous effects are queried, never dispatched.
+    const id =
+      action.alvo === "fonte"
+        ? source.id
+        : action.alvo === "magoAliado"
+          ? owner.mage.id
+          : action.alvo === "magoInimigo"
+            ? this.opponent(owner.id).mage.id
+            : action.alvo === "atacante"
+              ? event.attackerId
+              : action.alvo === "alvoAtaque"
+                ? event.targetId
+                : event.cardId;
+    const target = id ? (this.findCard(id) ?? this.targetSlot(id)?.card) : null;
+    if (!target) return false;
+    switch (action.id) {
+      case "damage":
+        if (!action.valor) return false;
+        this.damage(
+          target.id,
+          action.valor,
+          undefined,
+          false,
+          action.elemento,
+          source,
+        );
+        return true;
+      case "heal": {
+        return this.heal(target, action.valor, action.excedente, source);
+      }
+      case "growMaxHp":
+        if (!action.valor) return false;
+        target.hp = (target.hp ?? 0) + action.valor;
+        target.hpAtual += action.valor;
+        if (target.hpAtual > 0) delete target.killedBy;
+        return true;
+      case "status":
+        this.effects(
+          owner.id,
+          [
+            {
+              id: "status",
+              status: action.status,
+              duracao: action.duracao,
+              valor: action.valor,
+            },
+          ],
+          [target.id],
+        );
+        return true;
+    }
+    return false;
   }
   private validateTargets(
     owner: string,
@@ -728,11 +892,21 @@ export class Game {
       ? ids.map((id) => this.targetSlot(id)!.structure!.id)
       : ids;
   }
+  private relocateTroops(from: Slot, to: Slot) {
+    const before = this.weapons(from).reduce((n, w) => n + (w.bonusHp ?? 0), 0);
+    const after = this.weapons(to).reduce((n, w) => n + (w.bonusHp ?? 0), 0);
+    if (from.card) from.card.hpAtual += after - before;
+    if (to.card) to.card.hpAtual += before - after;
+    [from.card, to.card] = [to.card, from.card];
+    [from.structure, to.structure] = [to.structure, from.structure];
+    if (to.card) to.card.moved = true;
+  }
   private effects(
     ownerId: string,
     effects: Effect[],
     ids: string[],
     element?: Card["elemento"],
+    source?: Instance,
   ) {
     const player = this.player(ownerId);
     for (const effect of effects) {
@@ -745,13 +919,14 @@ export class Game {
               undefined,
               false,
               effect.elemento ?? element,
+              source,
             );
           break;
         case "heal":
           for (const id of ids) {
             const card = this.findCard(id) ?? this.targetSlot(id)?.card;
             if (!card) this.fail("Não é possível curar este alvo.");
-            this.heal(card, effect.valor!);
+            this.heal(card, effect.valor!, undefined, source ?? player.mage);
           }
           break;
         case "status":
@@ -969,8 +1144,7 @@ export class Game {
         card.maxAlvos,
       );
       this.spend(player, card.custoMana);
-      const bonus =
-        card.elemento === "Fogo" ? (player.mage.fireDamageBonus ?? 0) : 0;
+      const bonus = spellDamageBonus(player.mage, card.elemento);
       player.hand.splice(index, 1);
       player.graveyard.push(card);
       this.event("spell", card);
@@ -1443,7 +1617,10 @@ export class Game {
     return "";
   }
   private attackTargetError(slot: Slot, card: Instance, target: Slot) {
-    if (target.card && restrictedBasicAttack(target.card, card))
+    if (
+      target.card &&
+      restrictedBasicAttack(target.card, card, this.state.slots)
+    )
       return "A passiva desta carta impede este ataque básico.";
     const enemyId = target.ownerId;
     const guards = this.state.slots.filter(
@@ -1510,6 +1687,22 @@ export class Game {
       )
       .map((target) => target.id);
   }
+  private attackBlockReasons(user: string, card: Instance | null) {
+    if (!card) return {};
+    return Object.fromEntries(
+      this.state.slots
+        .filter(
+          (target) =>
+            target.ownerId !== user &&
+            target.card &&
+            restrictedBasicAttack(target.card, card, this.state.slots),
+        )
+        .map((target) => [
+          target.id,
+          `${target.card!.nome}: a passiva impede este ataque básico.`,
+        ]),
+    );
+  }
   private attack(user: string, cmd: Extract<Command, { type: "attack" }>) {
     if (this.openingBlocked())
       this.fail(
@@ -1565,7 +1758,14 @@ export class Game {
         cardId: attackedCard.id,
         attackerId: card.id,
       });
-    this.trigger("onAttack", { ownerId: user, cardId: card.id });
+    this.trigger("onAttack", {
+      ownerId: user,
+      cardId: card.id,
+      card,
+      targetId: attackedCard?.id ?? target.structure?.id ?? enemy.mage.id,
+      targetCard: attackedCard ?? target.structure ?? enemy.mage,
+      slotId: target.id,
+    });
     this.log(`${card.nome} atacou a coluna ${target.column + 1}.`);
   }
   private ability(user: string, cmd: Extract<Command, { type: "ability" }>) {
@@ -1587,7 +1787,7 @@ export class Game {
     if (ability.efeitos?.length) {
       const targets = this.validateTargets(user, ability.alvo, cmd.targets);
       this.spend(p, ability.custoMana);
-      this.effects(user, ability.efeitos, targets, card.elemento);
+      this.effects(user, ability.efeitos, targets, card.elemento, card);
     } else {
       switch (ability.id) {
         case "recuperarEnergia": {
@@ -1611,7 +1811,7 @@ export class Game {
           const target = this.findCard(ids[0]) ?? this.targetSlot(ids[0])?.card;
           if (!target || !cmd.mode) this.fail("Escolha alvo aliado e modo.");
           this.spend(p, ability.custoMana);
-          if (cmd.mode === "cura") this.heal(target, 3);
+          if (cmd.mode === "cura") this.heal(target, 3, undefined, card);
           else
             target.statuses.push({
               nome: "Escudo",
@@ -1654,7 +1854,7 @@ export class Game {
             (s) =>
               s.ownerId === this.opponent(user).id && s.card?.tipo === "Tropa",
           ))
-            this.damage(s.id, 3);
+            this.damage(s.id, 3, undefined, false, undefined, card);
           break;
         case "armaduraPoderosa":
           this.spend(p, ability.custoMana);
@@ -1669,6 +1869,7 @@ export class Game {
       }
     }
     card.usedAbility = true;
+    this.event("ability", card, ability.nome);
     this.log(`${card.nome} usou ${ability.nome}.`);
   }
   private beginTurn() {
@@ -1852,19 +2053,7 @@ export class Game {
             this.fail("Estas tropas não podem se mover.");
           if (to.terrain || (to.card && from.terrain))
             this.fail("Nenhuma tropa pode se mover para um pântano.");
-          const fromBonus = this.weapons(from).reduce(
-              (n, w) => n + (w.bonusHp ?? 0),
-              0,
-            ),
-            toBonus = this.weapons(to).reduce(
-              (n, w) => n + (w.bonusHp ?? 0),
-              0,
-            );
-          if (from.card) from.card.hpAtual += toBonus - fromBonus;
-          if (to.card) to.card.hpAtual += fromBonus - toBonus;
-          [from.card, to.card] = [to.card, from.card];
-          [from.structure, to.structure] = [to.structure, from.structure];
-          if (to.card) to.card.moved = true;
+          this.relocateTroops(from, to);
           break;
         }
         case "endTurn":
@@ -1890,6 +2079,7 @@ export class Game {
       )
         this.player(user).preparation.started = true;
       this.resolve();
+      this.notifyContinuousPassives(previous);
       if (
         (previous.phase === "PREPARATION" || previous.turn <= 2) &&
         ["play", "ability", "move"].includes(cmd.type)
@@ -1967,6 +2157,10 @@ export class Game {
                 card: this.attackTargets(user, slot, slot.card),
                 structure: this.attackTargets(user, slot, slot.structure),
               },
+              attackBlockReasons: {
+                card: this.attackBlockReasons(user, slot.card),
+                structure: this.attackBlockReasons(user, slot.structure),
+              },
             }
           : {}),
       })),
@@ -1997,5 +2191,21 @@ export class Game {
           : {}),
       })),
     });
+  }
+  private notifyContinuousPassives(previous: State) {
+    for (const slot of this.state.slots) {
+      const source = slot.card;
+      if (!source) continue;
+      const before = previous.slots.find((s) => s.card?.id === source.id)?.card;
+      for (const rule of source.habilidadesPassivas.map(normalizePassive)) {
+        if (
+          rule.gatilho !== "continuous" ||
+          !continuousPassiveActive(source, rule, this.state.slots)
+        )
+          continue;
+        if (!before || !continuousPassiveActive(before, rule, previous.slots))
+          this.event("passive", source, describePassiveActions(rule.efeitos));
+      }
+    }
   }
 }

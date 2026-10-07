@@ -14,6 +14,7 @@ import {
   effectIds,
   abilityIds,
   passiveIds,
+  legacyPassiveIds,
   playableErrors,
 } from "../game/capabilities";
 export const cardRoutes = Router();
@@ -31,6 +32,7 @@ cardRoutes.get("/schema", (_req, res) => {
     efeitos: effectIds,
     habilidades: abilityIds,
     passivas: passiveIds,
+    passivasLegadas: legacyPassiveIds,
     modelosPassivos: passiveTemplates,
     schema: z.toJSONSchema(cardSchema, { unrepresentable: "any" }),
   });

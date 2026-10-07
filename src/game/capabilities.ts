@@ -1,4 +1,6 @@
 import type { Card, Effect, TipoAlvoFeitico } from "../types/card";
+import { legacyPassiveTriggers } from "./legacy-passives";
+import { passiveEventTriggers, passiveActionIds } from "./passives";
 
 export const effectIds = [
   "damage",
@@ -30,7 +32,8 @@ export const abilityIds = [
   "armaduraPoderosa",
   "recuperarEnergia",
 ] as const;
-export const passiveIds = [
+export const passiveIds = passiveActionIds;
+export const legacyPassiveIds = [
   "aplicarStatusAtacante",
   "bonusAtaqueAdjacente",
   "restringirAtaqueBasico",
@@ -45,21 +48,6 @@ export const passiveIds = [
   "acumularDanoFogo",
   "curarMagoAgua",
 ];
-const passiveTriggers: Record<string, string[]> = {
-  aplicarStatusAtacante: ["onAttacked"],
-  bonusAtaqueAdjacente: ["continuous"],
-  restringirAtaqueBasico: ["onTargeted"],
-  ganharVida: ["onDeath"],
-  curarMago: ["onSpellCast"],
-  recuperarMana: ["onDeath"],
-  comprarCarta: ["onSpellCast"],
-  comprarCartaCemiterio: ["onRevive"],
-  ganharVidaEManaSacrificio: ["onSacrifice"],
-  manaCampoVazio: ["onTurnStart"],
-  causarDanoExtra: ["onStatusApplied"],
-  acumularDanoFogo: ["onSpellCast"],
-  curarMagoAgua: ["onSpellCast"],
-};
 const keywordIds = [
   "Guardar",
   "Esconder",
@@ -199,6 +187,100 @@ export function playableErrors(card: Card): string[] {
       errors.push(`Habilidade ${h.id} não implementada.`);
   }
   for (const h of card.habilidadesPassivas) {
+    if ("efeitos" in h) {
+      const ongoing = h.gatilho === "continuous" || h.gatilho === "onTargeted";
+      if (
+        !ongoing &&
+        !(passiveEventTriggers as readonly string[]).includes(h.gatilho)
+      )
+        errors.push("Gatilho de passiva não implementado.");
+      if (ongoing && h.escopo !== "proprio")
+        errors.push("Aura e restrição exigem escopo proprio.");
+      if (h.filtroAlvo && !["onKill", "onAttack", "onHeal"].includes(h.gatilho))
+        errors.push("Filtro de alvo exige evento de abate, ataque ou cura.");
+      for (const filter of [
+        h.filtroEvento,
+        ...h.efeitos.flatMap((a) =>
+          "filtro" in a
+            ? [a.filtro, ...("qualquerDe" in a ? (a.qualquerDe ?? []) : [])]
+            : [],
+        ),
+      ])
+        if (filter?.status && !statusIds.includes(filter.status))
+          errors.push("Filtro de passiva usa status não implementado.");
+      for (const effect of h.efeitos) {
+        const allowed =
+          h.gatilho === "continuous"
+            ? ["attackAura", "attackBonus"]
+            : h.gatilho === "onTargeted"
+              ? ["blockAttack"]
+              : (passiveIds as readonly string[]).filter(
+                  (id) =>
+                    !["attackAura", "attackBonus", "blockAttack"].includes(id),
+                );
+        if (!allowed.includes(effect.id))
+          errors.push(
+            "Efeito " +
+              effect.id +
+              " incompatível com gatilho " +
+              h.gatilho +
+              ".",
+          );
+        if (effect.id === "status" && !statusIds.includes(effect.status))
+          errors.push("Status de passiva não implementado.");
+        if (
+          ["attackAura", "attackBonus"].includes(effect.id) &&
+          card.tipo !== "Tropa"
+        )
+          errors.push("Bônus de ataque contínuo exige tropa.");
+        if (effect.id === "spellDamageBonus" && card.tipo !== "Mago")
+          errors.push("Bônus de feitiços exige mago.");
+        if (
+          effect.id === "spellDamageBonus" &&
+          ["__proto__", "prototype", "constructor"].includes(effect.contador)
+        )
+          errors.push("Identificador de contador reservado.");
+        if (effect.id === "blockAttack" && !effect.filtro && !effect.qualquerDe)
+          errors.push("Restrição exige filtro do atacante.");
+        if (
+          (effect.id === "move" || effect.id === "summonFromDeck") &&
+          (h.gatilho !== "onDeath" ||
+            h.filtroEvento?.tipo !== "Tropa" ||
+            h.escopo !== "aliado")
+        )
+          errors.push("Ocupar espaço de morte exige onDeath de tropa aliada.");
+        if (
+          (effect.id === "move" || effect.id === "summonFromDeck") &&
+          card.tipo !== "Tropa"
+        )
+          errors.push("Movimento e mobilização passivos exigem tropa.");
+        if ("alvo" in effect) {
+          if (
+            effect.alvo === "atacante" &&
+            !["onAttacked", "onDamageTaken"].includes(h.gatilho)
+          )
+            errors.push("Alvo atacante exige evento de ataque ou dano.");
+          if (
+            effect.alvo === "alvoAtaque" &&
+            !["onAttack", "onKill", "onHeal"].includes(h.gatilho)
+          )
+            errors.push("Alvo do evento exige ataque, abate ou cura.");
+          if (
+            effect.alvo === "cartaEvento" &&
+            ["onTurnStart", "onTurnEnd"].includes(h.gatilho)
+          )
+            errors.push("Eventos de turno não fornecem carta alvo.");
+          if (
+            ["heal", "growMaxHp"].includes(effect.id) &&
+            effect.alvo === "fonte" &&
+            !["Tropa", "Mago", "Estrutura"].includes(card.tipo)
+          )
+            errors.push("Cura/vida exigem uma fonte com vida.");
+        }
+      }
+      continue;
+    }
+
     if (
       h.efeito === "aplicarStatusAtacante" &&
       (!h.status || !statusIds.includes(h.status) || !h.duracao)
@@ -212,8 +294,8 @@ export function playableErrors(card: Card): string[] {
     if (h.efeito === "restringirAtaqueBasico" && !h.elemento && !h.direcao)
       errors.push("Restrição exige elemento ou direção do atacante.");
     if (
-      !passiveIds.includes(h.efeito) ||
-      !passiveTriggers[h.efeito]?.includes(h.gatilho)
+      !legacyPassiveIds.includes(h.efeito) ||
+      !legacyPassiveTriggers[h.efeito]?.includes(h.gatilho)
     )
       errors.push(`Passiva ${h.efeito}/${h.gatilho} não implementada.`);
     if (

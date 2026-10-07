@@ -31,6 +31,10 @@ export const targets = [
 ] as const;
 export const triggers = [
   "onDeath",
+  "onStructureDestroyed",
+  "onHeal",
+  "onHealed",
+  "onKill",
   "onSpellCast",
   "onDamageTaken",
   "onAttacked",
@@ -71,7 +75,133 @@ export const activeSchema = z
     efeitos: z.array(effectSchema).max(12).optional(),
   })
   .strict();
-export const passiveSchema = z
+const passiveCardTargets = [
+  "fonte",
+  "magoAliado",
+  "magoInimigo",
+  "cartaEvento",
+  "atacante",
+  "alvoAtaque",
+] as const;
+export const passiveFilterSchema = z
+  .object({
+    tipo: z.enum(cardTypes).optional(),
+    elemento: z.enum(elements).optional(),
+    direcao: z.enum(["Frente", "Diagonal", "Universal"]).optional(),
+    status: z.string().max(80).optional(),
+  })
+  .strict()
+  .refine(
+    (filter) => Object.values(filter).some((value) => value !== undefined),
+    "Defina pelo menos um filtro.",
+  );
+const cardAction = { alvo: z.enum(passiveCardTargets), valor: number };
+const playerAction = { jogador: z.enum(["aliado", "inimigo"]), valor: number };
+export const passiveActionSchema = z.discriminatedUnion("id", [
+  z
+    .object({
+      id: z.literal("damage"),
+      ...cardAction,
+      elemento: z.enum(elements).optional(),
+    })
+    .strict(),
+  z
+    .object({
+      id: z.literal("heal"),
+      ...cardAction,
+      excedente: number.optional(),
+    })
+    .strict(),
+  z.object({ id: z.literal("growMaxHp"), ...cardAction }).strict(),
+  z
+    .object({
+      id: z.literal("status"),
+      alvo: z.enum(passiveCardTargets),
+      status: z.string().min(1).max(80),
+      duracao: number.min(1),
+      valor: number.optional(),
+    })
+    .strict(),
+  z.object({ id: z.literal("mana"), ...playerAction }).strict(),
+  z.object({ id: z.literal("draw"), ...playerAction }).strict(),
+  z.object({ id: z.literal("recover"), ...playerAction }).strict(),
+  z
+    .object({
+      id: z.literal("spellDamageBonus"),
+      elemento: z.enum(elements),
+      valor: number.min(1),
+      contador: identifier,
+      aCada: number.min(1),
+    })
+    .strict(),
+  z
+    .object({
+      id: z.literal("attackAura"),
+      valor: number.min(1),
+      filtro: passiveFilterSchema.optional(),
+      fonteRecebe: z.boolean().optional(),
+      porVizinho: z.boolean().optional(),
+    })
+    .strict(),
+  z.object({ id: z.literal("attackBonus"), valor: number.min(1) }).strict(),
+  z
+    .object({
+      id: z.literal("summonFromDeck"),
+      carta: z.union([z.literal("mesmaCarta"), z.string().regex(/^\d{3,6}$/)]),
+      destino: z.literal("slotEvento"),
+    })
+    .strict(),
+  z
+    .object({ id: z.literal("move"), destino: z.literal("slotEvento") })
+    .strict(),
+  z
+    .object({
+      id: z.literal("blockAttack"),
+      filtro: passiveFilterSchema.optional(),
+      qualquerDe: z.array(passiveFilterSchema).min(1).max(12).optional(),
+    })
+    .strict(),
+]);
+export const declarativePassiveSchema = z
+  .object({
+    gatilho: z.enum(triggers),
+    descricao: z.string().max(2000).optional(),
+    escopo: z.enum(["proprio", "aliado", "inimigo", "qualquer"]),
+    excluirFonte: z.boolean().optional(),
+    filtroEvento: passiveFilterSchema.optional(),
+    filtroAlvo: z
+      .object({
+        tipo: z.enum(cardTypes).optional(),
+        elemento: z.enum(elements).optional(),
+        relacao: z.enum(["aliado", "inimigo"]).optional(),
+      })
+      .strict()
+      .optional(),
+    condicoes: z
+      .array(
+        z.discriminatedUnion("tipo", [
+          z
+            .object({
+              tipo: z.literal("campoVazio"),
+              jogador: z.enum(["aliado", "inimigo"]),
+            })
+            .strict(),
+          z
+            .object({
+              tipo: z.literal("vidaPercentual"),
+              alvo: z.enum(["fonte", "cartaEvento"]),
+              percentual: number.max(100),
+              comparacao: z.enum(["menor", "menorOuIgual"]),
+            })
+            .strict(),
+        ]),
+      )
+      .max(12)
+      .optional(),
+    efeitos: z.array(passiveActionSchema).min(1).max(12),
+  })
+  .strict();
+export const legacyPassiveSchema = z
   .object({
     gatilho: z.enum(triggers),
     descricao: z.string().max(2000).optional(),
@@ -86,6 +216,14 @@ export const passiveSchema = z
     porVizinho: z.boolean().optional(),
   })
   .strict();
+export const passiveSchema = z.union([
+  legacyPassiveSchema,
+  declarativePassiveSchema,
+]);
+export type LegacyPassive = z.infer<typeof legacyPassiveSchema>;
+export type DeclarativePassive = z.infer<typeof declarativePassiveSchema>;
+export type PassiveAction = z.infer<typeof passiveActionSchema>;
+export type PassiveFilter = z.infer<typeof passiveFilterSchema>;
 export const limitsSchema = z
   .object({
     tropasMobilizadas: number,

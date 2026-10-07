@@ -13,7 +13,9 @@ O próprio baralho é mostrado ordenado por nome, sem revelar a ordem de compra.
 
 Foram preservadas as regras e a aparência atuais, conforme confirmação do autor.
 As mudanças locais já existentes fazem parte do projeto a ser enviado ao GitHub.
-Esta revisão não executa migrações de produção nem sobrescreve cartas no banco.
+A revisão inicial não executou migrações de produção. A extensão das passivas
+foi autorizada pelo autor com definições de gatilhos, duração, vagas e referências.
+Sincronizações específicas do catálogo usam dry run, backup e controle de versão.
 
 Correções de prioridade alta aplicadas:
 - Conexão MongoDB: somente tentativas em curso são compartilhadas. Uma promessa
@@ -81,8 +83,8 @@ Não remover artes sem conferir referência local, banco editável e cartas futu
 Deck: 40 cartas + 1 mago; Tropa/Feitico até 3 cópias, Estrutura/Armamento até 2.
 Rascunhos incompletos podem ser salvos, mas cartas inexistentes/cópias inválidas
 são rejeitadas. Cartas jogáveis precisam de publicação e capacidade executável.
-Médico da Peste usa 900098; Palhaço usa 098. Objetos legados com nome do Médico
-são convertidos; uma referência isolada 098 continua identificando Palhaço.
+Médico da Peste usa 107; Palhaço usa 098. Objetos legados com nome do Médico
+e o número provisório 900098 são convertidos; 098 isolado identifica Palhaço.
 
 Preparação: ambos recebem cinco cartas e cinco mana, mobilizam gratuitamente
 respeitando o mago, e confirmam separadamente. Sem tropas na mão inicial,
@@ -138,7 +140,7 @@ Feitiços implementados:
 - 001 Bola de Fogo: custo 4, dano 3 em todas as tropas inimigas, inclusive
   flanqueadas. Com Furacão na rodada, em qualquer ordem, soma dano 6 em tropas e
   mago inimigos, uma combinação por jogador por rodada.
-- 002 Jato d'água: custo 3, dano 4 em inimigo no próprio turno. Fora do turno,
+- 002 Jato da água: custo 3, dano 4 em inimigo no próprio turno. Fora do turno,
   cancela um comum de Fogo dirigido a tropa/mago, inclusive vários alvos, sem
   causar dano nem aplicar elemento. Não cancela assinaturas nem feitiço só para
   estrutura. Janela de 20 s; opção de recusar; timeout resolve o feitiço original.
@@ -169,12 +171,35 @@ Feitiços implementados:
 - 090 Fluxo Forte: custo 2, compra três; próxima outra Zarcos própria na rodada
   compra mais uma, uma vez por cópia. Compra sem cartas causa derrota no motor.
 
-Passivas: são efeito + gatilho + parâmetros. Salamandra retalia com Envenenado,
+Passivas novas: gatilho + escopo + filtros/condições + lista de efeitos gerais.
+As definições antigas são convertidas em memória pelo adaptador legacy-passives;
+cartas e partidas antigas continuam executáveis. Ativas mantêm seu motor separado.
+Salamandra retalia com Envenenado,
 Cágado com Queimado, inclusive em golpe fatal ou sem dano. Dançarina concede
 ataque por ligação a vizinhos elegíveis; bônus recalcula com posição/presença e
 se acumula. Esqueleto em Chamas bloqueia básico de tropa Água OU Frente, sem
 bloquear habilidades/feitiços/magos. Ativas mostradas nas artes dessas tropas
 não foram implementadas só por terem recebido passivas. Não presumir carta completa.
+
+Passivas revisadas com confirmação do autor:
+- Assassino: dano 4 quando inimigo recebe Incapacitado, agora no formato geral.
+- Cavaleiro: cura 2 quando mata uma tropa inimiga por ataque ou habilidade.
+  Montar o Cavalo ainda precisa de regra própria; não foi deduzido da arte.
+- Guerreiro: ataque básico +1 com MENOS de 50% da vida máxima; exatamente
+  metade não ativa. O motor permite configurar menorOuIgual em outras cartas.
+- Arqueiro: inimigo que recebe Cegueira fica Incapacitado por 1 rodada.
+- Piranha: quando outra tropa aliada morre, mobiliza uma cópia do baralho
+  no espaço liberado, sem mana nem consumo de mobilização voluntária.
+- Rato: um Rato já em campo toma o espaço liberado de outra tropa aliada.
+  O movimento preserva identidade e segue transferência de estruturas/armamentos
+  e bloqueios de movimento atuais. Não cria carta da mão ou do baralho.
+Na disputa por uma vaga, a primeira fonte na ordem dos slots a ocupa; as demais
+não duplicam ocupantes. Vaga ocupada/pântano e falta de cópia tornam o efeito
+inaplicável. Valores de HP/custo/elemento que divergirem das artes continuam
+pendentes de revisão; alterar passivas não autoriza reequilibrar esses atributos.
+Passivas efetivas e habilidades usadas geram avisos sequenciais públicos.
+Uma aura avisa ao passar de inativa para ativa, sem repetir em cada snapshot.
+Restrição de ataque avisa somente no navegador de quem tenta o alvo bloqueado.
 
 Conta/social: amizade exige consentimento; convite privado dura 5 min e fixa
 decks válidos; aceitação é idempotente. Perfil mostra estatísticas do histórico
@@ -222,11 +247,58 @@ valor não necessariamente redefine um dano codificado no executor especial.
 Não podem ser usados em efeitos de habilidades genéricas. Uma ativa declarativa
 pode usar, por exemplo, alvo UnicoAliado e efeitos [{id: heal, valor: 3}].
 
-Modelos de passiva estão em /cards/schema e no seletor administrativo. Adicionar
-modelo só altera JSON do formulário: revise, valide e salve. Descrição própria
-prevalece nos detalhes. Para aura, configure elemento/valor/porVizinho; para
-restrição, elemento OU direcao com filtro opcional tipoAtacante; para retaliação,
-gatilho onAttacked + aplicarStatusAtacante + status/duracao suportados.
+Modelos gerais de passiva estão em /cards/schema e no seletor administrativo.
+Adicionar modelo só altera JSON do formulário: revise, valide e salve.
+Descrição própria prevalece nos detalhes. Exemplos para habilidadesPassivas:
+{
+  "gatilho": "onDeath", "escopo": "aliado", "excluirFonte": true,
+  "filtroEvento": { "tipo": "Tropa", "elemento": "Agua" },
+  "efeitos": [{ "id": "draw", "jogador": "aliado", "valor": 1 },
+              { "id": "mana", "jogador": "aliado", "valor": 2 }]
+}
+{
+  "gatilho": "continuous", "escopo": "proprio",
+  "condicoes": [{ "tipo": "vidaPercentual", "alvo": "fonte",
+                  "percentual": 50, "comparacao": "menor" }],
+  "efeitos": [{ "id": "attackBonus", "valor": 1 }]
+}
+Gatilhos gerais: onAttacked, onAttack, onDamageTaken, onDeath (tropa/estrutura),
+onStructureDestroyed, onSpellCast, onSummon, onEquip, onRevive, onSacrifice,
+onStatusApplied, onHeal (quem curou), onHealed (quem recebeu cura), onKill
+(autor do abate de tropa), onTurnStart e onTurnEnd. Cura só dispara se houver
+ganho real de HP. Filtros de status aceitam os aliases de status.ts.
+Escopos: proprio = esta instância originou/recebeu o evento; aliado/inimigo =
+dono da carta do evento; qualquer = ambos. excluirFonte elimina a própria carta.
+filtroEvento combina tipo/elemento/direcao/status por E. filtroAlvo seleciona
+tipo/elemento/relacao do alvo em ataque, cura ou abate. Condições: campoVazio
+ou vidaPercentual (fonte/cartaEvento, menor/menorOuIgual). Vida percentual usa
+HP máximo próprio, sem somar bônus de armamento.
+Efeitos gerais: damage, heal, growMaxHp, status; mana/draw/recover; contador
+spellDamageBonus (mago, elemento, contador, aCada, valor); move/summonFromDeck
+(morte de tropa aliada e slotEvento). Alvos: fonte, magoAliado, magoInimigo,
+cartaEvento, atacante e alvoAtaque. jogador é aliado/inimigo relativo à fonte.
+heal.excedente limita cura acima do HP base; sem excedente usa HP com armamentos.
+continuous aceita attackBonus/attackAura; onTargeted aceita blockAttack.
+Aura usa filtro/valor/porVizinho/fonteRecebe. Restrição usa filtro obrigatório
+e/ou qualquerDe: campos do filtro são E; entradas de qualquerDe são OU.
+Use condições para recalcular bônus, sem gravar aumentos em cada consulta.
+Os participantes e condições de cada evento são congelados antes dos efeitos;
+a ordem dos slots e das passivas decide a sequência. Ciclos têm limite e rollback.
+Não misturar efeito (formato antigo) e efeitos (formato declarativo) na passiva.
+Para uma combinação dos efeitos existentes, basta editar o JSON; só crie
+executor novo quando a operação geral ainda não existir.
+
+Sincronizar somente as passivas revisadas no banco configurado:
+node node_modules/tsx/dist/cli.mjs scripts/update-troop-passives.ts
+Após revisar as propostas e publicar o motor compatível, repetir com --apply.
+PASSIVE_ENV_FILE seleciona arquivo de ambiente; padrão .env. O script escreve
+somente habilidadesPassivas e versao, preserva outros efeitos existentes e salva
+backup dos registros antes da primeira escrita. Partidas em andamento conservam
+suas cartas; as regras novas aparecem nas próximas partidas.
+Médico: scripts/update-card-reference.ts faz o mesmo dry run/backup para 900098
+-> 107; CATALOG_ENV_FILE seleciona o ambiente e --apply autoriza a escrita.
+Se ambos os números existirem no banco, recusa a migração para revisão manual.
+As leituras preferem o registro canônico 107 e não duplicam a carta no catálogo.
 
 Para novo efeito:
 1. Fechar alvo, custo, duração, acúmulo, preparação, estruturas, respostas,
@@ -479,7 +551,7 @@ Para arquivo novo, escrever sua responsabilidade aqui: audit/check exigem a entr
 - public/assets/Cards/Golem de água.png — Arte utilizada pela definição de 026 Golém de água (publicada localmente); pode ser sobrescrita por imgURL do banco.
 - public/assets/Cards/Golem.png — Arte utilizada pela definição de 025 Golém (publicada localmente); pode ser sobrescrita por imgURL do banco.
 - public/assets/Cards/Guerreiro.png — Arte utilizada pela definição de 023 Guerreiro (publicada localmente); pode ser sobrescrita por imgURL do banco.
-- public/assets/Cards/Jato da água.png — Arte utilizada pela definição de 002 Jato d'água (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Jato da água.png — Arte utilizada pela definição de 002 Jato da água (publicada localmente); pode ser sobrescrita por imgURL do banco.
 - public/assets/Cards/Ladino.png — Arte utilizada pela definição de 088 Ladino (publicada localmente); pode ser sobrescrita por imgURL do banco.
 - public/assets/Cards/Lança Chamas.png — Arte utilizada pela definição de 102 Lança Chamas (rascunho local); pode ser sobrescrita por imgURL do banco.
 - public/assets/Cards/Leptospirose.png — Arte utilizada pela definição de 072 Leptospirose (rascunho local); pode ser sobrescrita por imgURL do banco.
@@ -497,7 +569,7 @@ Para arquivo novo, escrever sua responsabilidade aqui: audit/check exigem a entr
 - public/assets/Cards/Maresia.png — Arte utilizada pela definição de 118 Maresia (rascunho local); pode ser sobrescrita por imgURL do banco.
 - public/assets/Cards/Mochila de Recursos.png — Arte utilizada pela definição de 092 Mochila de recursos (rascunho local); pode ser sobrescrita por imgURL do banco.
 - public/assets/Cards/Muro de Terra.png — Arte utilizada pela definição de 059 Muro de terra (rascunho local); pode ser sobrescrita por imgURL do banco.
-- public/assets/Cards/Médico da Peste.png — Arte utilizada pela definição de 900098 Médico da Peste (publicada localmente); pode ser sobrescrita por imgURL do banco.
+- public/assets/Cards/Médico da Peste.png — Arte utilizada pela definição de 107 Médico da Peste (publicada localmente); pode ser sobrescrita por imgURL do banco.
 - public/assets/Cards/Necromante.png — Arte utilizada pela definição de 108 Necromante (publicada localmente); pode ser sobrescrita por imgURL do banco.
 - public/assets/Cards/Nevoeiro Denso.png — Arte utilizada pela definição de 121 Nevoeiro Denso (rascunho local); pode ser sobrescrita por imgURL do banco.
 - public/assets/Cards/Nome Profano.png — Arte utilizada pela definição de 054 Nome profano (rascunho local); pode ser sobrescrita por imgURL do banco.
@@ -567,7 +639,8 @@ Para arquivo novo, escrever sua responsabilidade aqui: audit/check exigem a entr
 - scripts/backup.mjs — Exporta documentos/índices em EJSON e AES-GCM; restaura em banco vazio isolado com prefixo permitido.
 - scripts/make-admin.ts — Concede admin a e-mail existente no MongoDB configurado e encerra conexão.
 - scripts/update-spell-rules.ts — Compara/sincroniza regras de 12 feitiços existentes; dry run padrão, --apply escreve com revisão; pendente backup por lote.
-- scripts/update-troop-passives.ts — Planeja quatro passivas, valida, salva backup e escreve com revisão apenas sob --apply.
+- scripts/update-troop-passives.ts — Sincroniza passivas de dez tropas sem alterar atributos/ativas; dry run, backup e revisão sob --apply; reconhece formatos antigo e declarativo.
+- scripts/update-card-reference.ts — Migra o registro do Médico 900098 para 107 com backup e revisão; dry run padrão; recusa conflito com 107 já existente.
 - src/application.ts — Fábrica Express: segurança, estáticos, conexão, montagem das APIs, operações e erros.
 - src/data/catalog.json — 130 definições locais de fallback, referenciadas por numeroCatalogo; banco válido pode substituí-las.
 - src/db/models/Card.ts — Modelo MongoDB das definições de carta, efeitos e habilidades com versionamento.
@@ -580,7 +653,8 @@ Para arquivo novo, escrever sua responsabilidade aqui: audit/check exigem a entr
 - src/game/contracts.ts — Schema estrito de comandos e tipo Command, com UUID de ação e versão.
 - src/game/durable.ts — Coordena fila/convites, CAS, presença, prazos, resposta, recuperação, revanche e projeção de resultados.
 - src/game/engine.ts — Motor atômico: preparação, turnos, alvos, combate, feitiços, habilidades, morte, rollback e snapshot privado.
-- src/game/passives.ts — Auras/restrições puras e modelos administrativos reutilizáveis de passivas.
+- src/game/passives.ts — Gatilhos, filtros, condições, auras/restrições, contagem de bônus de feitiço, descrições de avisos e modelos gerais de passivas.
+- src/game/legacy-passives.ts — Traduz definições antigas em efeitos gerais e preserva contadores antigos de Fogo; concentra a compatibilidade, sem regras por número/nome de carta.
 - src/game/reactions.ts — Identifica pares elementais e fornece descrições públicas únicas; resolução fica no motor.
 - src/game/state.ts — Contratos de Instance, Slot, Player, State e DeckDefinition; sem banco ou transporte.
 - src/game/status.ts — Normaliza aliases, aplica status/acúmulos e calcula dano/duração por rodada.
@@ -638,13 +712,13 @@ Para arquivo novo, escrever sua responsabilidade aqui: audit/check exigem a entr
 8. VERIFICAÇÃO DESTA REVISÃO
 
 A base anterior passou com 110 testes e uma integração opcional ignorada.
-Verificação final: npm run check aprovado, 111 testes passaram, nenhuma falha e
+Verificação final: npm run check aprovado, 126 testes passaram, nenhuma falha e
 1 integração MongoDB opcional ignorada; tipos e compilação aprovados. A auditoria
-verificou 264 arquivos, 130 cartas e 44 publicadas localmente, sem erros de
+verificou 266 arquivos, 130 cartas e 44 publicadas localmente, sem erros de
 imports, referências estáticas, alcance de módulos ou cobertura deste guia.
 Os três assets reservados são Globo de luz.png, Peste Negra - efeito.png e
 fundo site.png; foram preservados. npm ls --depth=0 e git diff --check aprovados.
 O envio ao GitHub é registrado na entrega do chat; o log local
-.codex-architecture-final.log contém a execução final completa.
+.codex-passives-check.log contém a execução desta extensão de passivas.
 Testes simulados não comprovam entrega SMTP, capacidade de produção, fidelidade
 de todas as artes ou experiência em aparelhos físicos.

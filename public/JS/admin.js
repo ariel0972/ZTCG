@@ -45,7 +45,7 @@ async function load() {
       }),
     );
     $("capabilities").textContent =
-      `Tipos: ${capabilities.tipos.join(", ")}\n\nAlvos: ${capabilities.alvos.join(", ")}\n\nGatilhos: ${capabilities.gatilhos.join(", ")}\n\nEfeitos: ${capabilities.efeitos.join(", ")}\n\nHabilidades especiais: ${capabilities.habilidades.join(", ")}`;
+      `Tipos: ${capabilities.tipos.join(", ")}\n\nAlvos: ${capabilities.alvos.join(", ")}\n\nGatilhos: ${capabilities.gatilhos.join(", ")}\n\nEfeitos: ${capabilities.efeitos.join(", ")}\n\nEfeitos de passivas: ${capabilities.passivas.join(", ")}\n\nHabilidades especiais: ${capabilities.habilidades.join(", ")}`;
     if (cards.length) edit(cards[0]);
   } catch (e) {
     message(e.message, true);

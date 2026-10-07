@@ -63,6 +63,67 @@ function effectDescription(effect) {
 }
 export function passiveDescription(h) {
   if (h.descricao) return h.descricao;
+  if (h.efeitos) {
+    const trigger =
+      {
+        onAttacked: "Ao ser atacada",
+        onAttack: "Ao atacar",
+        onHeal: "Ao curar",
+        onHealed: "Ao receber cura",
+        onKill: "Ao eliminar uma tropa",
+        onDeath: "Quando uma carta morre",
+        onStructureDestroyed: "Quando uma estrutura é destruída",
+        onSpellCast: "Ao conjurar um feitiço",
+        onTurnStart: "No início do turno",
+        onTurnEnd: "No fim do turno",
+        onSummon: "Ao entrar em campo",
+        onEquip: "Ao equipar",
+        onDamageTaken: "Ao receber dano",
+        onRevive: "Ao reviver",
+        onSacrifice: "Ao sacrificar",
+        onStatusApplied: "Ao aplicar status",
+        continuous: "Enquanto a condição for válida",
+        onTargeted: "Ao ser alvo de ataque básico",
+      }[h.gatilho] || "Passiva";
+    const scope = {
+      proprio: "da própria carta",
+      aliado: "de um aliado",
+      inimigo: "de um inimigo",
+      qualquer: "de qualquer jogador",
+    }[h.escopo];
+    const effects = h.efeitos
+      .map(
+        (e) =>
+          ({
+            damage: `causa ${e.valor} de dano`,
+            heal: `cura ${e.valor} de vida`,
+            growMaxHp: `ganha ${e.valor} de vida máxima`,
+            status: `aplica ${e.status}`,
+            mana: `recupera ${e.valor} de mana`,
+            draw: `compra ${e.valor} carta(s)`,
+            recover: `recupera ${e.valor} carta(s) do cemitério`,
+            spellDamageBonus: `a cada ${e.aCada} eventos ganha +${e.valor} de dano de ${e.elemento}`,
+            attackAura: `aura de ataque +${e.valor} entre vizinhos`,
+            attackBonus: `ataque básico +${e.valor}`,
+            blockAttack: "impede ataques básicos que correspondam ao filtro",
+            summonFromDeck:
+              "mobiliza uma carta do baralho no espaço da tropa morta",
+            move: "move esta carta para o espaço da tropa morta",
+          })[e.id] || "efeito",
+      )
+      .join("; ");
+    const conditions = (h.condicoes || [])
+      .map((c) =>
+        c.tipo === "vidaPercentual"
+          ? `vida ${c.comparacao === "menor" ? "menor que" : "menor ou igual a"} ${c.percentual}%`
+          : `campo ${c.jogador} vazio`,
+      )
+      .join(", ");
+    const filters = h.filtroEvento
+      ? Object.values(h.filtroEvento).join(", ")
+      : "";
+    return `${trigger} ${scope}: ${effects}${filters ? " · Filtro: " + filters : ""}${conditions ? " · Condição: " + conditions : ""}.`;
+  }
   if (h.efeito === "aplicarStatusAtacante")
     return `Ao receber ataque básico, aplica ${h.status} ao atacante, mesmo se não receber dano ou morrer.`;
   if (h.efeito === "bonusAtaqueAdjacente")

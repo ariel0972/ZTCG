@@ -9,6 +9,7 @@ export const deckRules = {
 export function cardReference(value: unknown): string {
   if (typeof value === "string" || typeof value === "number") {
     const text = String(value);
+    if (text === "900098") return "107";
     if (/^\d{1,6}$/.test(text)) return text.padStart(3, "0");
   }
   if (value && typeof value === "object") {
@@ -18,7 +19,7 @@ export function cardReference(value: unknown): string {
       String(ref.numeroCatalogo ?? ref.id).replace(/^0+/, "") === "98" &&
       /m[eé]dico/i.test(String(ref.nome ?? ref.name))
     )
-      return "900098";
+      return "107";
     return cardReference(ref.numeroCatalogo ?? ref.id);
   }
   throw new AppError(422, "Referência de carta inválida. Use numeroCatalogo.");

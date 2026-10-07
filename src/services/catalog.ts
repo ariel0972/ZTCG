@@ -1,9 +1,17 @@
 import model from "../db/models/Card";
 import { Card, cardSchema } from "../types/card";
 import initial from "../data/catalog.json";
+import { cardReference } from "../domain/deck";
 export function cleanCard(raw: Record<string, unknown>): Card {
   const { _id, __v, createdAt, updatedAt, ...card } = raw;
-  return cardSchema.parse(card);
+  const parsed = cardSchema.parse(card);
+  return {
+    ...parsed,
+    numeroCatalogo: cardReference({
+      numeroCatalogo: parsed.numeroCatalogo,
+      nome: parsed.nome,
+    }),
+  };
 }
 export function mergeCatalog(records: Record<string, unknown>[]) {
   const issues: { id: string; nome: string; motivo: string }[] = [];
@@ -13,10 +21,14 @@ export function mergeCatalog(records: Record<string, unknown>[]) {
       return [card.numeroCatalogo, card] as const;
     }),
   );
+  const canonicalOverrides = new Set<string>();
   for (const record of records) {
     try {
       const card = cleanCard(record);
+      const aliased = String(record.numeroCatalogo) !== card.numeroCatalogo;
+      if (aliased && canonicalOverrides.has(card.numeroCatalogo)) continue;
       merged.set(card.numeroCatalogo, card);
+      if (!aliased) canonicalOverrides.add(card.numeroCatalogo);
     } catch {
       // Os antigos campos name/type/attack não são convertidos em regras novas
       // nem liberados para jogo. A definição local conhecida continua disponível.

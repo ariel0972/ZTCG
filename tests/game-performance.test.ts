@@ -90,6 +90,45 @@ test("avisos de jogadas não repetem após reconexão e mostram morte sem carta 
       1,
     );
     assert.match(dom.window.document.body.textContent!, /cemitério.*Cavaleiro/);
+    const passive = {
+      ...event,
+      sequence: 3,
+      kind: "passive",
+      message: "Curou 2 de vida",
+    };
+    const ability = {
+      ...event,
+      sequence: 4,
+      kind: "ability",
+      message: "A Ordem da Espada",
+    };
+    view.update({ id: "a", events: [event, next, passive, ability] });
+    view.update({ id: "a", events: [event, next, passive, ability] });
+    assert.match(
+      dom.window.document.body.textContent!,
+      /Passiva ativada.*Curou 2 de vida/,
+    );
+    assert.match(
+      dom.window.document.body.textContent!,
+      /Habilidade usada.*A Ordem da Espada/,
+    );
+    view.notify({
+      ...event,
+      kind: "block",
+      message: "A passiva impede este ataque básico.",
+    });
+    assert.match(
+      dom.window.document.body.textContent!,
+      /Ataque impedido.*passiva impede/,
+    );
+    assert.equal(
+      dom.window.document.querySelectorAll(".battle-event--passive").length,
+      1,
+    );
+    assert.equal(
+      dom.window.document.querySelectorAll(".battle-event--block").length,
+      1,
+    );
     view.update({ id: "b", events: [] });
     assert.equal(
       dom.window.document.querySelectorAll(".battle-event").length,

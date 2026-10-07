@@ -22,10 +22,69 @@ const active = new Schema(
   },
   { _id: false, strict: "throw" },
 );
+const passiveFilter = new Schema(
+  {
+    tipo: { type: String, enum: cardTypes },
+    elemento: { type: String, enum: elements },
+    direcao: { type: String, enum: ["Frente", "Diagonal", "Universal"] },
+    status: String,
+  },
+  { _id: false, strict: "throw" },
+);
+const passiveCondition = new Schema(
+  {
+    tipo: { type: String, enum: ["campoVazio", "vidaPercentual"] },
+    jogador: { type: String, enum: ["aliado", "inimigo"] },
+    alvo: { type: String, enum: ["fonte", "cartaEvento"] },
+    percentual: n,
+    comparacao: { type: String, enum: ["menor", "menorOuIgual"] },
+  },
+  { _id: false, strict: "throw" },
+);
+const passiveAction = new Schema(
+  {
+    id: { type: String, required: true },
+    alvo: String,
+    valor: n,
+    jogador: { type: String, enum: ["aliado", "inimigo"] },
+    elemento: { type: String, enum: elements },
+    status: String,
+    duracao: n,
+    excedente: n,
+    contador: String,
+    aCada: n,
+    fonteRecebe: Boolean,
+    porVizinho: Boolean,
+    carta: String,
+    destino: String,
+    filtro: { type: passiveFilter, default: undefined },
+    qualquerDe: { type: [passiveFilter], default: undefined },
+  },
+  { _id: false, strict: "throw" },
+);
 const passive = new Schema(
   {
     gatilho: { type: String, enum: triggers, required: true },
-    efeito: { type: String, required: true },
+    efeito: String,
+    escopo: {
+      type: String,
+      enum: ["proprio", "aliado", "inimigo", "qualquer"],
+    },
+    excluirFonte: Boolean,
+    filtroEvento: { type: passiveFilter, default: undefined },
+    filtroAlvo: {
+      type: new Schema(
+        {
+          tipo: { type: String, enum: cardTypes },
+          elemento: { type: String, enum: elements },
+          relacao: { type: String, enum: ["aliado", "inimigo"] },
+        },
+        { _id: false, strict: "throw" },
+      ),
+      default: undefined,
+    },
+    condicoes: { type: [passiveCondition], default: undefined },
+    efeitos: { type: [passiveAction], default: undefined },
     valor: n,
     condicao: String,
     elemento: { type: String, enum: elements },

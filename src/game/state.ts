@@ -13,6 +13,8 @@ export interface Instance extends Card {
   statuses: Status[];
   fireSpellsCast?: number;
   fireDamageBonus?: number;
+  passiveCounters?: Record<string, number>;
+  killedBy?: { ownerId: string; cardId: string };
 }
 export interface Slot {
   id: string;
@@ -84,6 +86,7 @@ export interface State {
   events?: {
     sequence: number;
     kind: string;
+    message?: string;
     card: { id: string; nome: string; imgURL: string; ownerId: string };
   }[];
   eventSequence?: number;

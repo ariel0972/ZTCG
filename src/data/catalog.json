@@ -1182,7 +1182,7 @@
     "descricao": "",
     "imgURL": "/assets/Cards/Assassino.png",
     "publicado": true,
-    "versao": 1,
+    "versao": 2,
     "hp": 9,
     "ataque": 2,
     "manaGerada": 2,
@@ -1191,9 +1191,17 @@
     "habilidadesPassivas": [
       {
         "gatilho": "onStatusApplied",
-        "condicao": "Incapacitado",
-        "efeito": "causarDanoExtra",
-        "valor": 4
+        "escopo": "inimigo",
+        "filtroEvento": {
+          "status": "Incapacitado"
+        },
+        "efeitos": [
+          {
+            "id": "damage",
+            "alvo": "cartaEvento",
+            "valor": 4
+          }
+        ]
       }
     ],
     "habilidadesAtivas": [
@@ -1212,7 +1220,7 @@
     "descricao": "",
     "imgURL": "/assets/Cards/Cavaleiro.png",
     "publicado": true,
-    "versao": 1,
+    "versao": 2,
     "hp": 12,
     "ataque": 3,
     "manaGerada": 3,
@@ -1227,6 +1235,24 @@
         "id": "armaduraPoderosa",
         "nome": "Armadura Poderosa",
         "custoMana": 3
+      }
+    ],
+    "habilidadesPassivas": [
+      {
+        "gatilho": "onKill",
+        "escopo": "proprio",
+        "filtroAlvo": {
+          "tipo": "Tropa",
+          "relacao": "inimigo"
+        },
+        "efeitos": [
+          {
+            "id": "heal",
+            "alvo": "fonte",
+            "valor": 2
+          }
+        ],
+        "descricao": "Quando esta carta mata uma tropa inimiga por ataque ou habilidade, cura 2 de vida."
       }
     ]
   },
@@ -1252,12 +1278,33 @@
     "descricao": "",
     "imgURL": "/assets/Cards/Guerreiro.png",
     "publicado": true,
-    "versao": 1,
+    "versao": 2,
     "hp": 11,
     "ataque": 3,
     "manaGerada": 2,
     "direcaoAtaque": "Universal",
-    "habilidadesAtivas": []
+    "habilidadesAtivas": [],
+    "habilidadesPassivas": [
+      {
+        "gatilho": "continuous",
+        "escopo": "proprio",
+        "condicoes": [
+          {
+            "tipo": "vidaPercentual",
+            "alvo": "fonte",
+            "percentual": 50,
+            "comparacao": "menor"
+          }
+        ],
+        "efeitos": [
+          {
+            "id": "attackBonus",
+            "valor": 1
+          }
+        ],
+        "descricao": "Com menos da metade de sua vida máxima, ganha +1 de dano de ataque básico."
+      }
+    ]
   },
   {
     "numeroCatalogo": "024",
@@ -1267,11 +1314,29 @@
     "descricao": "",
     "imgURL": "/assets/Cards/Arqueiro.png",
     "publicado": true,
-    "versao": 1,
+    "versao": 2,
     "hp": 1,
     "ataque": 2,
     "manaGerada": 1,
-    "direcaoAtaque": "Frente"
+    "direcaoAtaque": "Frente",
+    "habilidadesPassivas": [
+      {
+        "gatilho": "onStatusApplied",
+        "escopo": "inimigo",
+        "filtroEvento": {
+          "status": "Cego"
+        },
+        "efeitos": [
+          {
+            "id": "status",
+            "alvo": "cartaEvento",
+            "status": "Incapacitado",
+            "duracao": 1
+          }
+        ],
+        "descricao": "Quando um inimigo recebe Cegueira, aplica Incapacitado por 1 rodada."
+      }
+    ]
   },
   {
     "numeroCatalogo": "025",
@@ -1295,11 +1360,28 @@
     "descricao": "",
     "imgURL": "/assets/Cards/Rato.png",
     "publicado": true,
-    "versao": 1,
+    "versao": 2,
     "hp": 1,
     "ataque": 2,
     "manaGerada": 1,
-    "direcaoAtaque": "Frente"
+    "direcaoAtaque": "Frente",
+    "habilidadesPassivas": [
+      {
+        "gatilho": "onDeath",
+        "escopo": "aliado",
+        "excluirFonte": true,
+        "filtroEvento": {
+          "tipo": "Tropa"
+        },
+        "efeitos": [
+          {
+            "id": "move",
+            "destino": "slotEvento"
+          }
+        ],
+        "descricao": "Quando outra tropa aliada morre, este Rato em campo move-se para o espaço disponível dela."
+      }
+    ]
   },
   {
     "numeroCatalogo": "063",
@@ -1414,7 +1496,7 @@
     "direcaoAtaque": "Frente"
   },
   {
-    "numeroCatalogo": "900098",
+    "numeroCatalogo": "107",
     "nome": "Médico da Peste",
     "tipo": "Tropa",
     "custoMana": 4,
@@ -1573,11 +1655,29 @@
     "descricao": "",
     "imgURL": "/assets/Cards/Piranha.png",
     "publicado": true,
-    "versao": 1,
+    "versao": 2,
     "hp": 1,
     "ataque": 2,
     "manaGerada": 1,
-    "direcaoAtaque": "Frente"
+    "direcaoAtaque": "Frente",
+    "habilidadesPassivas": [
+      {
+        "gatilho": "onDeath",
+        "escopo": "aliado",
+        "excluirFonte": true,
+        "filtroEvento": {
+          "tipo": "Tropa"
+        },
+        "efeitos": [
+          {
+            "id": "summonFromDeck",
+            "carta": "mesmaCarta",
+            "destino": "slotEvento"
+          }
+        ],
+        "descricao": "Quando outra tropa aliada morre, busca uma cópia desta carta no baralho e a mobiliza sem custo no espaço disponível da tropa morta."
+      }
+    ]
   },
   {
     "numeroCatalogo": "042",

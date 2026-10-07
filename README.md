@@ -50,6 +50,8 @@ npm run check
 
 O primeiro comando concede administração à conta existente no MongoDB configurado. O painel `/HTML/admin.html` edita JSON declarativo, valida e salva cartas com controle de versão. Descrição não executa regras. Consulte os exemplos e o roteiro de publicação no guia.
 
+Passivas novas combinam `gatilho`, `escopo`, filtros/condições e uma lista de `efeitos`. Há eventos de ataque, cura, morte, abate e destruição de estrutura, além de condições de percentual de vida. O guia traz exemplos para criar outras cartas pelo JSON; `legacy-passives.ts` mantém compatibilidade com definições antigas. Passivas e habilidades geram avisos no jogo, e bloqueios de ataque são avisados somente a quem tenta atacar.
+
 `npm run check` verifica tipos, testa regras/API/interface/arquitetura e compila. `npm run audit` não conecta ao banco: verifica publicação local, imports, alcance dos módulos, arquivos estáticos e cobertura do guia. A integração real do MongoDB é opcional e exige um banco temporário novo `ztcg_test_*`.
 
 `npm run format` formata fontes, testes, scripts e interface. Credenciais, backups, logs, dependências e `dist/` são ignorados pelo Git. Atualizações no banco, backups reais e alterações de regras/aparência exigem sua definição ou autorização específica.

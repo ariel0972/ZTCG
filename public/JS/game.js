@@ -278,8 +278,17 @@ function selectSlot(slot) {
       return;
     }
     if (selected.type === "attack") {
-      if (!selected.slot.attackTargets?.[selected.source]?.includes(slot.id))
+      if (!selected.slot.attackTargets?.[selected.source]?.includes(slot.id)) {
+        const reason =
+          selected.slot.attackBlockReasons?.[selected.source]?.[slot.id];
+        if (reason && slot.card)
+          battleEvents.notify({
+            kind: "block",
+            card: slot.card,
+            message: reason,
+          });
         return;
+      }
       void command({
         type: "attack",
         slotId: selected.slot.id,
