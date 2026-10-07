@@ -61,6 +61,12 @@ DurableGame -> Game: restaurar, avançar prazos, executar, gravar e projetar.
 Game não importa Express, MongoDB nem DOM. Seus efeitos são declarativos.
 Tipos e capabilities não devem importar rotas, serviços de banco nem navegador.
 
+Exceção necessária de hospedagem: src/server.ts deve importar express em runtime
+e exportar a aplicação. A Vercel procura o import no próprio entrypoint; importar
+Express apenas dentro de application.ts não atende à detecção. O adaptador
+Express em server.ts é intencional; a fábrica permanece em application.ts.
+Não trocar esse import por import type. A auditoria verifica essa fronteira.
+
 Mongoose e Zod têm tarefas diferentes: documento persistido e validação de
 entrada. Ao mudar o contrato, alinhe os dois. Não os una em um módulo que faça
 o motor carregar modelos de banco. Também mantenha o banco simulado nos testes.
@@ -557,7 +563,7 @@ Para arquivo novo, escrever sua responsabilidade aqui: audit/check exigem a entr
 - public/assets/icons/terra.svg — Ícone terra usado em personalização de baralho ou tipo/elemento de carta.
 - public/assets/icons/tropa.svg — Ícone tropa usado em personalização de baralho ou tipo/elemento de carta.
 - public/assets/icons/zarcos.svg — Ícone zarcos usado em personalização de baralho ou tipo/elemento de carta.
-- scripts/audit-project.ts — Auditoria offline de grafo de imports, módulos usados, assets/capitalização, catálogo e cobertura deste guia.
+- scripts/audit-project.ts — Auditoria offline de grafo de imports, entrypoint Express para Vercel, módulos usados, assets/capitalização, catálogo e cobertura deste guia.
 - scripts/backup.mjs — Exporta documentos/índices em EJSON e AES-GCM; restaura em banco vazio isolado com prefixo permitido.
 - scripts/make-admin.ts — Concede admin a e-mail existente no MongoDB configurado e encerra conexão.
 - scripts/update-spell-rules.ts — Compara/sincroniza regras de 12 feitiços existentes; dry run padrão, --apply escreve com revisão; pendente backup por lote.
@@ -594,7 +600,7 @@ Para arquivo novo, escrever sua responsabilidade aqui: audit/check exigem a entr
 - src/routes/passwordRoutes.ts — Pedido de recuperação genérico e consumo atômico do token; invalida sessões antigas.
 - src/routes/profileRoutes.ts — Perfil autenticado, decks publicados/privados e histórico paginado com estatísticas completas.
 - src/routes/userRoutes.ts — Cadastro/login, cookie de renovação, logout, dados próprios e edição de nome/avatar.
-- src/server.ts — Entrypoint: valida configuração, exporta app e inicia HTTP/desligamento em execução Node direta.
+- src/server.ts — Entrypoint e adaptador Express exigido pela detecção Vercel: import direto runtime, export default, configuração e HTTP/desligamento Node.
 - src/services/catalog.ts — Mescla catálogo local e registros válidos do banco; diagnostica registros legados sem apagá-los.
 - src/services/decks.ts — DTO/migração de referências, posse do deck e validação de cartas executáveis para jogar.
 - src/services/profiles.ts — Estatísticas completas e progressão a partir do histórico de partidas.

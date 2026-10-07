@@ -1,10 +1,16 @@
 import { createServer } from "node:http";
+import express from "express";
 import mongoose from "mongoose";
 import { config } from "./lib/config";
 import { createApp } from "./application";
 import dbConnect from "./lib/mongodb";
 const settings = config(),
-  app = createApp(settings.origins);
+  app = express();
+// Vercel's framework detector requires a runtime Express import in its entrypoint.
+// Keep the platform adapter here and the application factory independently testable.
+app.disable("x-powered-by");
+if (process.env.VERCEL) app.set("trust proxy", 1);
+app.use(createApp(settings.origins));
 if (require.main === module) {
   const server = createServer(app);
   server.listen(settings.port, () =>

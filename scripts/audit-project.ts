@@ -59,6 +59,25 @@ export async function auditProject(root = path.resolve(__dirname, "..")) {
         ts.ScriptTarget.Latest,
         true,
       );
+      if (file === "src/server.ts") {
+        const importsExpress = source.statements.some(
+          (statement) =>
+            ts.isImportDeclaration(statement) &&
+            ts.isStringLiteral(statement.moduleSpecifier) &&
+            statement.moduleSpecifier.text === "express" &&
+            statement.importClause &&
+            !statement.importClause.isTypeOnly &&
+            !!statement.importClause.name,
+        );
+        const exportsApp = source.statements.some(
+          (statement) =>
+            ts.isExportAssignment(statement) && !statement.isExportEquals,
+        );
+        if (!importsExpress || !exportsApp)
+          errors.push(
+            "src/server.ts: Vercel exige import runtime direto de Express e export default da aplicação.",
+          );
+      }
       const imports = source.statements.flatMap((statement) => {
         if (
           (ts.isImportDeclaration(statement) ||
