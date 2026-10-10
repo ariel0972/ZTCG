@@ -31,6 +31,8 @@ export const abilityIds = [
   "ordemDaEspada",
   "armaduraPoderosa",
   "recuperarEnergia",
+  "refazerCaminhos",
+  "deslocar",
 ] as const;
 export const passiveIds = passiveActionIds;
 export const legacyPassiveIds = [
@@ -211,12 +213,18 @@ export function playableErrors(card: Card): string[] {
       for (const effect of h.efeitos) {
         const allowed =
           h.gatilho === "continuous"
-            ? ["attackAura", "attackBonus"]
+            ? ["attackAura", "attackBonus", "manaRecovery"]
             : h.gatilho === "onTargeted"
-              ? ["blockAttack"]
+              ? ["blockAttack", "reflectAttack"]
               : (passiveIds as readonly string[]).filter(
                   (id) =>
-                    !["attackAura", "attackBonus", "blockAttack"].includes(id),
+                    ![
+                      "attackAura",
+                      "attackBonus",
+                      "blockAttack",
+                      "manaRecovery",
+                      "reflectAttack",
+                    ].includes(id),
                 );
         if (!allowed.includes(effect.id))
           errors.push(
@@ -235,6 +243,8 @@ export function playableErrors(card: Card): string[] {
           errors.push("Bônus de ataque contínuo exige tropa.");
         if (effect.id === "spellDamageBonus" && card.tipo !== "Mago")
           errors.push("Bônus de feitiços exige mago.");
+        if (effect.id === "manaRecovery" && card.tipo !== "Mago")
+          errors.push("Substituição de recuperação exige mago.");
         if (
           effect.id === "spellDamageBonus" &&
           ["__proto__", "prototype", "constructor"].includes(effect.contador)

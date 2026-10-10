@@ -113,6 +113,14 @@ export const passiveActionSchema = z.discriminatedUnion("id", [
     })
     .strict(),
   z.object({ id: z.literal("growMaxHp"), ...cardAction }).strict(),
+  z.object({ id: z.literal("growAttack"), ...cardAction }).strict(),
+  z.object({ id: z.literal("manaRecovery"), valor: number }).strict(),
+  z
+    .object({
+      id: z.literal("reflectAttack"),
+      filtro: passiveFilterSchema.optional(),
+    })
+    .strict(),
   z
     .object({
       id: z.literal("status"),

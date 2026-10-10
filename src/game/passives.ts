@@ -22,6 +22,9 @@ export const passiveActionIds = [
   "damage",
   "heal",
   "growMaxHp",
+  "growAttack",
+  "manaRecovery",
+  "reflectAttack",
   "status",
   "mana",
   "draw",
@@ -61,6 +64,12 @@ export function describePassiveActions(actions: PassiveAction[]) {
           return `Curou ${a.valor} de vida`;
         case "growMaxHp":
           return `Ganhou ${a.valor} de vida máxima`;
+        case "growAttack":
+          return `Ganhou ${a.valor} de ataque básico`;
+        case "manaRecovery":
+          return `Recuperação de mana definida em ${a.valor}`;
+        case "reflectAttack":
+          return "Pode devolver um ataque básico por rodada";
         case "status":
           return `Aplicou ${a.status}`;
         case "mana":
@@ -294,6 +303,42 @@ export function continuousPassiveActive(
 }
 export const passiveTemplates: { nome: string; passiva: DeclarativePassive }[] =
   [
+    {
+      nome: "Ao reviver uma tropa aliada: ganhar ataque acumulável",
+      passiva: {
+        gatilho: "onRevive",
+        escopo: "aliado",
+        filtroEvento: { tipo: "Tropa" },
+        efeitos: [{ id: "growAttack", alvo: "fonte", valor: 1 }],
+      },
+    },
+    {
+      nome: "Ao morrer outra tropa: ganhar vida máxima e atual",
+      passiva: {
+        gatilho: "onDeath",
+        escopo: "qualquer",
+        excluirFonte: true,
+        filtroEvento: { tipo: "Tropa" },
+        efeitos: [{ id: "growMaxHp", alvo: "fonte", valor: 1 }],
+      },
+    },
+    {
+      nome: "Campo inimigo vazio: substituir recuperação do mago",
+      passiva: {
+        gatilho: "continuous",
+        escopo: "proprio",
+        condicoes: [{ tipo: "campoVazio", jogador: "inimigo" }],
+        efeitos: [{ id: "manaRecovery", valor: 5 }],
+      },
+    },
+    {
+      nome: "Reação opcional: devolver um ataque básico por rodada",
+      passiva: {
+        gatilho: "onTargeted",
+        escopo: "proprio",
+        efeitos: [{ id: "reflectAttack" }],
+      },
+    },
     {
       nome: "Ao receber ataque: aplicar status ao atacante",
       passiva: {

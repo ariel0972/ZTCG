@@ -72,6 +72,252 @@ function act(g: Game, cmd: object) {
     actionId: randomUUID(),
   });
 }
+function apprentice(g: Game, owner: string) {
+  const mage = instance("028", owner);
+  g.player(owner).mage = mage;
+  g.state.slots.find((s) => s.kind === "Mago" && s.ownerId === owner)!.card =
+    mage;
+  return mage;
+}
+function respond(
+  g: Game,
+  owner: string,
+  reflect: boolean,
+  actionId = randomUUID(),
+) {
+  return g.execute(owner, {
+    type: "respondAttack",
+    reflect,
+    actionId,
+    version: g.state.version,
+  });
+}
+test("Aprendiz substitui recuperação 3 por 5, soma geração e respeita teto 20", () => {
+  for (const enemyPresent of [false, true]) {
+    const g = make();
+    apprentice(g, "p1");
+    slot(g, "p1", 0).card = instance("095", "p1");
+    if (enemyPresent) slot(g, "p2", 0).card = instance("020", "p2");
+    g.player("p1").mana = 0;
+    g.state.current = "p2";
+    g.execute("p2", {
+      type: "endTurn",
+      actionId: randomUUID(),
+      version: g.state.version,
+    });
+    assert.equal(g.player("p1").mana, enemyPresent ? 5 : 7);
+    g.player("p1").mana = 19;
+    (g as any).recoverMana(g.player("p1"));
+    assert.equal(g.player("p1").mana, 20);
+    g.player("p1").mage.recuperacaoMana = 8;
+    g.player("p1").mana = 0;
+    (g as any).recoverMana(g.player("p1"));
+    assert.equal(
+      g.player("p1").mana,
+      enemyPresent ? 10 : 7,
+      "efeito substitui a recuperação, inclusive de outro mago",
+    );
+  }
+});
+test("Refazer caminhos escolhe só feitiço próprio, custa 5 e usa habilidade", () => {
+  const g = make(),
+    mage = apprentice(g, "p1"),
+    spell = instance("001", "p1"),
+    troop = instance("020", "p1");
+  g.player("p1").graveyard = [spell, troop];
+  const mageSlot = g.state.slots.find((s) => s.card?.id === mage.id)!;
+  const command = {
+    type: "ability",
+    abilityId: "refazerCaminhos",
+    slotId: mageSlot.id,
+  };
+  assert.throws(() => act(g, { ...command, targets: [troop.id] }), /feitiço/);
+  assert.equal(g.player("p1").mana, 20);
+  act(g, { ...command, targets: [spell.id] });
+  assert.equal(g.player("p1").mana, 15);
+  assert.ok(g.player("p1").hand.some((c) => c.id === spell.id));
+  assert.equal(g.player("p1").graveyard.length, 1);
+  assert.equal(g.player("p1").mage.usedAbility, true);
+  assert.throws(() => act(g, { ...command, targets: [troop.id] }), /utilizada/);
+});
+test("Aprendiz devolve opcionalmente uma vez por rodada, fora de turno, sem mana e independente da habilidade", () => {
+  let g = make();
+  const mage = apprentice(g, "p2");
+  mage.usedAbility = true;
+  g.player("p2").mana = 0;
+  const targetId = g.state.slots.find((s) => s.card?.id === mage.id)!.id;
+  for (const column of [0, 1])
+    slot(g, "p1", column).card = instance("020", "p1", { hp: 20, ataque: 4 });
+  act(g, { type: "attack", slotId: slot(g, "p1", 0).id, targetId });
+  assert.ok(g.state.pendingAttack);
+  assert.equal(g.player("p2").mage.hpAtual, 18);
+  assert.equal(slot(g, "p1", 0).card!.attacked, true);
+  assert.throws(() => act(g, { type: "endTurn" }), /resposta/);
+  assert.throws(() => respond(g, "p1", true), /disponível/);
+  g = Game.restore(g.exportState());
+  const actionId = randomUUID();
+  respond(g, "p2", true, actionId);
+  assert.equal(g.state.pendingAttack, undefined);
+  assert.equal(g.player("p2").mage.hpAtual, 18);
+  assert.equal(slot(g, "p1", 0).card!.hpAtual, 16);
+  assert.equal(g.player("p2").mana, 0);
+  assert.equal(respond(g, "p2", true, actionId).duplicate, true);
+  act(g, { type: "attack", slotId: slot(g, "p1", 1).id, targetId });
+  assert.equal(g.state.pendingAttack, undefined);
+  assert.equal(g.player("p2").mage.hpAtual, 14);
+  g.state.round++;
+  slot(g, "p1", 0).card!.attacked = false;
+  g.player("p1").counters.attacks = 0;
+  act(g, { type: "attack", slotId: slot(g, "p1", 0).id, targetId });
+  assert.ok(g.state.pendingAttack);
+  respond(g, "p2", false);
+  assert.equal(g.player("p2").mage.hpAtual, 10);
+});
+test("reação também funciona em outra carta e não intercepta feitiço ou habilidade", () => {
+  const g = make(),
+    from = slot(g, "p1", 0),
+    to = slot(g, "p2", 2);
+  from.card = instance("095", "p1");
+  to.card = instance("020", "p2", {
+    hp: 20,
+    habilidadesPassivas: [
+      {
+        gatilho: "onTargeted",
+        escopo: "proprio",
+        efeitos: [{ id: "reflectAttack" }],
+      },
+    ],
+  });
+  act(g, {
+    type: "ability",
+    slotId: from.id,
+    abilityId: "deslocar",
+    targets: [],
+  });
+  assert.equal(to.card!.hpAtual, 17);
+  assert.equal(g.state.pendingAttack, undefined);
+  to.card!.statuses = [];
+  act(g, { type: "attack", slotId: from.id, targetId: to.id });
+  assert.ok(g.state.pendingAttack);
+  respond(g, "p2", true);
+  assert.equal(from.card!.hpAtual, 4);
+});
+test("reação acompanha o destinatário real: mago atrás de congelado e estrutura protetora", () => {
+  const g = make(),
+    from = slot(g, "p1", 0),
+    to = slot(g, "p2", 2);
+  apprentice(g, "p2");
+  from.card = instance("020", "p1", { hp: 20, ataque: 4 });
+  to.card = instance("020", "p2", { hp: 20 });
+  to.card.statuses = [{ nome: "Congelado", turnosRestantes: 2 }];
+  act(g, { type: "attack", slotId: from.id, targetId: to.id });
+  assert.equal(g.state.pendingAttack!.defenderId, g.player("p2").mage.id);
+  respond(g, "p2", true);
+  assert.equal(g.player("p2").mage.hpAtual, 18);
+  assert.equal(to.card!.hpAtual, 20);
+  assert.equal(from.card!.hpAtual, 16);
+  const protectedGame = make(),
+    source = slot(protectedGame, "p1", 0),
+    destination = slot(protectedGame, "p2", 2);
+  source.card = instance("020", "p1", { ataque: 4 });
+  destination.card = instance("020", "p2", {
+    hp: 20,
+    habilidadesPassivas: [
+      {
+        gatilho: "onTargeted",
+        escopo: "proprio",
+        efeitos: [{ id: "reflectAttack" }],
+      },
+    ],
+  });
+  destination.structure = instance("020", "p2", { tipo: "Estrutura", hp: 20 });
+  act(protectedGame, {
+    type: "attack",
+    slotId: source.id,
+    targetId: destination.id,
+  });
+  assert.equal(protectedGame.state.pendingAttack, undefined);
+  assert.equal(destination.card!.hpAtual, 20);
+  assert.equal(destination.structure!.hpAtual, 16);
+});
+test("Aprendiz devolve ataques de tropas, mas não de magos", () => {
+  const g = make(),
+    mage = apprentice(g, "p2");
+  const source = g.state.slots.find(
+    (s) => s.ownerId === "p1" && s.kind === "Mago",
+  )!;
+  const target = g.state.slots.find((s) => s.card?.id === mage.id)!;
+  const damage = source.card!.ataque!;
+  act(g, { type: "attack", slotId: source.id, targetId: target.id });
+  assert.equal(g.state.pendingAttack, undefined);
+  assert.equal(g.player("p2").mage.hpAtual, 18 - damage);
+});
+test("Esqueleto ganha ataque em cada retorno de tropa revivida; Deslocar é frontal automático e custa 4", () => {
+  const g = make(),
+    skeleton = slot(g, "p1", 0);
+  skeleton.card = instance("095", "p1");
+  assert.throws(
+    () =>
+      act(g, {
+        type: "ability",
+        slotId: skeleton.id,
+        abilityId: "deslocar",
+        targets: [],
+      }),
+    /frente/,
+  );
+  assert.equal(g.player("p1").mana, 20);
+  for (const col of [1, 2]) {
+    const revived = instance("020", "p1");
+    revived.revivedFromGraveyard = true;
+    g.player("p1").hand.push(revived);
+    act(g, { type: "play", cardId: revived.id, slotId: slot(g, "p1", col).id });
+  }
+  assert.equal(skeleton.card!.ataque, 5);
+  const enemy = slot(g, "p2", 2);
+  enemy.card = instance("023", "p2", { hp: 20 });
+  const mana = g.player("p1").mana;
+  act(g, {
+    type: "ability",
+    slotId: skeleton.id,
+    abilityId: "deslocar",
+    targets: [],
+  });
+  assert.equal(g.player("p1").mana, mana - 4);
+  assert.equal(enemy.card!.hpAtual, 17, "bônus básico não aumenta habilidade");
+  assert.ok(enemy.card!.statuses.some((s) => s.nome === "Atordoado"));
+  assert.equal(skeleton.card!.usedAbility, true);
+});
+test("Palhaço ganha vida por mortes dos dois lados, ignora estruturas e não volta à vida em morte simultânea", () => {
+  const g = make(),
+    clown = slot(g, "p1", 0);
+  clown.card = instance("098", "p1");
+  for (const [owner, col] of [
+    ["p1", 1],
+    ["p2", 2],
+  ] as const) {
+    const victim = slot(g, owner, col);
+    victim.card = instance("020", owner);
+    victim.card.hpAtual = 0;
+    (g as any).resolve();
+  }
+  assert.equal(clown.card!.hp, 7);
+  assert.equal(clown.card!.hpAtual, 7);
+  const victim = slot(g, "p2", 1);
+  victim.structure = instance("020", "p2", { tipo: "Estrutura" });
+  victim.structure.hpAtual = 0;
+  (g as any).resolve();
+  assert.equal(clown.card!.hpAtual, 7);
+  slot(g, "p2", 2).card = instance("020", "p2");
+  slot(g, "p2", 2).card!.hpAtual = 0;
+  clown.card!.hpAtual = 0;
+  (g as any).resolve();
+  assert.equal(clown.card, null);
+  assert.equal(
+    g.player("p1").graveyard.find((c) => c.numeroCatalogo === "098")!.hpAtual,
+    0,
+  );
+});
 for (const [id, status] of [
   ["044", "Envenenado"],
   ["110", "Queimado"],

@@ -1,3 +1,4 @@
+import { createSiteNavigation } from "./site-navigation.js";
 export function token() {
   return sessionStorage.getItem("token") || localStorage.getItem("token");
 }
@@ -115,6 +116,7 @@ export async function navbar() {
     friends.href = "/HTML/friends.html";
     nav.append(friends);
   }
+  createSiteNavigation(document.querySelector(".topbar"));
   const host = document.getElementById("account");
   if (!host) return null;
   host.replaceChildren();
@@ -127,7 +129,11 @@ export async function navbar() {
   try {
     const { user } = await api("/auth/me");
     const link = node("a", user.nome);
-    link.href = "/HTML/perfil.html";
+    link.href = profilePath(user.id);
+    for (const entry of document.querySelectorAll(
+      'a[href="/HTML/perfil.html"]',
+    ))
+      entry.href = profilePath(user.id);
     host.append(link);
     if (user.admin) {
       const admin = node("a", "Catálogo");
@@ -165,4 +171,8 @@ export async function navbar() {
     message(e.message, true);
     return null;
   }
+}
+
+export function profilePath(id) {
+  return `/thumosplayer/${encodeURIComponent(id)}`;
 }

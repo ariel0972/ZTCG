@@ -10,7 +10,7 @@
   }
   .deckbuilder-page .workspace {
     display: block;
-    min-height: calc(100dvh - 190px);
+    min-height: calc(100dvh - 160px);
   }
   .deckbuilder-page .workspace > [hidden],
   .deck-mobile-nav[hidden] {
@@ -126,9 +126,5 @@
   }
   .deckbuilder-page .message {
     bottom: calc(92px + env(safe-area-inset-bottom));
-  }
-  .deckbuilder-page .detail-body {
-    grid-template-columns: minmax(90px, 1fr) minmax(0, 1.3fr);
-    gap: 14px;
   }
 }

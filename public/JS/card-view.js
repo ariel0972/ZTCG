@@ -14,6 +14,7 @@ export function abilityNeedsTarget(ability) {
       "ordemDaEspada",
       "armaduraPoderosa",
       "enganarAMorte",
+      "deslocar",
     ].includes(ability.id)
   )
     return false;
@@ -24,6 +25,9 @@ export function abilityNeedsTarget(ability) {
 export function abilityDescription(ability) {
   if (ability.descricao) return ability.descricao;
   const known = {
+    refazerCaminhos: "Escolha um feitiço do seu cemitério e devolva-o à mão.",
+    deslocar:
+      "Causa 3 de dano à tropa diretamente à frente e aplica Atordoado por 1 rodada. Alvo automático.",
     recuperarEnergia:
       "Escolha um feitiço da mão para sacrificar e recuperar 3 mana (máximo 20).",
     ataqueFurtivo:
@@ -97,6 +101,10 @@ export function passiveDescription(h) {
           ({
             damage: `causa ${e.valor} de dano`,
             heal: `cura ${e.valor} de vida`,
+            growAttack: `ganha +${e.valor} de ataque básico acumulável`,
+            manaRecovery: `recuperação do mago passa a ${e.valor} mana`,
+            reflectAttack:
+              "pode devolver um ataque básico por rodada; resposta opcional em 20 segundos, sem custo",
             growMaxHp: `ganha ${e.valor} de vida máxima`,
             status: `aplica ${e.status}`,
             mana: `recupera ${e.valor} de mana`,

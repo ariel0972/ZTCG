@@ -448,14 +448,14 @@
 }
 .card-action-menu {
   position: fixed;
-  width: 276px;
+  width: min(248px, calc(100vw - 24px));
   z-index: 150;
   border: 1px solid #b5a076;
   border-radius: 14px;
   background: #142333f5;
   box-shadow: 0 14px 45px #000a;
-  padding: 12px;
-  max-height: calc(100dvh - 24px);
+  padding: 10px;
+  max-height: min(560px, calc(100dvh - 24px));
   overflow-y: auto;
   backdrop-filter: blur(12px);
 }
@@ -481,7 +481,8 @@
 .card-action-menu .action-panel button {
   width: 100%;
   text-align: left;
-  padding: 9px 12px;
+  padding: 7px 10px;
+  min-height: 36px;
   font-size: 12px;
   border: 1px solid #68839566;
   background: #23364b;
@@ -1327,4 +1328,216 @@
   font-size: 0.8rem;
   color: var(--muted, #adc3cf);
   margin: 0 0 12px;
+}
+
+@media (pointer: coarse) {
+  .card-action-menu .action-panel button {
+    min-height: 44px;
+  }
+}
+
+/* Hand navigation keeps the first card reachable when the hand overflows. */
+.hand-carousel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.match-page .hand-carousel .hand {
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-start;
+  scroll-padding: 12px;
+  overscroll-behavior-x: contain;
+}
+.hand-carousel .hand > :first-child {
+  margin-left: auto;
+}
+.hand-carousel .hand > :last-child {
+  margin-right: auto;
+}
+.hand-arrow {
+  flex: 0 0 38px;
+  height: 48px;
+  padding: 0;
+  font-size: 28px;
+  border-radius: 12px;
+}
+.hand-arrow:disabled {
+  opacity: 0.3;
+}
+.match-page .battle-board {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr) 92px;
+  align-items: center;
+  gap: 12px;
+}
+.board-center {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  position: relative;
+  isolation: isolate;
+}
+.match-page .zone-piles {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 6px;
+  gap: 16px;
+  justify-self: center;
+}
+.enemy-zone-piles {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: start;
+  padding-top: 22px !important;
+}
+.own-zone-piles {
+  grid-column: 3;
+  grid-row: 1;
+  align-self: end;
+  padding-bottom: 22px !important;
+}
+.board-center::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 20px;
+  transition: background 0.25s;
+}
+.battle-arena[data-active-side="me"] .board-center::before {
+  background: linear-gradient(
+    to top,
+    #b5e7ff26,
+    #9ddcff10 40%,
+    transparent 52%
+  );
+}
+.battle-arena[data-active-side="enemy"] .board-center::before {
+  background: linear-gradient(
+    to bottom,
+    #b5e7ff26,
+    #9ddcff10 40%,
+    transparent 52%
+  );
+}
+.battle-arena[data-active-side="me"] .my-hud,
+.battle-arena[data-active-side="enemy"] .enemy-hud {
+  background: linear-gradient(90deg, #c2ecff22, #81cfff0a);
+}
+.turn-announcement {
+  position: fixed;
+  top: 42%;
+  left: 0;
+  width: 100%;
+  z-index: 110;
+  padding: 22px;
+  text-align: center;
+  font-size: clamp(24px, 4vw, 40px);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #e2f6ff;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    #23445deb 30%,
+    #23445deb 70%,
+    transparent
+  );
+  text-shadow: 0 2px 12px #0008;
+  pointer-events: none;
+}
+.match-page .spell-target,
+.match-page .spell-zone-target {
+  outline: 2px solid #a5e5ff;
+  outline-offset: 3px;
+  box-shadow: 0 0 22px #91d9ff44;
+  cursor: crosshair;
+}
+.match-page .board-slot.spell-target[data-target-side="enemy"] {
+  outline-color: #ecd4a2;
+}
+.match-page .board-slot.spell-unavailable {
+  opacity: 0.46;
+}
+.spell-target-label {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 5px;
+  padding: 2px 6px;
+  background: #b9e8fb;
+  color: #152738;
+  font-size: 9px;
+  z-index: 4;
+  white-space: nowrap;
+}
+.match-page .spell-field-target {
+  box-shadow: inset 0 0 50px #a6e6ff20;
+  outline: 1px solid #8acffb66;
+  outline-offset: -1px;
+}
+@media (min-width: 1001px) {
+  .player-field {
+    grid-template-columns: minmax(68px, 1fr) auto minmax(68px, 1fr);
+    gap: 5px;
+  }
+  .turn-action button {
+    padding: 10px;
+    font-size: 11px;
+    max-width: 96px;
+  }
+  .match-page #turn-clock {
+    padding: 5px;
+    font-size: 12px;
+  }
+}
+@media (max-width: 900px) {
+  .match-page .battle-board {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .board-center {
+    grid-column: 1 / -1;
+  }
+  .match-page .zone-piles {
+    flex-direction: row;
+    gap: 12px;
+    padding: 4px !important;
+  }
+  .enemy-zone-piles {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: start;
+  }
+  .own-zone-piles {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: end;
+  }
+  .match-page .zone-pile {
+    width: 44px;
+  }
+  .match-page .zone-pile img {
+    height: 58px;
+  }
+  .zone-pile-caption {
+    font-size: 8px;
+  }
+}
+@media (max-width: 500px) {
+  .hand-carousel {
+    gap: 3px;
+  }
+  .hand-arrow {
+    flex-basis: 30px;
+    height: 44px;
+  }
+  .hand-carousel .hand > :first-child {
+    margin-left: 0;
+  }
 }

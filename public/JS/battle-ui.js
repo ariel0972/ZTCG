@@ -1,5 +1,6 @@
 import { node } from "./auth.js";
 import { labels } from "./card-view.js";
+import { spellSlotTarget } from "./battle-targets.js";
 
 export function attackValue(card, slot, slots = []) {
   if (card.tipo === "Estrutura") return card.ataque || 0;
@@ -147,34 +148,7 @@ export function dropAction(source, slot, state, userId) {
     card = source.card;
   if (source.type === "play") {
     if (card.tipo === "Feitico") {
-      const target = card.alvo;
-      if (
-        (["UnicoAliado", "CampoAliado"].includes(target) && !own) ||
-        ([
-          "UnicoInimigo",
-          "MultiplosInimigos",
-          "CampoInimigo",
-          "TodosInimigos",
-          "TodasTropasInimigas",
-        ].includes(target) &&
-          own)
-      )
-        return null;
-      if (["Deck", "Cemiterio"].includes(target)) return null;
-      if (target === "Estrutura" && !slot.structure) return null;
-      if (
-        ![
-          "CampoAliado",
-          "CampoInimigo",
-          "Global",
-          "TodosInimigos",
-          "TodasTropasInimigas",
-        ].includes(target) &&
-        !slot.card &&
-        !slot.structure
-      )
-        return null;
-      return "play";
+      return spellSlotTarget(card, slot, userId) ? "play" : null;
     }
     if (!own) return null;
     if (card.tipo === "Estrutura")

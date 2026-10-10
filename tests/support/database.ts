@@ -9,6 +9,7 @@ import { Friendship, Invitation } from "../../src/db/models/social";
 import { Card, cardSchema } from "../../src/types/card";
 import initial from "../../src/data/catalog.json";
 import bcrypt from "bcrypt";
+import { playerNameKey } from "../../src/services/player-name";
 export async function fakeDatabase() {
   const users: any[] = [],
     decks: any[] = [],
@@ -99,6 +100,14 @@ export async function fakeDatabase() {
     query(find(users, filter).map(document)),
   );
   function update(row: any, change: any) {
+    if (
+      change.$set?.nomeKey &&
+      users.some((u) => u._id !== row._id && u.nomeKey === change.$set.nomeKey)
+    )
+      throw Object.assign(new Error("duplicate"), {
+        code: 11000,
+        keyPattern: { nomeKey: 1 },
+      });
     Object.assign(row, change.$set);
     for (const [k, v] of Object.entries(change.$inc ?? {}))
       row[k] = (row[k] ?? 0) + Number(v);
@@ -147,6 +156,11 @@ export async function fakeDatabase() {
   patch(User, "create", (data) => {
     if (users.some((u) => u.email === data.email))
       throw Object.assign(new Error("duplicate"), { code: 11000 });
+    if (data.nomeKey && users.some((u) => u.nomeKey === data.nomeKey))
+      throw Object.assign(new Error("duplicate"), {
+        code: 11000,
+        keyPattern: { nomeKey: 1 },
+      });
     const row = {
       _id: new Types.ObjectId().toHexString(),
       avatarURL: "/assets/avatar.png",
@@ -161,7 +175,19 @@ export async function fakeDatabase() {
   });
   patch(User, "findByIdAndUpdate", (id, update) => {
     const row = find(users, { _id: id })[0];
-    if (row) Object.assign(row, update.$set);
+    if (row) {
+      if (
+        update.$set.nomeKey &&
+        users.some(
+          (u) => u._id !== row._id && u.nomeKey === update.$set.nomeKey,
+        )
+      )
+        throw Object.assign(new Error("duplicate"), {
+          code: 11000,
+          keyPattern: { nomeKey: 1 },
+        });
+      Object.assign(row, update.$set);
+    }
     return query(document(row));
   });
   patch(Deck, "create", (data) => {
@@ -232,6 +258,7 @@ export async function fakeDatabase() {
     users.push({
       _id: id,
       nome: `Duelista ${i}`,
+      nomeKey: playerNameKey(`Duelista ${i}`),
       email: `p${i}@test.local`,
       senha,
       admin: i === 3,

@@ -3,6 +3,9 @@ const id = z.string().min(1).max(80);
 const base = { actionId: z.uuid(), version: z.number().int().min(0) };
 export const commandSchema = z.discriminatedUnion("type", [
   z
+    .object({ ...base, type: z.literal("respondAttack"), reflect: z.boolean() })
+    .strict(),
+  z
     .object({ ...base, type: z.literal("respondSpell"), cardId: id.optional() })
     .strict(),
   z

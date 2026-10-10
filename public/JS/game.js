@@ -1,5 +1,16 @@
+import {
+  automaticTargets,
+  zoneTargets,
+  actionTarget,
+  spellSlotTarget,
+  slotTargetId,
+  zoneCardAllowed,
+  targetDescription,
+} from "./battle-targets.js";
+import { createHandNavigation } from "./hand-navigation.js";
+import { createTurnAnnouncement } from "./turn-announcement.js";
 import { createBattleEvents } from "./battle-events.js";
-import { api, token, navbar, message, node } from "./auth.js";
+import { api, token, navbar, message, node, profilePath } from "./auth.js";
 import { gameTransport } from "./game-transport.js";
 import {
   cardTile,
@@ -17,6 +28,15 @@ const $ = (id) => document.getElementById(id);
 const inspector = createCardInspector({
   reactions: () => state?.reactions || {},
 });
+const handNavigation = createHandNavigation(
+  $("hand"),
+  $("hand-previous"),
+  $("hand-next"),
+);
+const turnAnnouncement = createTurnAnnouncement(
+  $("battle-arena"),
+  $("turn-announcement"),
+);
 const acknowledgedResults = new Set();
 const matchConnection = node("p", "Conectando…", "match-connection");
 $("match-title").after(matchConnection);
@@ -54,6 +74,7 @@ const cardBackDisplay = createCardBacks({
   dialog: $("card-back-dialog"),
   picker: $("card-back-picker"),
   field: $("field-zones"),
+  enemyField: $("enemy-field-zones"),
   footer: $("footer-zones"),
 });
 $("card-back-settings").onclick = () => {
@@ -63,6 +84,8 @@ $("card-back-settings").onclick = () => {
 $("card-back-close").onclick = () => $("card-back-dialog").close();
 $("graveyard-footer").onclick = () => $("graveyard").click();
 $("deck-zone-footer").onclick = () => $("deck-zone").click();
+$("enemy-deck-zone-footer").onclick = () => $("enemy-deck-zone").click();
+$("enemy-graveyard-footer").onclick = () => $("enemy-graveyard").click();
 const matchResult = createMatchResult($("result-dialog"));
 $("result-close").onclick = () => matchResult.close();
 $("view-result").onclick = () => {
@@ -108,6 +131,7 @@ function myTurn() {
     connected &&
     !state?.paused &&
     !state?.pendingSpell &&
+    !state?.pendingAttack &&
     state?.status === "ACTIVE" &&
     (state.phase === "PREPARATION"
       ? !myPlayer().preparation.ready
@@ -240,21 +264,6 @@ function selectHand(card) {
 function prepareHand(card) {
   selected = { type: "play", card };
   targets = [];
-  if (card.alvo === "Deck")
-    zone(
-      "Escolha um feitiço elemental",
-      myPlayer().deck.filter(
-        (c) =>
-          c.tipo === "Feitico" &&
-          c.elemento &&
-          !["Neutro", "Zarcos"].includes(c.elemento),
-      ),
-      (c) => {
-        targets = [c.id];
-        $("zone-dialog").close();
-        render();
-      },
-    );
   render();
 }
 function selectSlot(slot) {
@@ -298,18 +307,15 @@ function selectSlot(slot) {
       return;
     }
     if (selected.type === "play" || selected.type === "ability") {
-      const targetType =
-        selected.type === "ability"
-          ? selected.ability.alvo
-          : selected.card.alvo;
-      const id = ["CampoAliado", "CampoInimigo"].includes(targetType)
-        ? slot.id
-        : targetType === "Estrutura"
-          ? slot.structure?.id || slot.id
-          : slot.card?.id || slot.structure?.id || slot.id;
+      const action = targetAction();
+      if (
+        automaticTargets.includes(action.alvo) ||
+        !spellSlotTarget(action, slot, user.id)
+      )
+        return;
+      const id = slotTargetId(action, slot);
       if (targets.includes(id)) targets = targets.filter((t) => t !== id);
-      else if (targets.length < (selected.card?.maxAlvos || 1))
-        targets.push(id);
+      else if (targets.length < (action.maxAlvos || 1)) targets.push(id);
       render();
       return;
     }
@@ -396,6 +402,72 @@ function meHasStatus(name) {
     (s) => s.nome === name && s.turnosRestantes > 0,
   );
 }
+function targetAction() {
+  const action = actionTarget(selected);
+  return action ? { ...action, casterElement: myPlayer().mage.elemento } : null;
+}
+function isChoosingSpell() {
+  return (
+    selected &&
+    ["play", "ability"].includes(selected.type) &&
+    (selected.type === "ability" || selected.card.tipo === "Feitico") &&
+    myTurn() &&
+    !pending
+  );
+}
+function chooseZone(type) {
+  if (!isChoosingSpell()) return;
+  const action = targetAction(),
+    player = myPlayer();
+  const cards =
+    type === "Deck"
+      ? player.deck
+      : type === "Mao"
+        ? player.hand
+        : player.graveyard;
+  zone(
+    type === "Deck"
+      ? "Escolha uma carta do seu baralho"
+      : type === "Mao"
+        ? "Escolha uma carta da sua mão"
+        : "Escolha uma carta do cemitério",
+    cards.filter((c) => zoneCardAllowed(action, c)),
+    (card) => {
+      targets = [card.id];
+      $("zone-dialog").close();
+      render();
+    },
+  );
+}
+function renderTargetZones() {
+  const action = isChoosingSpell() ? targetAction() : null;
+  const has = (ids) => action?.efeitos?.some((e) => ids.includes(e.id));
+  for (const [id, footerId, active] of [
+    [
+      "deck-zone",
+      "deck-zone-footer",
+      action?.alvo === "Deck" || has(["draw", "strongFlow"]),
+    ],
+    ["graveyard", "graveyard-footer", action?.alvo === "Cemiterio"],
+    [
+      "enemy-deck-zone",
+      "enemy-deck-zone-footer",
+      action?.alvo === "DeckOponente",
+    ],
+  ]) {
+    $(id).classList.toggle("spell-zone-target", !!active);
+    $(footerId).classList.toggle("spell-zone-target", !!active);
+  }
+  $("battle-board").classList.toggle(
+    "spell-field-target",
+    action?.alvo === "Global",
+  );
+  $("hand").classList.toggle("spell-zone-target", action?.alvo === "Mao");
+  if (has(["mana", "zarcosTear"]))
+    $("my-back")
+      .querySelector('[data-kind="Mago"]')
+      ?.classList.add("spell-target");
+}
 function renderActions() {
   const panel = $("action-panel"),
     menu = $("card-menu");
@@ -410,7 +482,7 @@ function renderActions() {
   $("selection-help").hidden = !needsTarget;
   if (selected) {
     $("menu-title").textContent = selected.card.nome;
-    menu.style.left = `${Math.max(10, Math.min(menuAnchor.x + 12, window.innerWidth - 290))}px`;
+    menu.style.left = `${Math.max(10, Math.min(menuAnchor.x + 12, window.innerWidth - 260))}px`;
     menu.style.top = `${Math.max(10, Math.min(menuAnchor.y, window.innerHeight - 380))}px`;
     inspector.hide();
   }
@@ -426,7 +498,7 @@ function renderActions() {
             ? "Escolha um campo aliado vazio para reposicionar."
             : selected.type === "play" && selected.card.tipo !== "Feitico"
               ? "Escolha o campo onde deseja jogar a carta."
-              : "Escolha os alvos no campo e confirme no menu da carta.";
+              : targetDescription(targetAction());
   if (!selected) return;
   const inspected = selected.card || selected.slot?.card;
   if (inspected) {
@@ -553,10 +625,16 @@ function renderActions() {
             }
             selected = { type: "ability", slot, card, ability };
             targets = [];
-            if (ability.id === "ressurreicaoSombria")
+            if (["ressurreicaoSombria", "refazerCaminhos"].includes(ability.id))
               zone(
-                "Escolha uma tropa do cemitério",
-                myPlayer().graveyard.filter((c) => c.tipo === "Tropa"),
+                ability.id === "refazerCaminhos"
+                  ? "Escolha um feitiço do cemitério"
+                  : "Escolha uma tropa do cemitério",
+                myPlayer().graveyard.filter(
+                  (c) =>
+                    c.tipo ===
+                    (ability.id === "refazerCaminhos" ? "Feitico" : "Tropa"),
+                ),
                 (c) => {
                   targets = [c.id];
                   $("zone-dialog").close();
@@ -577,24 +655,36 @@ function renderActions() {
           },
           state.openingBlocked
             ? "Bloqueado na preparação e no primeiro turno de cada jogador."
-            : myPlayer().mana < ability.custoMana
-              ? "Mana insuficiente."
-              : card.usedAbility
-                ? "Uma habilidade por carta por rodada."
-                : state.openingBlocked
-                  ? "Habilidades bloqueadas para o primeiro jogador neste turno."
-                  : card.statuses?.some((s) =>
-                        [
-                          "Congelado",
-                          "Congelamento",
-                          "Atordoado",
-                          "Atordoamento",
-                          "Cego",
-                          "Cegueira",
-                        ].includes(s.nome),
-                      )
-                    ? "Um efeito ativo impede habilidades."
-                    : "",
+            : ability.id === "deslocar" &&
+                !state.slots.some(
+                  (s) =>
+                    s.ownerId !== user.id &&
+                    s.kind === "Tropa" &&
+                    s.column === 2 - slot.column &&
+                    s.card?.tipo === "Tropa",
+                )
+              ? "Não há tropa inimiga diretamente à frente."
+              : ability.id === "refazerCaminhos" &&
+                  !myPlayer().graveyard.some((c) => c.tipo === "Feitico")
+                ? "Não há feitiços no seu cemitério."
+                : myPlayer().mana < ability.custoMana
+                  ? "Mana insuficiente."
+                  : card.usedAbility
+                    ? "Uma habilidade por carta por rodada."
+                    : state.openingBlocked
+                      ? "Habilidades bloqueadas para o primeiro jogador neste turno."
+                      : card.statuses?.some((s) =>
+                            [
+                              "Congelado",
+                              "Congelamento",
+                              "Atordoado",
+                              "Atordoamento",
+                              "Cego",
+                              "Cegueira",
+                            ].includes(s.nome),
+                          )
+                        ? "Um efeito ativo impede habilidades."
+                        : "",
         ),
       );
   } else if (selected.type === "field") {
@@ -625,11 +715,18 @@ function renderActions() {
           "hint",
         ),
       );
+      if (zoneTargets.includes(card.alvo) && card.alvo !== "DeckOponente")
+        panel.append(
+          actionButton("Escolher carta da zona", () => chooseZone(card.alvo)),
+        );
       panel.append(
         actionButton(
           "Conjurar feitiço",
           () => command({ type: "play", cardId: card.id, targets }),
-          handBlock(card),
+          handBlock(card) ||
+            (!automaticTargets.includes(card.alvo) && !targets.length
+              ? "Selecione um alvo destacado."
+              : ""),
         ),
       );
     }
@@ -677,7 +774,7 @@ function renderActions() {
     );
   if (inspected) {
     const notes = node("details", "", "card-rules-notes");
-    notes.open = true;
+    notes.open = false;
     notes.append(node("summary", "Habilidades e passivas"));
     for (const ability of inspected.habilidadesAtivas || []) {
       notes.append(
@@ -793,6 +890,23 @@ function slotView(slot) {
       );
     }
   }
+  if (isChoosingSpell()) {
+    const valid = spellSlotTarget(targetAction(), slot, user.id);
+    button.classList.add(valid ? "spell-target" : "spell-unavailable");
+    button.dataset.targetSide = slot.ownerId === user.id ? "ally" : "enemy";
+    button.setAttribute(
+      "aria-disabled",
+      String(!valid || automaticTargets.includes(targetAction().alvo)),
+    );
+    if (valid)
+      button.append(
+        node(
+          "span",
+          slot.kind === "Mago" ? "Mago" : slot.card ? "Alvo" : "Campo",
+          "spell-target-label",
+        ),
+      );
+  }
   button.onclick = (event) => {
     anchorAt(event, button);
     if (selected && !["field", "hand"].includes(selected.type)) {
@@ -818,11 +932,17 @@ function slotView(slot) {
   inspector.bind(structureButton, slot.structure);
   structureButton.onclick = (event) => {
     anchorAt(event, structureButton);
+    if (isChoosingSpell()) {
+      selectSlot(slot);
+      return;
+    }
     selected = { type: "field", slot, card: slot.structure };
     targets = [];
     render();
   };
   dragBinding(structureButton, { type: "field", card: slot.structure, slot });
+  if (isChoosingSpell() && spellSlotTarget(targetAction(), slot, user.id))
+    structureButton.classList.add("spell-target");
   wrapper.append(button, structureButton);
   return wrapper;
 }
@@ -863,7 +983,7 @@ function hud(id, player) {
     node("span", player.nome.slice(0, 1), "duelist-avatar"),
     (() => {
       const link = node("a", player.nome);
-      link.href = `/HTML/perfil.html?id=${encodeURIComponent(player.id)}`;
+      link.href = profilePath(player.id);
       link.target = "_blank";
       link.rel = "noopener";
       return link;
@@ -912,7 +1032,34 @@ function hud(id, player) {
 }
 function render() {
   responsePanel.replaceChildren();
-  responsePanel.hidden = !state?.pendingSpell;
+  responsePanel.hidden = !state?.pendingSpell && !state?.pendingAttack;
+  if (state?.pendingAttack && user) {
+    selected = null;
+    targets = [];
+    const attack = state.pendingAttack;
+    const defender = state.slots
+      .flatMap((s) => [s.card, s.structure])
+      .find((c) => c?.id === attack.defenderId);
+    const attacker = state.slots
+      .flatMap((s) => [s.card, s.structure])
+      .find((c) => c?.id === attack.attackerId);
+    responsePanel.append(
+      node("h2", `${defender?.nome || "Carta"}: devolver ataque?`),
+      node(
+        "p",
+        `${attacker?.nome || "Atacante"} · ${attack.damage} de ataque. Resposta em 20 segundos; turno pausado.`,
+      ),
+    );
+    if (defender?.ownerId === user.id) {
+      const reflect = node("button", "Devolver ataque · gratuito", "primary");
+      const pass = node("button", "Receber ataque", "quiet");
+      for (const button of [reflect, pass])
+        button.disabled = pending || state.paused || !connected;
+      reflect.onclick = () => command({ type: "respondAttack", reflect: true });
+      pass.onclick = () => command({ type: "respondAttack", reflect: false });
+      responsePanel.append(reflect, pass);
+    }
+  }
   if (state?.pendingSpell && user) {
     selected = null;
     targets = [];
@@ -1006,6 +1153,12 @@ function render() {
     me.graveyard.length,
     me.deckAppearance?.verso,
   );
+  cardBackDisplay.updateEnemy(
+    enemy.deckCount,
+    enemy.graveyard.length,
+    enemy.deckAppearance?.verso,
+  );
+  turnAnnouncement.update(state, user.id);
   $("preparation-controls").hidden =
     state.phase !== "PREPARATION" || state.status !== "ACTIVE";
   $("preparation-status").textContent =
@@ -1044,7 +1197,12 @@ function render() {
         tile.append(cardFace(card, { hand: true }));
         tile.onclick = (event) => {
           anchorAt(event, tile);
-          selectHand(card);
+          if (isChoosingSpell() && targetAction().alvo === "Mao") {
+            if (zoneCardAllowed(targetAction(), card)) {
+              targets = [card.id];
+              render();
+            }
+          } else selectHand(card);
         };
         dragBinding(tile, { type: "play", card });
         inspector.bind(tile, card);
@@ -1054,6 +1212,8 @@ function render() {
       }),
     );
   }
+  handNavigation.update();
+  renderTargetZones();
   $("hand-count").textContent = `${me.hand.length} cartas`;
   $("battle-arena").classList.toggle("your-turn", myTurn());
   $("log").replaceChildren(...state.log.map((text) => node("p", text)));
@@ -1102,9 +1262,26 @@ window.addEventListener("resize", () => {
   if (state) renderActions();
 });
 $("graveyard").onclick = () =>
-  state && zone("Seu cemitério", myPlayer().graveyard);
+  isChoosingSpell() && targetAction().alvo === "Cemiterio"
+    ? chooseZone("Cemiterio")
+    : state && zone("Seu cemitério", myPlayer().graveyard);
 $("deck-zone").onclick = () =>
-  state && zone("Seu baralho (sem ordem de compra)", myPlayer().deck);
+  isChoosingSpell() && targetAction().alvo === "Deck"
+    ? chooseZone("Deck")
+    : state && zone("Seu baralho (sem ordem de compra)", myPlayer().deck);
+$("enemy-graveyard").onclick = () =>
+  state &&
+  zone(
+    "Cemitério do adversário",
+    state.players.find((p) => p.id !== user.id).graveyard,
+  );
+$("enemy-deck-zone").onclick = () => {
+  if (!state) return;
+  const enemy = state.players.find((p) => p.id !== user.id);
+  message(
+    `Baralho do adversário: ${enemy.deckCount} cartas. As cartas e a ordem de compra são ocultas.`,
+  );
+};
 $("end-turn").onclick = () => command({ type: "endTurn" });
 $("mulligan").onclick = () => command({ type: "mulligan" });
 $("accept-bonus").onclick = () =>
@@ -1176,7 +1353,7 @@ setInterval(() => {
     $("turn-clock").textContent = connected
       ? state.paused
         ? "Pausado · aguardando reconexão"
-        : state.pendingSpell
+        : state.pendingSpell || state.pendingAttack
           ? `Resposta: ${Math.max(0, Math.ceil((state.responseDeadline - Date.now() - clockOffset) / 1000))}s · turno pausado`
           : `${Math.max(0, Math.ceil((state.deadline - Date.now() - clockOffset) / 1000))}s restantes`
       : "Reconectando…";
@@ -1290,6 +1467,8 @@ void load();
 window.addEventListener("pagehide", () => {
   transport?.close();
   battleEvents.close();
+  handNavigation.close();
+  turnAnnouncement.close();
 });
 
 window.addEventListener("pageshow", (event) => {

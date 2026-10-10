@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 // Interface que descreve os campos do documento no banco
 export interface IUser extends Document {
   nome: string;
+  nomeKey?: string;
   email: string;
   senha: string;
   avatarURL: string;
@@ -17,6 +18,7 @@ export interface IUser extends Document {
 
 const userSchema = new Schema<IUser>({
   nome: { type: String, required: true },
+  nomeKey: { type: String, select: false },
   email: { type: String, required: true, unique: true },
   senha: { type: String, required: true, select: false },
   avatarURL: { type: String, default: "/assets/avatar.png" },
@@ -28,6 +30,14 @@ const userSchema = new Schema<IUser>({
   resetTokenHash: { type: String, select: false },
   resetExpires: { type: Date, select: false },
 });
+userSchema.index(
+  { nomeKey: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { nomeKey: { $type: "string" } },
+    name: "unique_player_name",
+  },
+);
 
 const User: Model<IUser> = mongoose.model<IUser>("UserTCG", userSchema);
 

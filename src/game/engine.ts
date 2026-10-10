@@ -4,6 +4,7 @@ import {
   adjacentAttackBonus,
   restrictedBasicAttack,
   passiveMatches,
+  matchesPassiveFilter,
   spellDamageBonus,
   describePassiveActions,
   continuousPassiveActive,
@@ -260,6 +261,7 @@ export class Game {
     if (this.state.status === "FINISHED") return;
     this.state.status = "FINISHED";
     delete this.state.pendingSpell;
+    delete this.state.pendingAttack;
     this.state.winner = winner;
     this.state.reason = reason;
     this.log(reason);
@@ -307,10 +309,27 @@ export class Game {
     return this.state.phase === "PREPARATION" || this.state.turn <= 2;
   }
   private recoverMana(player: Player) {
+    const mage = player.mage;
+    let recovery = mage.recuperacaoMana ?? 0;
+    for (const passive of mage.habilidadesPassivas) {
+      const rule = normalizePassive(passive);
+      if (
+        rule.gatilho !== "continuous" ||
+        !passiveMatches(
+          rule,
+          mage,
+          { ownerId: player.id, cardId: mage.id, card: mage },
+          this.state.slots,
+        )
+      )
+        continue;
+      for (const action of rule.efeitos)
+        if (action.id === "manaRecovery") recovery = action.valor;
+    }
     player.mana = Math.min(
       20,
       player.mana +
-        (player.mage.recuperacaoMana ?? 0) +
+        recovery +
         this.state.slots
           .filter((s) => s.ownerId === player.id)
           .flatMap((s) => [s.card, s.structure])
@@ -655,6 +674,7 @@ export class Game {
           .filter(
             (rule) =>
               rule.gatilho === trigger &&
+              (source.hpAtual > 0 || source.id === event.cardId) &&
               passiveMatches(rule, source, event, this.state.slots),
           )
           .map((rule) => ({ source, rule })),
@@ -787,8 +807,12 @@ export class Game {
       case "heal": {
         return this.heal(target, action.valor, action.excedente, source);
       }
+      case "growAttack":
+        if (!action.valor || target.hpAtual <= 0) return false;
+        target.ataque = (target.ataque ?? 0) + action.valor;
+        return true;
       case "growMaxHp":
-        if (!action.valor) return false;
+        if (!action.valor || target.hpAtual <= 0) return false;
         target.hp = (target.hp ?? 0) + action.valor;
         target.hpAtual += action.valor;
         if (target.hpAtual > 0) delete target.killedBy;
@@ -1739,19 +1763,87 @@ export class Game {
         return;
       }
     }
-    const attackedCard = target.card;
-    this.damage(
-      target.id,
+    const damage =
       (card.ataque ?? 0) +
-        adjacentAttackBonus(card, this.state.slots) +
-        (card.tipo === "Estrutura"
-          ? 0
-          : this.weapons(slot).reduce(
-              (sum, c) => sum + (c.bonusAtaque ?? 0),
-              0,
-            )),
-      card,
+      adjacentAttackBonus(card, this.state.slots) +
+      (card.tipo === "Estrutura"
+        ? 0
+        : this.weapons(slot).reduce((sum, c) => sum + (c.bonusAtaque ?? 0), 0));
+    const defender = this.basicAttackDefender(target);
+    if (this.canReflectAttack(defender, card)) {
+      this.state.pendingAttack = {
+        attackerOwnerId: user,
+        attackerId: card.id,
+        targetSlotId: target.id,
+        defenderId: defender.id,
+        damage,
+        element: card.elemento,
+      };
+      this.log(`${defender.nome} pode devolver o ataque de ${card.nome}.`);
+      return;
+    }
+    this.completeAttack(card, target, damage, card.elemento);
+  }
+  private basicAttackDefender(target: Slot): Instance {
+    const frozen =
+      target.card?.tipo === "Tropa" &&
+      hasStatus(target.card.statuses, ["Congelado"]);
+    if (
+      target.structure &&
+      target.card?.tipo === "Tropa" &&
+      !frozen &&
+      !hasStatus(target.structure.statuses, ["Abalo"])
+    )
+      return target.structure;
+    return frozen
+      ? this.player(target.ownerId).mage
+      : (target.card ?? this.player(target.ownerId).mage);
+  }
+  private canReflectAttack(card: Instance, attacker: Instance) {
+    return (
+      card.hpAtual > 0 &&
+      card.reflectedAttackRound !== this.state.round &&
+      !hasStatus(card.statuses, ["Atordoado", "Congelado", "Cego"]) &&
+      card.habilidadesPassivas.some((passive) => {
+        const rule = normalizePassive(passive);
+        return (
+          rule.gatilho === "onTargeted" &&
+          rule.efeitos.some(
+            (a) =>
+              a.id === "reflectAttack" &&
+              matchesPassiveFilter(attacker, a.filtro),
+          ) &&
+          passiveMatches(
+            rule,
+            card,
+            { ownerId: card.ownerId, cardId: card.id, card },
+            this.state.slots,
+          )
+        );
+      })
     );
+  }
+  private completeAttack(
+    card: Instance,
+    target: Slot,
+    damage: number,
+    element?: Card["elemento"],
+    reflect = false,
+    reactionCard?: Instance,
+  ) {
+    const user = card.ownerId,
+      enemy = this.opponent(user);
+    const attackedCard = target.card;
+    if (reflect && reactionCard) {
+      reactionCard.reflectedAttackRound = this.state.round;
+      this.damage(card.id, damage, undefined, false, element, reactionCard);
+      this.event(
+        "reaction",
+        reactionCard,
+        `Devolveu o ataque de ${card.nome}.`,
+      );
+      this.log(`${reactionCard.nome} devolveu o ataque de ${card.nome}.`);
+    } else this.damage(target.id, damage, card, false, element);
     if (attackedCard)
       this.trigger("onAttacked", {
         ownerId: attackedCard.ownerId,
@@ -1767,6 +1859,38 @@ export class Game {
       slotId: target.id,
     });
     this.log(`${card.nome} atacou a coluna ${target.column + 1}.`);
+  }
+  resolvePendingAttack(reflect = false) {
+    const pending = this.state.pendingAttack;
+    if (!pending || this.state.status !== "ACTIVE") return;
+    const card = this.findCard(pending.attackerId);
+    const target = this.state.slots.find((s) => s.id === pending.targetSlotId);
+    if (
+      !card ||
+      !target ||
+      this.basicAttackDefender(target).id !== pending.defenderId
+    )
+      this.fail("Ataque pendente inválido.");
+    const defender = this.basicAttackDefender(target);
+    if (reflect && !this.canReflectAttack(defender, card))
+      this.fail("Reação já utilizada ou indisponível.");
+    delete this.state.pendingAttack;
+    this.completeAttack(
+      card,
+      target,
+      pending.damage,
+      pending.element,
+      reflect,
+      defender,
+    );
+    this.resolve();
+    this.state.version++;
+  }
+  private respondAttack(user: string, reflect: boolean) {
+    const pending = this.state.pendingAttack;
+    if (!pending || this.findCard(pending.defenderId)?.ownerId !== user)
+      this.fail("Não há reação de ataque disponível para você.");
+    this.resolvePendingAttack(reflect);
   }
   private ability(user: string, cmd: Extract<Command, { type: "ability" }>) {
     const p = this.player(user),
@@ -1790,6 +1914,43 @@ export class Game {
       this.effects(user, ability.efeitos, targets, card.elemento, card);
     } else {
       switch (ability.id) {
+        case "refazerCaminhos": {
+          this.validateTargets(user, "Cemiterio", cmd.targets);
+          const index = p.graveyard.findIndex(
+            (c) => c.id === cmd.targets[0] && c.tipo === "Feitico",
+          );
+          if (index < 0) this.fail("Escolha um feitiço do seu cemitério.");
+          this.spend(p, ability.custoMana);
+          const spell = p.graveyard.splice(index, 1)[0];
+          this.resetCard(spell);
+          p.hand.push(spell);
+          this.log(`${card.nome} recuperou ${spell.nome} do cemitério.`);
+          break;
+        }
+        case "deslocar": {
+          if (cmd.targets.length)
+            this.fail("Deslocar usa um alvo frontal automático.");
+          const target = this.state.slots.find(
+            (s) =>
+              s.ownerId === this.opponent(user).id &&
+              s.kind === "Tropa" &&
+              s.column === 2 - slot.column &&
+              s.card?.tipo === "Tropa" &&
+              s.card.hpAtual > 0,
+          );
+          if (!target?.card)
+            this.fail("Não há tropa inimiga diretamente à frente.");
+          this.spend(p, ability.custoMana);
+          this.damage(target.id, 3, undefined, false, card.elemento, card);
+          this.effects(
+            user,
+            [{ id: "status", status: "Atordoado", duracao: 1 }],
+            [target.card.id],
+            card.elemento,
+            card,
+          );
+          break;
+        }
         case "recuperarEnergia": {
           if (card.tipo !== "Mago") this.fail("Esta habilidade exige um mago.");
           this.validateTargets(user, "Mao", cmd.targets);
@@ -1996,12 +2157,15 @@ export class Game {
     if (cmd.version !== this.state.version)
       throw new AppError(409, "Estado mudou. Tente novamente.", "STALE_STATE");
     if (
-      this.state.pendingSpell &&
-      !["respondSpell", "surrender"].includes(cmd.type)
+      (this.state.pendingSpell || this.state.pendingAttack) &&
+      ![
+        this.state.pendingSpell ? "respondSpell" : "respondAttack",
+        "surrender",
+      ].includes(cmd.type)
     )
-      this.fail("Aguarde a resposta ao feitiço.");
+      this.fail("Aguarde a resposta à ação pendente.");
     if (
-      !["surrender", "respondSpell"].includes(cmd.type) &&
+      !["surrender", "respondSpell", "respondAttack"].includes(cmd.type) &&
       this.state.phase === "BATTLE" &&
       this.state.current !== user
     )
@@ -2016,6 +2180,9 @@ export class Game {
     this.state = structuredClone(previous);
     try {
       switch (cmd.type) {
+        case "respondAttack":
+          this.respondAttack(user, cmd.reflect);
+          break;
         case "respondSpell":
           this.respondSpell(user, cmd.cardId);
           break;
@@ -2128,6 +2295,7 @@ export class Game {
       reactions: reactionDescriptions,
       ongoingSpells: this.state.ongoingSpells,
       pendingSpell: this.state.pendingSpell,
+      pendingAttack: this.state.pendingAttack,
       canRespond:
         !!this.state.pendingSpell &&
         this.state.pendingSpell.casterId !== user &&

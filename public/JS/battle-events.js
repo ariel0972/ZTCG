@@ -16,6 +16,7 @@ export function createBattleEvents(host = document.body) {
     passive: "Passiva ativada",
     ability: "Habilidade usada",
     block: "Ataque impedido",
+    reaction: "Ataque devolvido",
   };
   function show(event) {
     const card = event.card;

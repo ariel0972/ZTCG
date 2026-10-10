@@ -150,17 +150,24 @@
       </button>
     </nav>
     <p id="message" class="message" role="status" aria-live="polite" hidden></p>
-    <dialog id="card-detail">
+    <dialog id="card-detail" aria-labelledby="detail-name">
       <div class="dialog-heading">
         <h2 id="detail-name"></h2>
         <button id="close-detail" aria-label="Fechar">Fechar</button>
       </div>
       <div class="detail-body">
         <img id="detail-image" alt="Arte da carta" />
-        <div>
-          <p id="detail-text" class="preline"></p>
-          <button id="detail-add" class="primary">Adicionar ao baralho</button>
+        <div class="detail-deck-controls">
+          <p id="detail-quantity" role="status" aria-live="polite"></p>
+          <div class="detail-deck-actions">
+            <button id="detail-add" class="primary">
+              Adicionar ao baralho
+            </button>
+            <button id="detail-remove" class="quiet">Remover do baralho</button>
+          </div>
+          <p id="detail-limit" class="hint"></p>
         </div>
+        <p id="detail-text" class="preline"></p>
       </div>
     </dialog>
   </body>

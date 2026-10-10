@@ -74,44 +74,68 @@
         </section>
         <div id="battle-arena" class="battle-arena">
           <div id="enemy-hud" class="player-hud enemy-hud"></div>
-          <div class="battle-board">
-            <div id="enemy-back" class="board-row rear-row"></div>
-            <div id="enemy-front" class="board-row front-row"></div>
-            <div class="arena-divider"><span>✧</span></div>
-            <div class="player-field">
-              <div class="turn-time">
-                <span>Tempo restante</span
-                ><strong id="turn-clock" aria-live="off"></strong>
-              </div>
-              <div class="player-rows">
-                <div id="my-front" class="board-row front-row"></div>
-                <div id="my-back" class="board-row rear-row"></div>
-                <div
-                  id="field-zones"
-                  class="zone-piles"
-                  aria-label="Zonas do seu baralho"
-                >
-                  <button id="deck-zone" class="zone-pile" aria-label="Baralho">
-                    <img src="/assets/card-backs/common.png" alt="" /><span
-                      class="zone-pile-caption"
-                      >Baralho <b id="deck-pile-count">0</b></span
-                    >
-                  </button>
-                  <button
-                    id="graveyard"
-                    class="zone-pile"
-                    aria-label="Cemitério"
-                  >
-                    <img src="/assets/card-backs/common.png" alt="" /><span
-                      class="zone-pile-caption"
-                      >Cemitério <b id="graveyard-pile-count">0</b></span
-                    >
-                  </button>
+          <div class="battle-board" id="battle-board">
+            <div class="board-center">
+              <div id="enemy-back" class="board-row rear-row"></div>
+              <div id="enemy-front" class="board-row front-row"></div>
+              <div class="arena-divider"><span>✧</span></div>
+              <div class="player-field">
+                <div class="turn-time">
+                  <span>Tempo restante</span
+                  ><strong id="turn-clock" aria-live="off"></strong>
+                </div>
+                <div class="player-rows">
+                  <div id="my-front" class="board-row front-row"></div>
+                  <div id="my-back" class="board-row rear-row"></div>
+                </div>
+                <div class="turn-action">
+                  <button id="end-turn" class="primary">Passar turno</button>
                 </div>
               </div>
-              <div class="turn-action">
-                <button id="end-turn" class="primary">Passar turno</button>
-              </div>
+            </div>
+            <div
+              id="enemy-field-zones"
+              class="zone-piles enemy-zone-piles"
+              aria-label="Zonas do adversário"
+            >
+              <button
+                id="enemy-deck-zone"
+                class="zone-pile"
+                aria-label="Baralho do adversário"
+              >
+                <img src="/assets/card-backs/common.png" alt="" /><span
+                  class="zone-pile-caption"
+                  >Baralho <b id="enemy-deck-pile-count">0</b></span
+                >
+              </button>
+              <button
+                id="enemy-graveyard"
+                class="zone-pile"
+                aria-label="Cemitério do adversário"
+              >
+                <img src="/assets/card-backs/common.png" alt="" /><span
+                  class="zone-pile-caption"
+                  >Cemitério <b id="enemy-graveyard-pile-count">0</b></span
+                >
+              </button>
+            </div>
+            <div
+              id="field-zones"
+              class="zone-piles own-zone-piles"
+              aria-label="Zonas do seu baralho"
+            >
+              <button id="deck-zone" class="zone-pile" aria-label="Baralho">
+                <img src="/assets/card-backs/common.png" alt="" /><span
+                  class="zone-pile-caption"
+                  >Baralho <b id="deck-pile-count">0</b></span
+                >
+              </button>
+              <button id="graveyard" class="zone-pile" aria-label="Cemitério">
+                <img src="/assets/card-backs/common.png" alt="" /><span
+                  class="zone-pile-caption"
+                  >Cemitério <b id="graveyard-pile-count">0</b></span
+                >
+              </button>
             </div>
           </div>
           <div id="my-hud" class="player-hud my-hud"></div>
@@ -123,14 +147,43 @@
                 ampliar</span
               >
             </div>
-            <div id="hand" class="hand"></div>
+            <div class="hand-carousel">
+              <button
+                id="hand-previous"
+                class="hand-arrow quiet"
+                aria-label="Ver cartas anteriores da mão"
+                aria-controls="hand"
+                hidden
+              >
+                ‹
+              </button>
+              <div
+                id="hand"
+                class="hand"
+                tabindex="0"
+                aria-label="Cartas na mão"
+              ></div>
+              <button
+                id="hand-next"
+                class="hand-arrow quiet"
+                aria-label="Ver próximas cartas da mão"
+                aria-controls="hand"
+                hidden
+              >
+                ›
+              </button>
+            </div>
           </section>
         </div>
         <div class="battle-footer">
           <div class="toolbar">
             <span id="footer-zones" hidden
               ><button id="graveyard-footer">Cemitério</button
-              ><button id="deck-zone-footer">Baralho</button></span
+              ><button id="deck-zone-footer">Baralho</button>
+              <button id="enemy-deck-zone-footer">Baralho adversário</button>
+              <button id="enemy-graveyard-footer">
+                Cemitério adversário
+              </button></span
             >
             <button id="card-back-settings" class="quiet">Verso e mesa</button>
             <button id="clear-selection" class="quiet">Cancelar ação</button>
@@ -143,6 +196,13 @@
         <p id="selection-help" class="target-cue" role="status" hidden></p>
       </section>
     </main>
+    <div
+      id="turn-announcement"
+      class="turn-announcement"
+      role="status"
+      aria-live="polite"
+      hidden
+    ></div>
     <section
       id="card-menu"
       class="card-action-menu"

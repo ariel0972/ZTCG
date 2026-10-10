@@ -1,5 +1,5 @@
 import { api, token, navbar, message, node } from "./auth.js";
-import { cardTile, describe } from "./card-view.js";
+import { cardTile, describe, labels } from "./card-view.js";
 import { createCardInspector } from "./card-inspection.js";
 const inspector = createCardInspector();
 import { createDeckNavigation } from "./deck-navigation.js";
@@ -11,7 +11,8 @@ let catalog = [],
   byId = new Map(),
   decks = [],
   current = null,
-  dirty = false;
+  dirty = false,
+  detailCard = null;
 const rules = { Tropa: 3, Feitico: 3, Estrutura: 2, Armamento: 2, Mago: 1 };
 const $ = (id) => document.getElementById(id);
 const navigation = createDeckNavigation(
@@ -131,6 +132,8 @@ function renderDeck() {
   $("mage-slot").replaceChildren(node("span", "MAGO PRINCIPAL", "eyebrow"));
   if (mage) {
     const tile = cardTile(mage, details);
+    tile.querySelector(".card-meta").textContent =
+      labels[mage.elemento] || mage.elemento || "Neutro";
     $("mage-slot").append(tile);
     const clear = node("button", "Remover mago", "quiet");
     clear.onclick = () => {
@@ -155,12 +158,19 @@ function renderDeck() {
           "quiet",
         );
       open.onclick = () => card && details(card);
+      if (card && !card.publicado) {
+        open.append(node("span", "Rascunho", "deck-draft"));
+        row.classList.add("has-draft");
+      }
       const minus = node("button", "−", "quantity");
       minus.setAttribute("aria-label", `Remover ${card?.nome || id}`);
       minus.onclick = () => {
-        const i = current.cartas.indexOf(id);
-        if (i >= 0) current.cartas.splice(i, 1);
-        edited();
+        if (card) remove(card);
+        else {
+          const i = current.cartas.indexOf(id);
+          if (i >= 0) current.cartas.splice(i, 1);
+          edited();
+        }
       };
       const plus = node("button", "+", "quantity");
       plus.setAttribute("aria-label", `Adicionar ${card?.nome || id}`);
@@ -180,6 +190,45 @@ function renderDeck() {
     : "Pronto para jogar. Salve e entre na fila.";
   $("play").disabled = !!errors.length;
   renderList();
+  updateDetailControls();
+}
+function copies(card) {
+  return !current
+    ? 0
+    : card.tipo === "Mago"
+      ? Number(current.mago === card.numeroCatalogo)
+      : current.cartas.filter((id) => id === card.numeroCatalogo).length;
+}
+function remove(card) {
+  if (!current || !copies(card)) return;
+  if (card.tipo === "Mago") current.mago = null;
+  else current.cartas.splice(current.cartas.indexOf(card.numeroCatalogo), 1);
+  edited();
+}
+function updateDetailControls() {
+  if (!detailCard) return;
+  const count = copies(detailCard),
+    limit = rules[detailCard.tipo];
+  $("detail-quantity").textContent =
+    `${count} de ${limit} ${limit === 1 ? "cópia" : "cópias"} no baralho`;
+  $("detail-add").disabled =
+    !current ||
+    count >= limit ||
+    (detailCard.tipo !== "Mago" && current.cartas.length >= 40);
+  $("detail-remove").disabled = !count;
+  $("detail-add").textContent =
+    detailCard.tipo === "Mago" ? "Definir como mago" : "Adicionar ao baralho";
+  $("detail-remove").textContent =
+    detailCard.tipo === "Mago" ? "Remover mago" : "Remover do baralho";
+  $("detail-limit").textContent =
+    count >= limit
+      ? detailCard.tipo === "Mago"
+        ? "Este é o mago principal do baralho."
+        : "Limite de cópias atingido."
+      : detailCard.tipo !== "Mago" && current?.cartas.length >= 40
+        ? "O baralho já tem 40 cartas. Remova uma carta para adicionar outra."
+        : "";
+  $("detail-limit").hidden = !$("detail-limit").textContent;
 }
 function add(card) {
   if (!current) return;
@@ -202,6 +251,7 @@ function add(card) {
   edited();
 }
 function details(card) {
+  detailCard = card;
   $("detail-name").textContent = card.nome;
   $("detail-text").textContent =
     describe(card) +
@@ -229,6 +279,8 @@ function details(card) {
     $("detail-image").src = "/assets/avatar.png";
   };
   $("detail-add").onclick = () => add(card);
+  $("detail-remove").onclick = () => remove(card);
+  updateDetailControls();
   $("card-detail").showModal();
 }
 function renderCatalog() {

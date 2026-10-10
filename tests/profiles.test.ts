@@ -40,13 +40,25 @@ test("perfis usam totais reais, paginam histórico e respeitam baralhos privados
       method: body ? "PUT" : "GET",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${jwt.sign({ id: who }, process.env.SECRET!)}`,
+        ...(who
+          ? {
+              Authorization: `Bearer ${jwt.sign({ id: who }, process.env.SECRET!)}`,
+            }
+          : {}),
       },
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
     return { status: response.status, data: (await response.json()) as any };
   };
   try {
+    const pretty = await fetch(`${base}/thumosplayer/${id}`);
+    assert.equal(pretty.status, 200);
+    assert.match(await pretty.text(), /profile.js/);
+    assert.equal((await fetch(`${base}/thumosplayer/invalid`)).status, 404);
+    const anonymous = await call(`/profiles/${id}`, "");
+    assert.equal(anonymous.status, 200);
+    assert.equal(anonymous.data.owner, false);
+    assert.deepEqual(anonymous.data.decks, []);
     const publicProfile = await call(`/profiles/${id}`);
     assert.equal(publicProfile.status, 200);
     const data = publicProfile.data;
@@ -91,7 +103,7 @@ test("perfis usam totais reais, paginam histórico e respeitam baralhos privados
     assert.equal((await call(`/decks/${deck._id}`, other, input)).status, 404);
     const saved = await call(`/decks/${deck._id}`, id, input);
     assert.equal(saved.status, 200);
-    const shared = (await call(`/profiles/${id}`)).data.decks;
+    const shared = (await call(`/profiles/${id}`, "")).data.decks;
     assert.equal(shared.length, 1);
     assert.deepEqual(shared[0].cartas, deck.cartas);
     assert.equal(shared[0].userId, undefined);

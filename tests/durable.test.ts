@@ -118,6 +118,64 @@ test("janela de Jato dura 20 segundos, persiste após reinício e preserva tempo
   assert.equal(resolved.deadline, 1100000);
   assert.equal(resolved.current, "p1");
 });
+test("reação de ataque persiste, expira em 20 segundos e pausa o turno sem contar inatividade", async () => {
+  const f = fixture(),
+    match = await pair(f),
+    room = f.store.rooms.get(match.id)!;
+  const g = Game.restore(room.game);
+  g.state.phase = "BATTLE";
+  g.state.turn = 3;
+  g.state.current = "p1";
+  const mage = g.player("p2").mage;
+  Object.assign(
+    mage,
+    catalog.find((c) => c.numeroCatalogo === "028"),
+  );
+  mage.hpAtual = mage.hp!;
+  const attacker = {
+    ...catalog.find((c) => c.numeroCatalogo === "020")!,
+    id: randomUUID(),
+    ownerId: "p1",
+    hpAtual: 20,
+    ataque: 4,
+    attacked: false,
+    usedAbility: false,
+    statuses: [],
+  };
+  g.state.slots.find((s) => s.id === "p1:front:0")!.card = attacker;
+  const targetId = g.state.slots.find((s) => s.card?.id === mage.id)!.id;
+  room.game = g.exportState();
+  room.deadline = 1080000;
+  f.store.rooms.set(match.id, room);
+  await f
+    .service()
+    .command(match.id, "p1", {
+      type: "attack",
+      slotId: "p1:front:0",
+      targetId,
+      version: g.state.version,
+      actionId: randomUUID(),
+    });
+  const pending = (await f.service().state("p2")).match!;
+  assert.ok(pending.pendingAttack);
+  assert.equal(pending.responseDeadline, 1020000);
+  f.advance(19000);
+  await f.store.touch("p1", 1019000);
+  await f.store.touch("p2", 1019000);
+  assert.ok((await f.service().state("p2")).match!.pendingAttack);
+  f.advance(1000);
+  await f.store.touch("p1", 1020000);
+  await f.store.touch("p2", 1020000);
+  const resolved = (await f.service().state("p1")).match!;
+  assert.equal(resolved.pendingAttack, undefined);
+  assert.equal(resolved.players.find((p) => p.id === "p2")!.mage.hpAtual, 14);
+  assert.equal(resolved.deadline, 1100000);
+  assert.equal(
+    resolved.players.find((p) => p.id === "p2")!.inactivityStreak,
+    0,
+  );
+  assert.equal(resolved.current, "p1");
+});
 test("resultado reconhecido não reabre após reinício, sem ocultar o resultado do oponente ou impedir revanche", async () => {
   const f = fixture(),
     match = await pair(f);

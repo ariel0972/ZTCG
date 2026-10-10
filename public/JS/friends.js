@@ -1,10 +1,10 @@
-import { api, navbar, message, node } from "./auth.js";
+import { api, navbar, message, node, profilePath } from "./auth.js";
 let user,
   loading = false;
 const $ = (id) => document.getElementById(id);
 function profileLink(id, nome) {
   const link = node("a", nome);
-  link.href = `/HTML/perfil.html?id=${encodeURIComponent(id)}`;
+  link.href = profilePath(id);
   return link;
 }
 function button(text, action) {

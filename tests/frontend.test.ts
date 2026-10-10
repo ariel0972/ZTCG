@@ -94,8 +94,11 @@ test("interface real em DOM: catálogo, filtros, limites, detalhes, salvamento e
     (doc.querySelector("#card-list .card-tile") as HTMLButtonElement).click();
     assert.ok(dialog.open);
     assert.ok(doc.getElementById("detail-name")!.textContent);
-    (doc.getElementById("detail-add") as HTMLButtonElement).click();
-    assert.match(doc.getElementById("message")!.textContent!, /40 cartas/);
+    assert.equal(
+      (doc.getElementById("detail-add") as HTMLButtonElement).disabled,
+      true,
+    );
+    assert.match(doc.getElementById("detail-limit")!.textContent!, /40 cartas/);
     const name = doc.getElementById("deck-name") as HTMLInputElement;
     name.value = "<img src=x onerror=alert(1)>";
     name.dispatchEvent(new dom.window.Event("input"));
@@ -113,6 +116,70 @@ test("interface real em DOM: catálogo, filtros, limites, detalhes, salvamento e
         doc.getElementById("save-status")?.textContent === "Salvo na conta",
     );
     assert.equal(db.decks[0].nome, "<img src=x onerror=alert(1)>");
+    dialog.close();
+    (doc.getElementById("new-deck") as HTMLButtonElement).click();
+    type.value = "Mago";
+    type.dispatchEvent(new dom.window.Event("input"));
+    const draftTile = doc
+      .querySelector("#card-list .badge.draft")!
+      .closest("button")!;
+    const draftName = draftTile.querySelector(".card-name")!.textContent;
+    draftTile.click();
+    assert.match(doc.getElementById("detail-quantity")!.textContent!, /^0 de /);
+    assert.equal(
+      (doc.getElementById("detail-remove") as HTMLButtonElement).disabled,
+      true,
+    );
+    (doc.getElementById("detail-add") as HTMLButtonElement).click();
+    assert.match(doc.getElementById("detail-quantity")!.textContent!, /^1 de /);
+    assert.ok(dialog.open);
+    assert.equal(
+      doc.querySelector("#mage-slot .card-name")!.textContent,
+      draftName,
+    );
+    assert.equal(
+      doc.querySelector("#mage-slot .draft")!.textContent,
+      "Rascunho",
+    );
+    (doc.getElementById("detail-remove") as HTMLButtonElement).click();
+    assert.match(doc.getElementById("detail-quantity")!.textContent!, /^0 de /);
+    dialog.close();
+    // A draft spell stays editable, while its status is visible in the deck rows.
+    type.value = "Feitico";
+    type.dispatchEvent(new dom.window.Event("input"));
+    const spellTile = doc
+      .querySelector("#card-list .badge.draft")!
+      .closest("button")!;
+    spellTile.click();
+    for (let n = 1; n <= 3; n++) {
+      (doc.getElementById("detail-add") as HTMLButtonElement).click();
+      assert.equal(
+        doc.getElementById("detail-quantity")!.textContent,
+        `${n} de 3 cópias no baralho`,
+      );
+    }
+    assert.equal(
+      (doc.getElementById("detail-add") as HTMLButtonElement).disabled,
+      true,
+    );
+    assert.equal(
+      doc.querySelector("#deck-cards .deck-draft")!.textContent,
+      "Rascunho",
+    );
+    (doc.getElementById("detail-remove") as HTMLButtonElement).click();
+    assert.equal(
+      doc.getElementById("detail-quantity")!.textContent,
+      "2 de 3 cópias no baralho",
+    );
+    assert.equal(
+      (doc.getElementById("detail-add") as HTMLButtonElement).disabled,
+      false,
+    );
+    assert.equal(
+      JSON.parse(dom.window.sessionStorage.getItem("ztcg:editor-draft")!).cartas
+        .length,
+      2,
+    );
     dom.window.close();
     dom = await page("admin.html", "3".repeat(24));
     const adminModule = "../public/JS/admin.js";

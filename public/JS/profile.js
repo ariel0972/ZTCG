@@ -1,7 +1,7 @@
-import { api, token, navbar, message, node } from "./auth.js";
+import { api, token, navbar, message, node, profilePath } from "./auth.js";
 import { cardTile } from "./card-view.js";
 import { createCardInspector } from "./card-inspection.js";
-if (!token()) location.href = "/HTML/login.html";
+
 const $ = (id) => document.getElementById(id);
 const inspector = createCardInspector();
 let user,
@@ -121,8 +121,7 @@ function renderHistory(matches, append = false) {
     row.dataset.result = draw ? "draw" : win ? "win" : "loss";
     const opponent = match.players.find((p) => p.id !== profileId),
       link = node("a", opponent?.nome || "Oponente");
-    if (opponent)
-      link.href = `/HTML/perfil.html?id=${encodeURIComponent(opponent.id)}`;
+    if (opponent) link.href = profilePath(opponent.id);
     detail.append(
       link,
       node(
@@ -154,14 +153,23 @@ function renderHistory(matches, append = false) {
 async function load() {
   try {
     user = await navbar();
-    if (!user) return;
-    profileId = new URLSearchParams(location.search).get("id") || user.id;
+    const pathId = /^\/thumosplayer\/([a-f\d]{24})\/?$/i.exec(
+      location.pathname,
+    )?.[1];
+    profileId =
+      pathId || new URLSearchParams(location.search).get("id") || user?.id;
+    if (!profileId) {
+      location.href = "/HTML/login.html";
+      return;
+    }
     if (!/^[a-f\d]{24}$/i.test(profileId)) throw Error("Perfil inválido.");
     const [data, cards] = await Promise.all([
       api(`/profiles/${profileId}`),
       api("/cards"),
     ]);
     profile = data;
+    history.replaceState(null, "", profilePath(profileId));
+    $("share-profile").disabled = false;
     catalog = cards.cards;
     $("player-name").textContent = data.user.nome;
     document.title = `${data.user.nome} · Zacornia`;
@@ -246,6 +254,15 @@ $("profile-form").onsubmit = async (e) => {
     message(e.message, true);
   } finally {
     button.disabled = false;
+  }
+};
+$("share-profile").onclick = async () => {
+  const url = new URL(profilePath(profileId), location.origin).href;
+  try {
+    await navigator.clipboard.writeText(url);
+    message("Link do perfil copiado.");
+  } catch {
+    message(`Link do perfil: ${url}`);
   }
 };
 void load();

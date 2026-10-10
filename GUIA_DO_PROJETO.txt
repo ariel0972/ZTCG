@@ -267,20 +267,23 @@ onStructureDestroyed, onSpellCast, onSummon, onEquip, onRevive, onSacrifice,
 onStatusApplied, onHeal (quem curou), onHealed (quem recebeu cura), onKill
 (autor do abate de tropa), onTurnStart e onTurnEnd. Cura só dispara se houver
 ganho real de HP. Filtros de status aceitam os aliases de status.ts.
-Escopos: proprio = esta instância originou/recebeu o evento; aliado/inimigo =
-dono da carta do evento; qualquer = ambos. excluirFonte elimina a própria carta.
-filtroEvento combina tipo/elemento/direcao/status por E. filtroAlvo seleciona
-tipo/elemento/relacao do alvo em ataque, cura ou abate. Condições: campoVazio
-ou vidaPercentual (fonte/cartaEvento, menor/menorOuIgual). Vida percentual usa
-HP máximo próprio, sem somar bônus de armamento.
+Escopos: proprio = esta instância originou/recebeu o evento;
+aliado/inimigo = dono da carta do evento;
+qualquer = ambos.
+excluirFonte elimina a própria carta.
+filtroEvento combina tipo/elemento/direcao/status por E.
+filtroAlvo seleciona tipo/elemento/relacao do alvo em ataque, cura ou abate.
+Condições: campoVazio ou vidaPercentual (fonte/cartaEvento, menor/menorOuIgual).
+Vida percentual usa HP máximo próprio, sem somar bônus de armamento.
+
 Efeitos gerais: damage, heal, growMaxHp, status; mana/draw/recover; contador
 spellDamageBonus (mago, elemento, contador, aCada, valor); move/summonFromDeck
-(morte de tropa aliada e slotEvento). Alvos: fonte, magoAliado, magoInimigo,
-cartaEvento, atacante e alvoAtaque. jogador é aliado/inimigo relativo à fonte.
-heal.excedente limita cura acima do HP base; sem excedente usa HP com armamentos.
+(morte de tropa aliada e slotEvento).
+Alvos: fonte, magoAliado, magoInimigo, cartaEvento, atacante e alvoAtaque. jogador é aliado/inimigo relativo à fonte.
+heal. excedente limita cura acima do HP base; sem excedente usa HP com armamentos.
 continuous aceita attackBonus/attackAura; onTargeted aceita blockAttack.
-Aura usa filtro/valor/porVizinho/fonteRecebe. Restrição usa filtro obrigatório
-e/ou qualquerDe: campos do filtro são E; entradas de qualquerDe são OU.
+Aura usa filtro/valor/porVizinho/fonteRecebe.
+Restrição usa filtro obrigatório e/ou qualquerDe: campos do filtro são E; entradas de qualquerDe são OU.
 Use condições para recalcular bônus, sem gravar aumentos em cada consulta.
 Os participantes e condições de cada evento são congelados antes dos efeitos;
 a ordem dos slots e das passivas decide a sequência. Ciclos têm limite e rollback.
@@ -722,3 +725,115 @@ O envio ao GitHub é registrado na entrega do chat; o log local
 .codex-passives-check.log contém a execução desta extensão de passivas.
 Testes simulados não comprovam entrega SMTP, capacidade de produção, fidelidade
 de todas as artes ou experiência em aparelhos físicos.
+
+
+ATUALIZAÇÃO — APRENDIZ, ESQUELETO, PALHAÇO E MENU COMPACTO (10/10/2026)
+
+- public/JS/site-navigation.js — Menu lateral acessível no celular; mantém os controles existentes da conta e restaura a navegação no desktop.
+- tests/site-navigation.test.ts — Verifica navegação, fechamento, restauração no desktop e preservação dos controles da conta.
+- scripts/update-apprentice-skeleton-clown.ts — Atualiza somente 028, 095 e 098: revisão sem gravação, backup prévio e gravação condicionada à versão da carta; preserva publicação, arte, nome e outras habilidades.
+
+Aprendiz de Mago (028): 18 PV, ataque 2, recuperação normal 3; sem tropas
+inimigas, a recuperação do mago passa a 5, não soma 5 ao valor normal.
+Geração de tropas/estruturas continua sendo somada; teto de mana 20.
+Limites: mobilizar 3, atacar com 2 tropas, 3 feitiços comuns e 1 assinatura.
+Refazer caminhos custa 5: escolhe um feitiço próprio do cemitério e o devolve
+à mão. Uma habilidade por carta por rodada.
+Reação opcional a ataque básico recebido de tropa inimiga: 20 segundos, turno pausado, gratuita,
+independente da habilidade. Devolver cancela o golpe e envia o valor de ataque
+ao atacante; as defesas e fraquezas do atacante são aplicadas normalmente, com
+o elemento do golpe original. Sem resposta, o golpe resolve normalmente.
+Apenas uma devolução usada por rodada; recusar não consome essa utilização.
+Não reage a feitiços/habilidades. Atordoado, Congelado e Cego bloqueiam a reação.
+A escolha e seu prazo são persistidos, inclusive após reinício do servidor.
+
+Esqueleto (095): 7 PV, ataque 3, custo 3, gera 2 mana, Monstro, Neutro,
+ataque Frontal, fraqueza Terra. Cada tropa aliada revivida que retorna ao campo
+concede +1 de ataque básico acumulável. Apenas retornar à mão não dispara o
+evento onRevive. Deslocar custa 4 e causa 3 de dano à tropa diretamente à
+frente (colunas espelhadas), com Atordoado por 1 rodada. Alvo automático,
+sem uso se não houver tropa; estruturas absorvem dano conforme regra geral.
+O bônus básico não aumenta Deslocar.
+
+Palhaço (098): 5 PV, ataque 2, custo 4, gera 2 mana, Humano, Neutro,
+Frontal, resistência Ar e fraqueza Terra. Cada morte de outra tropa de qualquer
+jogador concede +1 de vida atual e máxima acumulável. Não conta estruturas,
+a própria morte nem mortes ocorridas enquanto o Palhaço já está sem vida.
+Foram implementadas somente as passivas solicitadas do Palhaço; suas outras
+habilidades configuradas no banco são preservadas.
+
+Reutilização no editor Catálogo: os quatro novos modelos de passiva aparecem
+na lista de modelos. Copie o JSON do modelo para outra carta e ajuste filtros,
+condições e valor. Os efeitos gerais adicionados são growAttack (ganho de
+ataque básico), manaRecovery (substituição condicional da recuperação de mago)
+e reflectAttack (reação opcional a ataque básico, uma vez por rodada).
+O efeito growMaxHp já existente atende à passiva do Palhaço.
+Use descricao para explicar a regra em linguagem natural; o motor executa
+os campos estruturados, não interpreta o texto da descrição.
+Bônus acumulados ficam na instância da carta e persistem no cemitério/retorno.
+
+Menu de ações: largura 248 px, miniatura de 84 px, descrições recolhidas em
+Habilidades e passivas, rolagem interna e botões de pelo menos 44 px no toque.
+Clique na miniatura para ver a carta completa; Ampliar carta mostra os detalhes.
+
+Roteiro de teste: iniciar uma nova partida após atualizar o catálogo. Publicar
+o Aprendiz no editor se desejar usá-lo (a atualização preserva seu rascunho).
+Comparar mana recuperada com e sem tropas inimigas; recuperar um feitiço;
+atacar o Aprendiz, devolver/recusar e deixar uma janela expirar. Reviver duas
+tropas com um Esqueleto em campo e observar ataque 3 → 4 → 5; usar Deslocar
+sem escolher alvos. Com Palhaço em campo, eliminar tropas dos dois lados.
+Fixtures visuais locais: PREVIEW_MECHANICS=1 npm run demo; contas fictícias
+p1@test.local e p2@test.local usam apenas dados em memória.
+
+Revisão final: a aura de Fogo antiga do Esqueleto no banco foi removida a pedido
+do dono. O Esqueleto tem somente a passiva onRevive → growAttack da imagem.
+A sincronização substitui as passivas do Esqueleto; nas outras duas cartas,
+preserva as personalizações que não conflitam com as regras implementadas.
+Publicação de 10/10: https://ztcg.vercel.app. Verificados readiness, catálogo
+público e schema de efeitos/modelos. Após aplicar, dry run retorna changed: 0.
+Os testes específicos, a verificação de tipos e build passaram. A suíte geral
+final executou 137 testes: 136 passaram, 1 integração foi omitida, zero falhas.
+Inclui proteção/congelamento, recuperação substituída e a restrição da reação
+do Aprendiz a ataques básicos de tropas. O teste visual com as duas contas fictícias confirmou a
+resposta gratuita, Deslocar, o ganho de vida do Palhaço e Refazer caminhos.
+
+
+ATUALIZAÇÃO — MÃO, ALVOS, TURNOS E PERFIS COMPARTILHÁVEIS (10/10/2026)
+- public/JS/battle-targets.js — Sugestões de alvos por tipo, efeito, lado, zona e regras especiais; o servidor valida toda ação.
+- public/JS/hand-navigation.js — Setas para rolagem da mão, atualização no resize e limites de navegação sem cortar a primeira carta.
+- public/JS/turn-announcement.js — Aviso animado de mudança de turno, sem repetição em polling, com indicação do lado ativo e redução de movimento.
+- src/services/player-name.ts — Nome mínimo de quatro caracteres, espaços normalizados e chave exclusiva sem diferença de acento/caixa.
+- scripts/prepare-player-names.ts — Auditoria, backup e preenchimento de chaves exclusivas das contas; cria índice único e interrompe em conflitos sem renomear ninguém.
+- tests/player-names.test.ts — Limites de nome, normalização, renomeação e cadastros concorrentes com índice único simulado.
+- tests/battle-navigation.test.ts — Mão com overflow, aviso sem repetição e sugestões de alvos válidos incluindo magos, estruturas, campos e zonas.
+
+Baralhos/cemitérios próprios ficam à direita e os do adversário à esquerda.
+Em telas estreitas, as duas duplas ficam abaixo das fileiras mantendo os lados.
+O baralho adversário mostra somente quantidade e verso, sem revelar as cartas.
+O cemitério adversário é público. A preferência de pilhas é aplicada aos dois lados.
+Feitiços em preparação destacam cartas/campos/zonas válidos. Os efeitos globais
+mostram o campo e as zonas envolvidas; os automáticos não exigem selecionar cartas.
+A mão usa rolagem horizontal com setas somente quando não cabe, mantendo os cliques,
+arraste e ampliação. A faixa “Seu turno”/“Turno do oponente” acompanha mudanças de
+turno e respeita redução de movimento. O lado ativo recebe degradê azul claro.
+
+Perfis: /thumosplayer/ID-DO-JOGADOR. Links antigos continuam funcionando e passam
+para o endereço compartilhável. Há botão para copiar o link. Perfis públicos
+abrem sem login; somente o dono autenticado recebe seus decks privados e edição.
+Cadastro/edição exigem pelo menos quatro caracteres. Nomes equivalentes por caixa,
+acentos e espaços são o mesmo nome. A chave nomeKey é protegida por índice único;
+uma corrida entre cadastros/edições retorna NAME_TAKEN, sem sobrepor outra conta.
+A migração audita conflitos antes de qualquer escrita, mantém os nomes existentes
+e grava backup local (ignorado por Git/Vercel). Um nome é liberado ao renomear.
+O ID no endereço é estável, mesmo que o nome mude.
+
+VERIFICAÇÃO DESTA ENTREGA (10/10/2026)
+- Typecheck e build concluídos sem erros.
+- Suíte completa: 142 testes, 141 aprovados, 1 ignorado, nenhuma falha.
+- Conferência no navegador local: mão com 15 cartas e navegação nas duas extremidades;
+  alvos de Furacão e slots vazios de feitiços de campo; perfil público sem login.
+- Migração dos nomes aplicada às 12 contas existentes, com cópia prévia em backups/
+  (pasta ignorada pelo Git). Sem nomes duplicados ou com menos de 4 caracteres.
+  Índice único unique_player_name criado no MongoDB de produção.
+- Backups e implantação pelo GitHub Actions continuam como workflows manuais.
+  O push executa o workflow Verify; não configura segredos nem agendas de backup.

@@ -11,6 +11,7 @@ export function createCardBacks({
   picker,
   field,
   footer,
+  enemyField,
   storage = localStorage,
 }) {
   let chosen = "common",
@@ -22,6 +23,7 @@ export function createCardBacks({
   const toggle = dialog.querySelector("#piles-on-field");
   function render() {
     field.hidden = !onField;
+    if (enemyField) enemyField.hidden = !onField;
     footer.hidden = onField;
     toggle.checked = onField;
     for (const image of field.querySelectorAll("img"))
@@ -51,6 +53,19 @@ export function createCardBacks({
         String(graveyardCount);
       field
         .querySelector("#graveyard")
+        .classList.toggle("empty-pile", !graveyardCount);
+    },
+    updateEnemy(deckCount, graveyardCount, back = "common") {
+      if (!enemyField) return;
+      const chosen = cardBacks.some(([id]) => id === back) ? back : "common";
+      for (const image of enemyField.querySelectorAll("img"))
+        image.src = `/assets/card-backs/${chosen}.png`;
+      enemyField.querySelector("#enemy-deck-pile-count").textContent =
+        String(deckCount);
+      enemyField.querySelector("#enemy-graveyard-pile-count").textContent =
+        String(graveyardCount);
+      enemyField
+        .querySelector("#enemy-graveyard")
         .classList.toggle("empty-pile", !graveyardCount);
     },
   };

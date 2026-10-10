@@ -8,6 +8,7 @@ import { AuthRequest } from "../types";
 import { AppError } from "../lib/errors";
 import { rateLimit } from "../middlewares/rateLimit";
 import { passwordRoutes } from "./passwordRoutes";
+import { playerName, playerNameKey } from "../services/player-name";
 const router = Router();
 router.use(passwordRoutes());
 const refreshCookie = "ztcg_refresh";
@@ -103,7 +104,7 @@ const credentials = z.object({
 });
 const register = credentials
   .extend({
-    nome: z.string().trim().min(2).max(80),
+    nome: playerName,
     senha: credentials.shape.senha.refine(
       (v) => v.length >= 8,
       "Use pelo menos 8 caracteres.",
@@ -131,8 +132,16 @@ router.post("/registrar", rateLimit(10), async (req, res) => {
   const input = register.parse(req.body);
   if (await User.exists({ email: input.email }))
     throw new AppError(409, "Email já cadastrado.");
-  const user = await User.create({
+  const nomeKey = playerNameKey(input.nome);
+  if (await User.exists({ nomeKey }))
+    throw new AppError(
+      409,
+      "Este nome de jogador já está em uso.",
+      "NAME_TAKEN",
+    );
+  await User.create({
     nome: input.nome,
+    nomeKey,
     email: input.email,
     senha: await bcrypt.hash(input.senha, 12),
   });
@@ -165,7 +174,7 @@ router.get("/me", checkToken, async (req: AuthRequest, res) => {
 router.put("/user/edit", checkToken, async (req: AuthRequest, res) => {
   const input = z
     .object({
-      nome: z.string().trim().min(2).max(80),
+      nome: playerName,
       avatarURL: z
         .string()
         .max(280000)
@@ -179,9 +188,16 @@ router.put("/user/edit", checkToken, async (req: AuthRequest, res) => {
     })
     .strict()
     .parse(req.body);
+  const nomeKey = playerNameKey(input.nome);
+  if (await User.exists({ nomeKey, _id: { $ne: req.userId } }))
+    throw new AppError(
+      409,
+      "Este nome de jogador já está em uso.",
+      "NAME_TAKEN",
+    );
   const user = await User.findByIdAndUpdate(
     req.userId,
-    { $set: input },
+    { $set: { ...input, nomeKey } },
     { new: true, runValidators: true },
   );
   if (!user) throw new AppError(404, "Conta não encontrada.");

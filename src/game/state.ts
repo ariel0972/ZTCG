@@ -14,6 +14,7 @@ export interface Instance extends Card {
   fireSpellsCast?: number;
   fireDamageBonus?: number;
   passiveCounters?: Record<string, number>;
+  reflectedAttackRound?: number;
   killedBy?: { ownerId: string; cardId: string };
 }
 export interface Slot {
@@ -58,6 +59,14 @@ export interface Player {
   };
 }
 export interface State {
+  pendingAttack?: {
+    attackerOwnerId: string;
+    attackerId: string;
+    targetSlotId: string;
+    defenderId: string;
+    damage: number;
+    element?: Card["elemento"];
+  };
   ongoingSpells?: {
     id: string;
     ownerId: string;

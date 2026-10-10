@@ -264,8 +264,12 @@ export class DurableGame {
       }
       if (expired.length && now >= (room.recoveryUntil ?? 0))
         game.abandon(expired[0].id, "Abandono após desconexão.");
-      if (game.state.pendingSpell && now >= (room.responseDeadline ?? now)) {
-        game.resolvePendingSpell();
+      if (
+        (game.state.pendingSpell || game.state.pendingAttack) &&
+        now >= (room.responseDeadline ?? now)
+      ) {
+        if (game.state.pendingAttack) game.resolvePendingAttack();
+        else game.resolvePendingSpell();
         room.deadline =
           (room.responseDeadline ?? now) + (room.remainingTurnMs ?? TURN_MS);
         delete room.responseDeadline;
@@ -274,7 +278,7 @@ export class DurableGame {
       for (
         let n = 0;
         game.state.status === "ACTIVE" &&
-        !game.state.pendingSpell &&
+        !(game.state.pendingSpell || game.state.pendingAttack) &&
         now >= room.deadline &&
         n < 10;
         n++
@@ -302,7 +306,7 @@ export class DurableGame {
       stage = performance.now();
       const turn = game.state.turn,
         phase = game.state.phase,
-        responding = !!game.state.pendingSpell;
+        responding = !!(game.state.pendingSpell || game.state.pendingAttack);
       let response: unknown, error: unknown;
       try {
         response = game.execute(user, command);
@@ -311,10 +315,16 @@ export class DurableGame {
       }
       if (game.state.turn !== turn || game.state.phase !== phase)
         room.deadline = this.now() + TURN_MS;
-      if (!responding && game.state.pendingSpell) {
+      if (
+        !responding &&
+        (game.state.pendingSpell || game.state.pendingAttack)
+      ) {
         room.remainingTurnMs = Math.max(0, room.deadline - this.now());
         room.responseDeadline = this.now() + 20000;
-      } else if (responding && !game.state.pendingSpell) {
+      } else if (
+        responding &&
+        !(game.state.pendingSpell || game.state.pendingAttack)
+      ) {
         room.deadline = this.now() + (room.remainingTurnMs ?? TURN_MS);
         delete room.responseDeadline;
         delete room.remainingTurnMs;

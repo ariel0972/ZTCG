@@ -1471,29 +1471,86 @@
     "numeroCatalogo": "095",
     "nome": "Esqueleto",
     "tipo": "Tropa",
-    "custoMana": 4,
-    "descricao": "",
+    "custoMana": 3,
+    "descricao": "Ataca uma vez por rodada. Ganha +1 de ataque básico permanente e acumulável quando uma tropa aliada revivida volta ao campo.",
     "imgURL": "/assets/Cards/Esqueleto.png",
     "publicado": true,
     "versao": 1,
-    "hp": 1,
-    "ataque": 2,
-    "manaGerada": 1,
-    "direcaoAtaque": "Frente"
+    "hp": 7,
+    "ataque": 3,
+    "manaGerada": 2,
+    "direcaoAtaque": "Frente",
+    "elemento": "Neutro",
+    "subtipo": "Monstro",
+    "fraqueza": [
+      "Terra"
+    ],
+    "resistencia": [],
+    "habilidadesAtivas": [
+      {
+        "id": "deslocar",
+        "nome": "Deslocar",
+        "custoMana": 4,
+        "descricao": "Causa 3 de dano à tropa inimiga diretamente à frente e aplica Atordoado por 1 rodada. Alvo automático; não pode ser usada se esse espaço estiver vazio."
+      }
+    ],
+    "habilidadesPassivas": [
+      {
+        "gatilho": "onRevive",
+        "escopo": "aliado",
+        "filtroEvento": {
+          "tipo": "Tropa"
+        },
+        "efeitos": [
+          {
+            "id": "growAttack",
+            "alvo": "fonte",
+            "valor": 1
+          }
+        ],
+        "descricao": "Cada tropa aliada revivida que volta ao campo concede +1 de ataque básico acumulável. O bônus não aumenta o dano das habilidades."
+      }
+    ]
   },
   {
     "numeroCatalogo": "098",
     "nome": "Palhaço",
     "tipo": "Tropa",
     "custoMana": 4,
-    "descricao": "",
+    "descricao": "Ataca uma vez por rodada. Quando qualquer outra tropa, aliada ou inimiga, morre, ganha +1 de vida atual e máxima, acumulável.",
     "imgURL": "/assets/Cards/Palhaço.png",
     "publicado": true,
     "versao": 1,
-    "hp": 1,
+    "hp": 5,
     "ataque": 2,
-    "manaGerada": 1,
-    "direcaoAtaque": "Frente"
+    "manaGerada": 2,
+    "direcaoAtaque": "Frente",
+    "elemento": "Neutro",
+    "subtipo": "Humano",
+    "resistencia": [
+      "Ar"
+    ],
+    "fraqueza": [
+      "Terra"
+    ],
+    "habilidadesPassivas": [
+      {
+        "gatilho": "onDeath",
+        "escopo": "qualquer",
+        "excluirFonte": true,
+        "filtroEvento": {
+          "tipo": "Tropa"
+        },
+        "efeitos": [
+          {
+            "id": "growMaxHp",
+            "alvo": "fonte",
+            "valor": 1
+          }
+        ],
+        "descricao": "Ganha +1 de vida atual e máxima quando outra tropa morre, de qualquer jogador. Não conta a própria morte nem a destruição de estruturas. Bônus acumulável enquanto está vivo em campo."
+      }
+    ]
   },
   {
     "numeroCatalogo": "107",
@@ -1547,8 +1604,12 @@
       }
     ],
     "elemento": "Fogo",
-    "resistencia": ["Ar"],
-    "fraqueza": ["Agua"]
+    "resistencia": [
+      "Ar"
+    ],
+    "fraqueza": [
+      "Agua"
+    ]
   },
   {
     "numeroCatalogo": "110",
@@ -1574,8 +1635,12 @@
       }
     ],
     "elemento": "Fogo",
-    "resistencia": ["Ar"],
-    "fraqueza": ["Agua"]
+    "resistencia": [
+      "Ar"
+    ],
+    "fraqueza": [
+      "Agua"
+    ]
   },
   {
     "numeroCatalogo": "111",
@@ -1602,8 +1667,12 @@
       }
     ],
     "elemento": "Fogo",
-    "resistencia": ["Ar"],
-    "fraqueza": ["Agua"]
+    "resistencia": [
+      "Ar"
+    ],
+    "fraqueza": [
+      "Agua"
+    ]
   },
   {
     "numeroCatalogo": "117",
@@ -1630,8 +1699,12 @@
       }
     ],
     "elemento": "Fogo",
-    "resistencia": ["Ar"],
-    "fraqueza": ["Agua"]
+    "resistencia": [
+      "Ar"
+    ],
+    "fraqueza": [
+      "Agua"
+    ]
   },
   {
     "numeroCatalogo": "026",
@@ -1749,19 +1822,61 @@
     "nome": "Aprendiz de mago",
     "tipo": "Mago",
     "custoMana": 0,
-    "descricao": "",
+    "descricao": "Recupera 5 de mana, em vez de 3, se não houver tropas inimigas no início do seu turno. Pode devolver um ataque básico recebido de uma tropa inimiga uma vez por rodada, sem custo, escolhendo em até 20 segundos.",
     "imgURL": "/assets/Cards/Aprendiz de Mago.png",
     "publicado": false,
     "versao": 1,
     "hp": 18,
-    "ataque": 0,
-    "recuperacaoMana": 0,
+    "ataque": 2,
+    "recuperacaoMana": 3,
     "limites": [
       {
-        "tropasMobilizadas": 0,
-        "tropaAtacam": 0,
-        "feiticosUsados": 0,
-        "feiticosUnicos": 0
+        "tropasMobilizadas": 3,
+        "tropaAtacam": 2,
+        "feiticosUsados": 3,
+        "feiticosUnicos": 1
+      }
+    ],
+    "elemento": "Neutro",
+    "habilidadesAtivas": [
+      {
+        "id": "refazerCaminhos",
+        "nome": "Refazer caminhos",
+        "custoMana": 5,
+        "alvo": "Cemiterio",
+        "descricao": "Escolha um feitiço do seu cemitério e devolva-o à mão. Consome a utilização de habilidade da carta nesta rodada."
+      }
+    ],
+    "habilidadesPassivas": [
+      {
+        "gatilho": "continuous",
+        "escopo": "proprio",
+        "condicoes": [
+          {
+            "tipo": "campoVazio",
+            "jogador": "inimigo"
+          }
+        ],
+        "efeitos": [
+          {
+            "id": "manaRecovery",
+            "valor": 5
+          }
+        ],
+        "descricao": "No início do próprio turno, a recuperação do mago passa de 3 para 5 mana se não houver tropas inimigas. A geração das outras cartas é somada normalmente, até 20 mana."
+      },
+      {
+        "gatilho": "onTargeted",
+        "escopo": "proprio",
+        "efeitos": [
+          {
+            "id": "reflectAttack",
+            "filtro": {
+              "tipo": "Tropa"
+            }
+          }
+        ],
+        "descricao": "Uma vez por rodada, pode cancelar um ataque básico recebido de uma tropa inimiga e devolver seu dano ao atacante. Resposta opcional de 20 segundos, gratuita e independente da habilidade. O turno fica pausado; sem resposta, recebe o ataque."
       }
     ]
   },
@@ -1786,8 +1901,12 @@
       }
     ],
     "elemento": "Fogo",
-    "fraqueza": ["Agua"],
-    "resistencia": ["Ar"],
+    "fraqueza": [
+      "Agua"
+    ],
+    "resistencia": [
+      "Ar"
+    ],
     "habilidadesAtivas": [
       {
         "id": "recuperarEnergia",
@@ -1827,8 +1946,12 @@
       }
     ],
     "elemento": "Agua",
-    "fraqueza": ["Terra"],
-    "resistencia": ["Fogo"],
+    "fraqueza": [
+      "Terra"
+    ],
+    "resistencia": [
+      "Fogo"
+    ],
     "habilidadesAtivas": [
       {
         "id": "protecaoAquatica",

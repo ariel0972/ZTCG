@@ -1,4 +1,5 @@
-import { api, message } from "./auth.js";
+import { api, message, navbar } from "./auth.js";
+void navbar();
 const form = document.getElementById("password-form"),
   result = document.getElementById("recovery-result");
 const token = new URLSearchParams(location.hash.slice(1)).get("token");

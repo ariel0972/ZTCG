@@ -54,6 +54,14 @@ export function createApp(
     });
   });
   app.use(express.static(path.join(__dirname, "..", "public")));
+  app.get("/thumosplayer/:id", (req, res) => {
+    if (!/^[a-f\d]{24}$/i.test(req.params.id)) {
+      res.status(404).send("Perfil inválido.");
+      return;
+    }
+    res.setHeader("Cache-Control", "no-store");
+    res.sendFile(path.join(__dirname, "..", "public/HTML/perfil.html"));
+  });
   app.get("/", (_req, res) =>
     res.sendFile(path.join(__dirname, "..", "public/HTML/deckbuilder.html"), {
       dotfiles: "allow",
@@ -77,7 +85,14 @@ export function createApp(
   app.use("/auth", userRoutes);
   app.use("/game", gameRoutes(game));
   app.use("/friends", friendRoutes(game));
-  app.use("/profiles", checkToken, profileRoutes);
+  app.use(
+    "/profiles",
+    (req, res, next) => {
+      if (req.headers.authorization) checkToken(req, res, next);
+      else next();
+    },
+    profileRoutes,
+  );
   app.get("/ops/maintenance", async (req, res) => {
     if (
       !process.env.CRON_SECRET ||
@@ -181,7 +196,13 @@ export function createApp(
         error.issues,
       );
     else if (error?.code === 11000)
-      e = new AppError(409, "Este registro já existe.", "DUPLICATE");
+      e = error.keyPattern?.nomeKey
+        ? new AppError(
+            409,
+            "Este nome de jogador já está em uso.",
+            "NAME_TAKEN",
+          )
+        : new AppError(409, "Este registro já existe.", "DUPLICATE");
     else if (error?.type === "entity.too.large")
       e = new AppError(413, "Dados excedem o tamanho permitido.");
     else if (

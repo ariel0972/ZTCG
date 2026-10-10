@@ -4,7 +4,7 @@ import { JSDOM } from "jsdom";
 
 test("pilhas usam o verso do baralho e ignoram a antiga preferência global", async () => {
   const dom = new JSDOM(
-    `<dialog><input id="piles-on-field" type="checkbox"><div id="picker"></div></dialog><div id="field"><button id="deck-zone"><img><b id="deck-pile-count"></b></button><button id="graveyard"><img><b id="graveyard-pile-count"></b></button></div><div id="footer"></div>`,
+    `<dialog><input id="piles-on-field" type="checkbox"><div id="picker"></div></dialog><div id="field"><button id="deck-zone"><img><b id="deck-pile-count"></b></button><button id="graveyard"><img><b id="graveyard-pile-count"></b></button></div><div id="enemy"><button id="enemy-deck-zone"><img><b id="enemy-deck-pile-count"></b></button><button id="enemy-graveyard"><img><b id="enemy-graveyard-pile-count"></b></button></div><div id="footer"></div>`,
     { url: "http://localhost" },
   );
   const doc = dom.window.document;
@@ -17,11 +17,18 @@ test("pilhas usam o verso do baralho e ignoram a antiga preferência global", as
     dialog: doc.querySelector("dialog"),
     picker: doc.querySelector("#picker"),
     field: doc.querySelector("#field"),
+    enemyField: doc.querySelector("#enemy"),
     footer: doc.querySelector("#footer"),
     storage,
   });
   assert.equal(doc.querySelectorAll("#picker button").length, 0);
   controller.update(28, 3, "water");
+  controller.updateEnemy(19, 2, "fire");
+  assert.match(
+    doc.querySelector("#enemy img")!.getAttribute("src")!,
+    /fire.png$/,
+  );
+  assert.equal(doc.querySelector("#enemy-deck-pile-count")!.textContent, "19");
   assert.match(
     doc.querySelector("#field img")!.getAttribute("src")!,
     /water.png$/,
@@ -39,6 +46,7 @@ test("pilhas usam o verso do baralho e ignoram a antiga preferência global", as
   toggle.checked = false;
   toggle.dispatchEvent(new dom.window.Event("change"));
   assert.equal((doc.querySelector("#field") as HTMLElement).hidden, true);
+  assert.equal((doc.querySelector("#enemy") as HTMLElement).hidden, true);
   assert.equal((doc.querySelector("#footer") as HTMLElement).hidden, false);
   assert.equal(storage.getItem("ztcg:zone-piles"), "false");
   dom.window.close();
