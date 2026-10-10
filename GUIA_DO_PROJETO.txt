@@ -851,13 +851,14 @@ ATUALIZAÇÃO — PERFIL E AMIZADES (10/10/2026)
   e cancelar pedidos enviados. Resultados de busca refletem amizades já existentes.
   Convites mantém escolha de baralho, validade de 5 minutos, aceite e cancelamento.
 - Polling evita reconstruir listas sem alterações; filtros e aba selecionada permanecem.
-- public/JS/social-view.js: agrupamento, filtros, controles de amizade compartilhados
+- public/JS/social-view.js — agrupamento, filtros, controles de amizade compartilhados
   e navegação acessível por teclado nas abas.
-- public/CSS/social.css: estilos compactos compartilhados entre amigos e perfis.
+- public/CSS/social.css — estilos compactos compartilhados entre amigos e perfis.
 - public/JS/friends.js e public/JS/profile.js: integração com a API existente.
-- tests/social-ui.test.ts: transições de amizade, bloqueio de cliques duplicados,
+- tests/social-ui.test.ts — transições de amizade, bloqueio de cliques duplicados,
   recuperação após falha, separação de relações, busca e navegação por teclado.
 - PREVIEW_SOCIAL=1 em tests/preview.ts cria somente relações e convite fictícios
   em memória para conferir a interface, sem alterar contas ou amizades reais.
 - Validação: 7 testes de interface/social/perfis/navegação aprovados; typecheck e
   build sem erros; envio/cancelamento e perfil de amigo conferidos no navegador local.
+
