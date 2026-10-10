@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Amigos · Zacornia</title>
     <link rel="stylesheet" href="/CSS/app.css" />
+    <link rel="stylesheet" href="/CSS/social.css" />
     <script type="module" src="/JS/friends.js"></script>
   </head>
   <body>
@@ -22,27 +23,100 @@
       <h1>Amigos</h1>
       <p id="social-intro">Entre na sua conta para adicionar amigos.</p>
       <section id="social-controls" hidden>
-        <label
+        <label class="social-deck-choice"
           >Baralho para os convites<select id="social-deck"></select
         ></label>
-        <form id="friend-search">
-          <label
-            >Buscar jogador pelo nome<input
-              name="q"
-              minlength="3"
+        <div
+          id="social-tabs"
+          class="social-tabs"
+          role="tablist"
+          aria-label="Seções de amigos"
+        >
+          <button
+            id="friends-tab"
+            type="button"
+            role="tab"
+            aria-controls="friends-panel"
+            aria-selected="true"
+          >
+            Amigos <span id="friends-count"></span>
+          </button>
+          <button
+            id="requests-tab"
+            type="button"
+            role="tab"
+            aria-controls="requests-panel"
+            aria-selected="false"
+            tabindex="-1"
+          >
+            Pedidos de amizade <span id="requests-count"></span>
+          </button>
+          <button
+            id="invites-tab"
+            type="button"
+            role="tab"
+            aria-controls="invites-panel"
+            aria-selected="false"
+            tabindex="-1"
+          >
+            Convites de partida <span id="invites-count"></span>
+          </button>
+        </div>
+        <section
+          id="friends-panel"
+          class="social-panel"
+          role="tabpanel"
+          aria-labelledby="friends-tab"
+        >
+          <h2>Seus amigos</h2>
+          <label class="friend-filter"
+            >Buscar entre seus amigos<input
+              id="friends-filter"
+              type="search"
+              placeholder="Nome do amigo"
               maxlength="80"
-              required /></label
-          ><button>Buscar</button>
-        </form>
-        <div id="search-results"></div>
-        <h2>Amizades e pedidos</h2>
-        <div id="friend-list"></div>
-        <h2>Convites para jogar</h2>
-        <p class="hint">
-          Convites valem por 5 minutos. Escolha seu baralho antes de aceitar.
-        </p>
-        <div id="invite-list"></div>
-        <p><a href="/HTML/index.html">Ir para Jogar</a></p>
+          /></label>
+          <div id="friend-list"></div>
+        </section>
+        <section
+          id="requests-panel"
+          class="social-panel"
+          role="tabpanel"
+          aria-labelledby="requests-tab"
+          hidden
+        >
+          <h2>Pedidos de amizade</h2>
+          <form id="friend-search">
+            <label
+              >Encontrar jogadores para adicionar<input
+                name="q"
+                type="search"
+                placeholder="Digite pelo menos 3 caracteres"
+                minlength="3"
+                maxlength="80"
+                required /></label
+            ><button>Buscar</button>
+          </form>
+          <div id="search-results" aria-live="polite"></div>
+          <h3>Pedidos recebidos</h3>
+          <div id="incoming-requests"></div>
+          <h3>Pedidos enviados</h3>
+          <div id="outgoing-requests"></div>
+        </section>
+        <section
+          id="invites-panel"
+          class="social-panel"
+          role="tabpanel"
+          aria-labelledby="invites-tab"
+          hidden
+        >
+          <h2>Convites de partida</h2>
+          <p class="hint">
+            Convites valem por 5 minutos. Escolha seu baralho antes de aceitar.
+          </p>
+          <div id="invite-list"></div>
+          <p><a href="/HTML/index.html">Ir para Jogar</a></p>
+        </section>
       </section>
     </main>
     <p id="message" class="message" role="status" aria-live="polite" hidden></p>

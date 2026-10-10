@@ -66,13 +66,14 @@
   margin: 0;
 }
 .level-medal {
-  margin-left: auto;
-  min-width: 86px;
-  text-align: center;
-  display: grid;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
   border: 1px solid #d3b777;
-  border-radius: 22px;
-  padding: 12px;
+  border-radius: 8px;
+  padding: 5px 9px;
+  font-size: 0.78rem;
   color: #ead59e;
   background: #d7b77d0a;
 }
@@ -81,7 +82,24 @@
   letter-spacing: 0.15em;
 }
 .level-medal strong {
-  font-size: 2rem;
+  font-size: 1rem;
+}
+.profile-identity-content {
+  min-width: 0;
+  flex: 1;
+}
+.profile-name-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.profile-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
 }
 .profile-stats {
   display: grid;
@@ -292,12 +310,16 @@
     font-size: 0.78rem;
   }
   .level-medal {
-    min-width: 60px;
-    padding: 9px;
-    border-radius: 16px;
+    padding: 5px 8px;
   }
   .level-medal strong {
-    font-size: 1.5rem;
+    font-size: 1rem;
+  }
+  .profile-name-line {
+    gap: 8px;
+  }
+  .profile-actions {
+    gap: 8px;
   }
   .profile-stats {
     padding: 0 20px;

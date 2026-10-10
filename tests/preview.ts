@@ -10,6 +10,31 @@ import type { Instance } from "../src/game/state";
 import { randomUUID } from "node:crypto";
 process.env.SECRET = "preview-only-012345678901234567890123456789";
 void fakeDatabase().then(async (db) => {
+  if (process.env.PREVIEW_SOCIAL === "1") {
+    db.friendships.push(
+      {
+        key: `${"1".repeat(24)}:${"2".repeat(24)}`,
+        members: ["1".repeat(24), "2".repeat(24)],
+        requestedBy: "1".repeat(24),
+        status: "pending",
+      },
+      {
+        key: `${"1".repeat(24)}:${"3".repeat(24)}`,
+        members: ["1".repeat(24), "3".repeat(24)],
+        requestedBy: "3".repeat(24),
+        status: "accepted",
+      },
+    );
+    db.invitations.push({
+      invitationId: randomUUID(),
+      from: "3".repeat(24),
+      to: "1".repeat(24),
+      deckId: "6".repeat(24),
+      status: "pending",
+      expires: new Date(Date.now() + 300000),
+      createdAt: new Date(),
+    });
+  }
   // Optional, isolated fixtures for the profile UI; never touches production data.
   if (process.env.PREVIEW_PROFILES === "1") {
     db.decks[0].publico = true;

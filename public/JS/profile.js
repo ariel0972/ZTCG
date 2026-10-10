@@ -1,9 +1,50 @@
 import { api, token, navbar, message, node, profilePath } from "./auth.js";
 import { cardTile } from "./card-view.js";
 import { createCardInspector } from "./card-inspection.js";
+import { friendshipButtons } from "./social-view.js";
 
 const $ = (id) => document.getElementById(id);
 const inspector = createCardInspector();
+async function loadFriendship() {
+  const controls = $("profile-friendship");
+  controls.hidden = !user || profileId === user.id;
+  if (controls.hidden) return;
+  const currentRelation = async () =>
+    (await api("/friends")).relations.find((r) => r.id === profileId);
+  try {
+    friendshipButtons(
+      controls,
+      await currentRelation(),
+      async (action) => {
+        const result = await api(
+          action === "send"
+            ? "/friends/requests"
+            : action === "accept"
+              ? `/friends/requests/${profileId}/accept`
+              : `/friends/${profileId}`,
+          {
+            method: action === "remove" ? "DELETE" : "POST",
+            ...(action !== "remove"
+              ? {
+                  body: JSON.stringify(
+                    action === "send" ? { userId: profileId } : {},
+                  ),
+                }
+              : {}),
+          },
+        );
+        message(result.content);
+        return currentRelation();
+      },
+      (e) => message(e.message, true),
+    );
+  } catch (e) {
+    message(e.message, true);
+    const retry = node("button", "Recarregar amizade", "quiet");
+    retry.onclick = () => void loadFriendship();
+    controls.replaceChildren(retry);
+  }
+}
 let user,
   profileId,
   profile,
@@ -202,6 +243,7 @@ async function load() {
     renderDecks();
     renderHistory(data.matches);
     $("more-history").hidden = !data.hasMore;
+    void loadFriendship();
   } catch (e) {
     message(e.message, true);
     $("player-name").textContent = "Perfil indisponível";

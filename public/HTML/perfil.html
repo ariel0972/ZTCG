@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="/CSS/app.css" />
     <link rel="stylesheet" href="/CSS/battle.css" />
     <link rel="stylesheet" href="/CSS/profile.css" />
+    <link rel="stylesheet" href="/CSS/social.css" />
     <script type="module" src="/JS/profile.js"></script>
   </head>
   <body>
@@ -32,16 +33,25 @@
             src="/assets/avatar.png"
             alt="Avatar do jogador"
           />
-          <div>
+          <div class="profile-identity-content">
             <p class="eyebrow">SUA JORNADA</p>
-            <h1 id="player-name">Carregando…</h1>
+            <div class="profile-name-line">
+              <h1 id="player-name">Carregando…</h1>
+              <span class="level-medal"
+                >Nível <strong id="level">1</strong></span
+              >
+            </div>
             <p id="profile-subtitle" class="muted"></p>
-            <button id="share-profile" class="quiet" disabled>
-              Copiar link do perfil
-            </button>
-          </div>
-          <div class="level-medal">
-            <small>NÍVEL</small><strong id="level">1</strong>
+            <div class="profile-actions">
+              <div
+                id="profile-friendship"
+                class="friendship-actions"
+                hidden
+              ></div>
+              <button id="share-profile" class="quiet" disabled>
+                Copiar link do perfil
+              </button>
+            </div>
           </div>
         </div>
         <div

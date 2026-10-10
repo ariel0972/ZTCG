@@ -837,3 +837,27 @@ VERIFICAÇÃO DESTA ENTREGA (10/10/2026)
   Índice único unique_player_name criado no MongoDB de produção.
 - Backups e implantação pelo GitHub Actions continuam como workflows manuais.
   O push executa o workflow Verify; não configura segredos nem agendas de backup.
+
+ATUALIZAÇÃO — PERFIL E AMIZADES (10/10/2026)
+- Nome e nível ficam juntos no perfil. Os botões de amizade e copiar link usam uma
+  faixa compacta com quebra de linha em telas pequenas.
+- Perfis de outros jogadores exibem Pedir amizade, Pedido Enviado + Cancelar envio,
+  Aceitar amizade + Recusar pedido, ou Desfazer amizade em vermelho, conforme a
+  relação autenticada. O próprio perfil e visitantes sem login não exibem ações
+  de amizade. Os controles consultam o estado real após cada alteração.
+- Amigos possui abas independentes: Amigos, Pedidos de amizade e Convites de partida.
+  Amigos filtra apenas amizades aceitas, sem distinguir maiúsculas e acentos.
+  Pedidos permite buscar jogadores (mínimo de 3 caracteres), aceitar pedidos recebidos
+  e cancelar pedidos enviados. Resultados de busca refletem amizades já existentes.
+  Convites mantém escolha de baralho, validade de 5 minutos, aceite e cancelamento.
+- Polling evita reconstruir listas sem alterações; filtros e aba selecionada permanecem.
+- public/JS/social-view.js: agrupamento, filtros, controles de amizade compartilhados
+  e navegação acessível por teclado nas abas.
+- public/CSS/social.css: estilos compactos compartilhados entre amigos e perfis.
+- public/JS/friends.js e public/JS/profile.js: integração com a API existente.
+- tests/social-ui.test.ts: transições de amizade, bloqueio de cliques duplicados,
+  recuperação após falha, separação de relações, busca e navegação por teclado.
+- PREVIEW_SOCIAL=1 em tests/preview.ts cria somente relações e convite fictícios
+  em memória para conferir a interface, sem alterar contas ou amizades reais.
+- Validação: 7 testes de interface/social/perfis/navegação aprovados; typecheck e
+  build sem erros; envio/cancelamento e perfil de amigo conferidos no navegador local.

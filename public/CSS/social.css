@@ -1,0 +1,134 @@
+.social-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  margin: 24px 0 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #172128;
+}
+.social-tabs button {
+  flex: 1;
+  background: transparent;
+  border-color: transparent;
+  font-size: 0.9rem;
+}
+.social-tabs button[aria-selected="true"] {
+  background: #2b3941;
+  color: #ead59e;
+  border-color: #6d624a;
+}
+.social-panel {
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #172128;
+}
+.social-panel h2 {
+  margin-top: 0;
+}
+.social-panel h3 {
+  font-size: 1rem;
+  margin: 24px 0 10px;
+}
+.social-deck-choice {
+  max-width: 400px;
+}
+.social-panel .social-row {
+  background: #1b2a33;
+  margin: 10px 0;
+  padding: 14px 16px;
+  gap: 14px;
+}
+.social-person {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex: 1;
+  min-width: 140px;
+}
+.social-person a {
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+.social-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+.social-actions,
+.friendship-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.social-actions button,
+.friendship-actions button,
+#share-profile {
+  padding: 7px 11px;
+  min-height: 34px;
+  font-size: 0.82rem;
+  width: auto;
+}
+button.friendship-remove {
+  color: var(--red);
+  border-color: #ed96904d;
+  background: #ed96900b;
+}
+button.friendship-remove:hover {
+  border-color: var(--red);
+}
+button.friendship-cancel {
+  background: transparent;
+}
+button.friendship-pending:disabled {
+  opacity: 1;
+  color: #b5cbda;
+  background: #263843;
+  border-color: transparent;
+  cursor: default;
+}
+.social-panel .empty-state {
+  color: var(--muted);
+  padding: 18px 0;
+}
+.social-panel #friend-search {
+  display: flex;
+  margin: 16px 0 24px;
+  gap: 10px;
+  align-items: end;
+}
+.social-panel #friend-search button {
+  margin: 0;
+}
+.social-panel .friend-filter {
+  display: block;
+  margin: 16px 0 24px;
+}
+@media (max-width: 600px) {
+  .social-tabs {
+    gap: 2px;
+    padding: 4px;
+  }
+  .social-tabs button {
+    padding: 10px 5px;
+    font-size: 0.78rem;
+  }
+  .social-panel {
+    padding: 18px 14px;
+  }
+  .social-actions {
+    width: 100%;
+  }
+  .social-panel .social-row {
+    gap: 12px;
+    padding: 12px;
+  }
+  .social-actions button,
+  .friendship-actions button,
+  #share-profile {
+    min-height: 40px;
+  }
+}
