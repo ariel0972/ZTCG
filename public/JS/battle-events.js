@@ -17,6 +17,8 @@ export function createBattleEvents(host = document.body) {
     ability: "Habilidade usada",
     block: "Ataque impedido",
     reaction: "Ataque devolvido",
+    damage: "Dano recebido",
+    notice: "Aviso",
   };
   function show(event) {
     const card = event.card;

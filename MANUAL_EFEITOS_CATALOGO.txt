@@ -1,0 +1,1283 @@
+ZACORNIA — COMO MONTAR CARTAS E EFEITOS NO CATÁLOGO
+Versão: 10/10/2026. Correspondência: motor desta versão do projeto.
+
+1. COMO USAR O EDITOR
+
+Entre com uma conta administradora, abra Catálogo, localize a carta e edite seu
+JSON. Use Validar antes de Salvar entrada. A descrição serve para o jogador ler;
+ela não executa regras. O comportamento vem dos campos estruturados.
+Escreva as chaves exatamente como nos exemplos, incluindo maiúsculas/minúsculas.
+No JSON, números não levam aspas; true/false não levam aspas; textos levam aspas
+duplas. Não use comentários, funções, vírgula depois do último item ou campos
+inventados. Os objetos rejeitam propriedades desconhecidas.
+
+publicado: false permite guardar um rascunho. Ele aparece no editor e na coleção,
+mas impede usar um baralho que o contenha em partida. publicado: true exige
+definição válida e efeitos realmente suportados pelo motor. Mudar a descrição
+não implementa uma habilidade. Salve um rascunho enquanto estiver montando.
+O servidor controla a versão e rejeita uma edição baseada numa versão antiga.
+Partidas que já começaram mantêm suas próprias cópias das cartas; uma alteração
+no catálogo vale para novas partidas. Não espere modificar a mesa atual ao salvar.
+
+2. CAMPOS DA CARTA
+
+numeroCatalogo: identificador textual de 3 a 6 dígitos, por exemplo "053".
+  Mantenha os zeros. Deve identificar uma única carta. Não use o nome como ID.
+nome: nome visível, 1 a 100 caracteres, sem espaços sobrando nas extremidades.
+tipo: Mago, Tropa, Feitico, Estrutura ou Armamento. No JSON é Feitico, sem acento.
+custoMana: inteiro de 0 a 1000. Custo de conjurar/mobilizar/equipar.
+assinatura: true marca feitiço assinatura; false é o padrão. Assinaturas usam
+  o limite feiticosUnicos e não podem ser canceladas pelo Jato da água.
+elemento: Fogo, Agua, Terra, Ar, Zarcos ou Neutro. Agua não leva acento no JSON.
+descricao: texto geral, até 4000 caracteres. Use para passiva, condições e limites.
+imgURL: caminho /assets/... ou endereço http(s). A imagem é uma carta completa.
+hp: vida máxima inicial. Obrigatória e positiva em Mago, Tropa e Estrutura.
+ataque: ataque básico inicial. Obrigatório em Mago, Tropa e Estrutura; pode ser 0.
+manaGerada: geração de mana em campo. Obrigatória em Tropa. Não é o custo.
+recuperacaoMana: recuperação própria do mago no início do turno. Obrigatória
+  em Mago. Soma à geração das cartas; uma passiva manaRecovery pode substituí-la.
+bonusAtaque / bonusHp: bônus do Armamento. Ambos obrigatórios nesse tipo.
+subtipo: Animal, Humano, Monstro, Planta ou Invocação. Opcional.
+direcaoAtaque: Frente, Diagonal ou Universal. Obrigatória em Tropa. Frente aponta
+  para a coluna oposta; Diagonal para coluna vizinha; Universal aceita diferença
+  de coluna até 1. Guardar e acesso ao mago têm regras próprias.
+alvo: tipo de seleção do feitiço, explicado na seção 3. Obrigatório em Feitico.
+maxAlvos: 1 a 3, padrão 1. Use com MultiplosInimigos; não muda o dano.
+alvoAutomatico: em uma CARTA Feitico, aceita UltimoAtacanteTropa. Exige
+  UnicoInimigo. O servidor escolhe a última tropa que atacou uma tropa sua no
+  turno imediatamente anterior. Precisa ser a mesma instância viva em campo.
+  Um ataque contra mago não substitui esse registro. Sem alvo válido, bloqueia
+  toda a carta, sem gastar mana, sem buscar a outra carta e sem descarte.
+ignoraEsconder: exceção opcional de alvo individual, usada por Nome Sagrado.
+  Não use por padrão. Não significa ignorar estruturas, resistência ou escudos.
+tiposAlvo: filtro opcional, exemplo ["Tropa", "Estrutura"]. Restringe quais
+  tipos um feitiço pode atingir. Não muda aliado/inimigo, quantidade ou alcance.
+efeitos: até 12 efeitos diretos, EXCLUSIVOS de Feitico. Padrão [].
+habilidadesAtivas: até 12 habilidades ativadas por botão. Padrão [].
+habilidadesPassivas: até 12 passivas. Padrão [].
+palavrasChave: lista, até 20, explicada na seção 8. Padrão [].
+fraqueza: lista de elementos cujo dano é dobrado. Padrão [].
+resistencia: lista de elementos cujo dano é dividido por 2, arredondado para baixo.
+  Vapor suspende a resistência. Não coloque o mesmo elemento nas duas listas
+  esperando imunidade; fraqueza e resistência são operações separadas.
+limites: uma lista de exatamente um objeto em Mago. Nos demais tipos use [].
+  tropasMobilizadas: máximo de mobilizações por turno.
+  tropaAtacam: máximo de ataques das tropas/estruturas por turno.
+  feiticosUsados: máximo de feitiços comuns por turno, incluindo respostas.
+  feiticosUnicos: máximo de feitiços assinatura por turno.
+publicado: estado do catálogo; não equivale a uma carta em campo.
+versao: inteiro positivo; padrão 1. É usado no controle de edição concorrente.
+
+Todos os campos numéricos comuns aceitam inteiros 0..1000, exceto maxAlvos,
+versao e limites próprios explicitados. Listas de fraqueza/resistência aceitam
+até 6 elementos. A validade estrutural não garante que uma combinação faça
+sentido: também passe pela validação de efeitos executáveis.
+
+3. ALVOS E COMBINAÇÕES
+
+UnicoInimigo: uma carta inimiga; normalmente permite mago. tiposAlvo pode excluir
+  magos. Para uma estrutura, clique no botão da estrutura, não na tropa vinculada.
+UnicoAliado: uma carta aliada, inclusive mago, respeitando o efeito.
+MultiplosInimigos: escolha até maxAlvos inimigos distintos.
+TodosInimigos: todas as tropas e o mago inimigos; não seleciona cada um.
+TodasTropasInimigas: todas as tropas inimigas; não inclui mago nem estruturas
+  como alvos independentes. Estruturas podem absorver o dano às tropas.
+Global: não seleciona carta. Use para mana, draw e regras globais especiais.
+Estrutura: seleciona uma estrutura; esse alvo não distingue lados por si só.
+Deck: escolhe uma carta do próprio baralho; searchElemental exige esse alvo.
+DeckOponente: zona adversária. Não revela conteúdo ou ordem do baralho.
+Cemiterio: carta do próprio cemitério; cartas banidas/esquecidas não estão nele.
+Mao: carta da própria mão; ações específicas, como recuperarEnergia.
+CampoAliado / CampoInimigo: um slot frontal do lado indicado, ocupado ou vazio.
+  Campo não é uma lista de todos os slots. field aplica o elemento/reação ali.
+
+Feitiços de Global/TodosInimigos/TodasTropasInimigas e alvoAutomatico podem ser
+arrastados a um slot ou ao fundo do campo. Também podem ser preparados e
+conjurados pelo botão. O arraste não escolhe alvos individuais nesses casos.
+Feitiços com alvo individual continuam exigindo seleção. Alvos repetidos,
+inválidos ou acima do limite são rejeitados antes de gastar mana.
+
+damage/heal/status combinam com UnicoInimigo, UnicoAliado, TodosInimigos,
+TodasTropasInimigas, Estrutura, MultiplosInimigos e CampoAliado/CampoInimigo.
+damage/heal/status NÃO combinam com Global, Deck, Mao ou Cemiterio como alvos
+genéricos. Campo vazio não permite curar ou aplicar status a uma carta ausente.
+draw e mana genéricos exigem Global, e agem no conjurador.
+field exige CampoAliado/CampoInimigo e elemento não Neutro na carta.
+searchElemental exige Deck, escolhendo um Feitico com Fogo/Agua/Terra/Ar.
+banish/forget aceitam UnicoInimigo, MultiplosInimigos, Cemiterio, DeckOponente;
+  mago não é removível por esses efeitos.
+searchNamed não precisa de seleção de deck: busca automaticamente pelo ID.
+  Pode acompanhar damage em uma carta de alvo individual, como Nome Profano.
+
+4. EFEITOS GENÉRICOS (efeitos DA CARTA OU DA HABILIDADE)
+
+id: identificador do executor, 1..80 caracteres: letras, números, _ ou -.
+valor: intensidade/quantidade. Obrigatório em damage, heal, draw, mana e nas
+  regras especiais de feitiços. Em status é opcional, salvo bônus/reduções.
+status: nome do status, obrigatório quando id = status.
+duracao: duração positiva, obrigatória em status. Padrão de unidade: rodada.
+elemento: sobrescrita opcional do elemento de damage; sem ela usa o da carta.
+unidade: opcional, turno ou rodada, exclusivamente para status sem duração fixa.
+  Rodada é o ciclo dos dois turnos; decrementa no fim da rodada, inclusive a da
+  aplicação. Turno com duracao 2 inclui o turno atual e o próximo. A duração de
+  1 rodada pode ser curta se aplicada no último turno daquela rodada.
+requerStatus: vincula um status a outro. Exemplo: ReducaoDano enquanto Esconder.
+  A redução não funciona sem o status requerido. Atacar remove Esconder e os
+  benefícios vinculados a ele. Use apenas com id status e status suportado.
+carta: numeroCatalogo a buscar; exclusiva de searchNamed.
+seNaoUsada: numeroCatalogo que bloqueia a busca caso já tenha sido conjurado
+  por esse jogador em qualquer momento da partida; exclusiva de searchNamed.
+  O histórico é permanente, persiste com a partida e não reinicia em nova rodada.
+
+Executores:
+damage: causa valor de dano. Estrutura protege tropa; fraqueza, resistência,
+  redução e escudos são calculados. Registra valor e vida antes/depois.
+heal: recupera valor até a vida máxima (mais bônus de armamento). Não revive.
+status: aplica condição. A maioria renova a duração sem acumular intensidade.
+draw: compra valor cartas do próprio baralho.
+mana: recupera valor de mana própria, até 20.
+searchElemental: escolhe um feitiço elemental do próprio deck, põe na mão e
+  embaralha. Não aceita Neutro/Zarcos.
+searchNamed: busca UMA cópia de carta, põe na mão e embaralha. Se seNaoUsada já
+  foi conjurada, não busca. Se não encontra cópia, avisa ambos e mantém a ordem
+  e o conteúdo do baralho. Não exige valor. Não procura no cemitério.
+banish: move alvo para banidas.
+forget: move alvo para esquecidas.
+field: aplica o elemento da carta ao slot frontal e resolve reação.
+
+A lista executa na ordem escrita. Por exemplo, damage antes de status é dano
+antes da condição; isso não faz status ignorar o escudo nem reviver um alvo.
+Uma combinação especial completa não pode ser misturada com esses efeitos.
+
+5. STATUS SUPORTADOS E EXCEÇÕES
+
+BonusAtaque: valor positivo de bônus SOMENTE no ataque básico. Não aumenta
+  habilidades/feitiços. Renova sem acumular. Ex.: Guerreiro, valor 2, duração 2.
+ReducaoDano: valor positivo subtraído de cada golpe, após fraqueza/resistência.
+  Não se consome a cada golpe. Dano periódico de status não passa por esse escudo.
+ReducaoAtaqueTropa: reduz somente ataque básico cujo atacante é Tropa.
+Interceptar: redireciona ataques básicos de tropas contra aliados para esta
+  tropa. Havendo várias, primeira da esquerda para a direita; não soma defesas.
+  O ataque precisa ser válido contra o alvo inicialmente escolhido. Não
+  intercepta feitiços nem habilidades. Estruturas continuam com sua proteção.
+Escudo: valor é reserva absorvida; decresce ao absorver e some quando zera.
+  Aplicações de Escudo criam reservas separadas; não confunda com ReducaoDano.
+EscudoProtecao: valor conta golpes totalmente bloqueados. A regra especial
+  protectionShield cria 3 golpes por 2 rodadas.
+Esconder: impede escolher alvo individual e ataque básico; efeitos de área
+  continuam válidos. Atacar revela a carta. ignoraEsconder é exceção explícita.
+Guardar: força ataques básicos contra um guardião antes de outros alvos.
+  Não é a mesma mecânica que Interceptar.
+Incapacitado: impede ataques. Não implica bloquear toda habilidade.
+Atordoado: impede ataque e habilidade.
+Congelado: impede ataque/habilidade até fim do próximo turno. Ataque básico
+  contra a tropa congelada segue para seu mago, ignorando a estrutura vinculada.
+Cego: mago não pode conjurar feitiços; habilidades ficam bloqueadas. Ataque
+  básico tem 50% de chance de errar.
+Abalo: estrutura deixa de proteger a tropa pelo período.
+armaduraPoderosa: redução de 2 por golpe, usada por habilidade especial antiga.
+Queimado: começa com dano 1 por 2 rodadas; reaplicar aumenta intensidade até 3
+  e acrescenta duração até 5. Ignora valor/duracao genéricos de início.
+Envenenado: dano 1 por 3 rodadas; reaplicar acrescenta 1 rodada, máximo 5.
+Sangrando: dano 1 por 3 rodadas; reaplicar aumenta intensidade, máximo 5.
+Peste Negra / Leptospirose: dano 2 no fim de cada rodada durante a duração.
+Aliases aceitos: Atordoamento, Congelamento, Cegueira, Sangramento,
+  Envenenamento, Queimacao e Queimando. Prefira os nomes canônicos acima.
+Não personalize unidade de Congelado, Envenenado, Queimado ou Sangrando:
+  eles têm seu próprio executor e sua duração fixa/incremental.
+
+O histórico mostra dano causado por cada status no fim da rodada; não apenas
+um total sem origem. Para dano de efeito/ataque, registra o valor depois das
+modificações, até quando foi reduzido a 0. Explosão/Sobrepujar registram o
+excedente no mago separadamente. O histórico recente mantém até 100 linhas.
+
+6. HABILIDADES ATIVAS
+
+Cada habilidade tem id único dentro da carta, nome, custoMana e descricao
+opcional (até 2000 caracteres). Pode conter alvo e efeitos, iguais aos genéricos.
+Sem efeitos, id precisa ser um executor especial já conhecido pelo motor.
+Com efeitos, o id pode ser seu identificador novo; não precisa criar função.
+Uma carta usa no máximo UMA habilidade por rodada, compartilhada entre seus
+botões. Habilidade não consome ataque automaticamente. Uma regra especial
+antiga pode consumir; armaduraPoderosa é um exemplo. Custo e limite são
+checados no servidor. Preparação e primeiro turno próprio bloqueiam habilidades.
+
+Em HABILIDADE, alvoAutomatico aceita Proprio ou Frontal:
+  Proprio + UnicoAliado: a carta que usa a habilidade, inclusive estrutura.
+  Frontal + UnicoInimigo: tropa viva diretamente à frente, apenas em Tropa.
+  Frontal vazio, escondido ou inválido bloqueia sem gastar mana.
+  Não envie targets manualmente nesses casos; o servidor rejeita.
+UltimoAtacanteTropa pertence ao feitiço; Proprio/Frontal pertencem à habilidade.
+Efeitos especiais de feitiços e field não são aceitos em habilidades genéricas.
+
+Executores antigos sem lista de efeitos:
+protecaoAquatica: escolher aliado e cura 3 OU Escudo 3 por 2 rodadas.
+enganarAMorte: até 3 tropas recentes do cemitério ao baralho, embaralhando.
+ressurreicaoSombria: tropa do cemitério à mão, restaurada e com custo 0.
+ataqueFurtivo: 2 de dano ao mago inimigo, automático.
+ordemDaEspada: 3 de dano às tropas inimigas, estruturas absorvem.
+armaduraPoderosa: Guardar e redução 2 por 2 rodadas; consome ataque.
+recuperarEnergia: sacrifica feitiço da mão para recuperar 3 mana, teto 20.
+refazerCaminhos: escolhe Feitico do cemitério e retorna à mão.
+deslocar: 3 de dano e Atordoado por 1 rodada na tropa frontal; vazio bloqueia.
+O custo de cada um vem de custoMana da habilidade, não de nome/descrição.
+
+7. PASSIVAS DECLARATIVAS REUTILIZÁVEIS
+
+Use gatilho, escopo e efeitos. É outro formato: não copie diretamente os
+objetos de efeitos de feitiço. Aqui uma ação damage exige alvo e valor, por exemplo.
+gatilho: quando avaliar. Opções:
+onDeath: morte de tropa; onStructureDestroyed: destruição de estrutura;
+onHeal: fonte realizou cura efetiva; onHealed: carta recebeu cura efetiva;
+onKill: abate atribuído à fonte; onSpellCast: conjuração, inclusive cancelada;
+onDamageTaken: recebe dano positivo; onAttacked: recebe ataque básico,
+inclusive sem dano; onAttack: realiza ataque básico; onTargeted: restrição ou
+reflexão de ataque básico; onEquip: equipamento; onTurnStart/onTurnEnd:
+início/fim do turno; onSummon: mobilização; onRevive: mobilização de carta
+revivida; onSacrifice: sacrifício; onStatusApplied: condição aplicada;
+continuous: aura/condição contínua, sem modificar o ataque base permanentemente.
+
+escopo: proprio (evento da fonte), aliado, inimigo ou qualquer jogador.
+excluirFonte: true evita ativar pelo evento da própria fonte.
+descricao: texto da passiva; não executa.
+filtroEvento: tipo, elemento, direcao e/ou status da carta do evento.
+  Os campos juntos são E lógico. Pelo menos um filtro precisa ser definido.
+filtroAlvo: tipo, elemento e relacao aliado/inimigo do alvo do evento.
+  Permitido somente em onAttack/onKill/onHeal.
+condicoes: até 12, todas devem valer:
+  {"tipo":"campoVazio","jogador":"inimigo"}: nenhuma tropa daquele lado.
+  {"tipo":"vidaPercentual","alvo":"fonte","percentual":50,
+   "comparacao":"menor"}: menos de 50% da vida máxima da própria fonte.
+  alvo pode ser fonte ou cartaEvento; percentual 0..100; comparacao menor
+  ou menorOuIgual. cartaEvento é a carta do evento, não um alvo adversário
+  imaginário. Em continuous normalmente é a própria fonte.
+
+Alvos de ações: fonte, magoAliado, magoInimigo, cartaEvento, atacante, alvoAtaque.
+atacante só faz sentido em onAttacked/onDamageTaken. alvoAtaque só é permitido
+em onAttack/onKill/onHeal. Eventos de turno não fornecem cartaEvento como alvo.
+A fonte e as demais relações são calculadas em relação ao dono da passiva.
+
+Ações disponíveis:
+damage: alvo + valor + elemento opcional.
+heal: alvo + valor + excedente opcional (limite adicional de vida para a cura).
+growMaxHp: alvo + valor; aumenta vida máxima e atual, permanentemente.
+growAttack: alvo + valor; aumenta ataque básico permanentemente e acumula.
+status: alvo + status + duracao positiva + valor opcional. Unidade padrão rodada;
+  não aceita unidade/requerStatus da lista de efeitos genéricos.
+mana / draw / recover: jogador aliado/inimigo + valor. recover retorna as cartas
+  mais recentes do cemitério à mão, sem escolher tipo; não mobiliza nem revive.
+spellDamageBonus: elemento, valor positivo, contador (identificador seguro),
+  aCada positivo. Em Mago, onSpellCast com filtro do elemento. Incrementa
+  contador; bônus permanente aumenta a cada N ocorrências. Não é consumido.
+manaRecovery: valor; só Mago, continuous, substitui recuperação própria.
+attackBonus: valor positivo; só Tropa, continuous. Condição ligada à fonte.
+attackAura: valor positivo; só Tropa, continuous; filtro opcional dos vizinhos;
+  fonteRecebe padrão true; porVizinho padrão true. Somam auras distintas.
+  Uma Dançarina central com Fogo dos dois lados recebe +4; cada vizinha +2.
+blockAttack: somente onTargeted com escopo proprio; filtro opcional do atacante.
+  qualquerDe lista filtros com OU lógico. Dentro de cada filtro é E lógico.
+  Água OU Frente: use qualquerDe, não um único filtro contendo os dois.
+reflectAttack: somente onTargeted/escopo proprio; filtro opcional. Resposta
+  opcional em 20 segundos, pausa relógio, sem mana, uma vez por rodada.
+summonFromDeck: carta = numeroCatalogo ou mesmaCarta, destino slotEvento.
+move: destino slotEvento. Ambos só em onDeath de tropa aliada, fonte Tropa.
+  Exigem vaga válida; não substituem uma carta viva nem ocupam Lama.
+
+continuous aceita apenas attackAura, attackBonus e manaRecovery.
+onTargeted aceita apenas blockAttack e reflectAttack.
+Outros gatilhos aceitam as ações de evento; não aceitam essas cinco ações
+contínuas/restrições. Um ciclo de passivas é limitado pelo motor e não pode
+ser usado para criar cura/dano infinito.
+
+Formato antigo de compatibilidade: gatilho, efeito, valor, condicao e demais
+campos específicos, sem efeitos[]. Os IDs antigos são aplicarStatusAtacante,
+bonusAtaqueAdjacente, restringirAtaqueBasico, ganharVida, curarMago, recuperarMana,
+comprarCarta, comprarCartaCemiterio, ganharVidaEManaSacrificio, manaCampoVazio,
+causarDanoExtra, acumularDanoFogo e curarMagoAgua. Gatilhos e condições não são
+intercambiáveis. Para novas cartas, prefira as passivas declarativas e o botão
+de exemplos no editor; não misture efeito singular com efeitos na mesma passiva.
+
+Detalhamento dos campos antigos (opcionais conforme o executor):
+valor: quantidade do efeito; não substitui intensidades fixas dos magos.
+condicao: filtro por elemento em onSpellCast; status em onStatusApplied;
+  aliadoMorreTerra/aliadoMorreAr filtram mortes pelo elemento. Valores antigos
+  aceitos: aliadoMorre, aliadoMorreTerra, aliadoMorreAr, Fogo, Agua, Terra, Ar,
+  Zarcos, Neutro e Incapacitado. Não são expressões JavaScript.
+elemento: elemento do atacante, na restrição; do vizinho, na aura.
+direcao: Frente/Diagonal/Universal do atacante na restrição.
+tipoAtacante: tipo exigido pela restrição, por exemplo Tropa.
+status/duracao: condição aplicada ao atacante em aplicarStatusAtacante.
+porVizinho: acumula a aura por vizinho quando true; padrão true.
+descricao/gatilho: texto e disparador, conforme o formato novo.
+Compatibilidade executor → gatilho:
+  aplicarStatusAtacante → onAttacked
+  bonusAtaqueAdjacente → continuous
+  restringirAtaqueBasico → onTargeted
+  ganharVida / recuperarMana → onDeath (outra tropa aliada)
+  curarMago / comprarCarta / acumularDanoFogo / curarMagoAgua → onSpellCast
+  comprarCartaCemiterio → onRevive (uma carta)
+  ganharVidaEManaSacrificio → onSacrifice (2 mana e 2 cura no mago)
+  manaCampoVazio → onTurnStart (campo próprio sem tropas; adiciona mana)
+  causarDanoExtra → onStatusApplied (dano na carta inimiga que recebeu status)
+acumularDanoFogo usa Fogo e +1 permanente a cada 2 feitiços; curarMagoAgua
+usa Agua e cura 3, permitindo até 6 acima da vida base. Não mude condicao para
+outro elemento esperando reprogramar esses dois executores antigos.
+
+8. PALAVRAS-CHAVE E ELEMENTOS
+
+Guardar, Esconder: comportamento de alvo descrito na seção 5.
+Sobrepujar: excedente de dano de ataque básico em tropa atinge seu mago.
+Campo livre: permite mover uma tropa uma vez por turno na fase de combate.
+Herança: mantém o armamento quando a tropa vinculada sai do campo.
+Flanquear: permite mobilizar a tropa em espaço de armamento durante preparação.
+Não existem palavras-chave arbitrárias executáveis; o nome novo precisa de código.
+
+Neutro: NÃO aplica token elemental nem apaga token existente. Pode causar dano.
+Fogo/Agua/Terra/Ar: quando usados pelos efeitos de feitiço/field, podem formar
+  reação com elemento anterior. A reação consome os elementos; o último elemento
+  usado não fica no slot quando houve reação. Ataque básico não aplica token.
+Zarcos: tem sua reação própria; não é elegível na busca searchElemental.
+Elemento de feitiço não transforma o mago. Algumas regras especiais variam
+com o elemento do MAGO conjurador, não com uma sobrescrita de effect.elemento.
+
+Reações (ordem não altera a combinação):
+Fogo + Agua = Vapor: suspende resistência até fim do turno.
+Ar + Terra = Erosão: 2 cartas do topo do deck do dono do alvo ao cemitério.
+Agua + Terra = Lama: bloqueia ocupação do slot por 2 rodadas.
+Fogo + Terra = Lava: 2 de dano às tropas adjacentes, ignorando estruturas.
+Fogo + Ar = Explosão: excedente ao eliminar tropa vai ao mago até fim do turno.
+Agua + Ar = Congelar: congelamento até fim do próximo turno.
+Zarcos + Zarcos = Zarconizado: conjurador recupera 2 mana, teto 20.
+Lama + Agua = Florescer: Planta ganha 1 de vida máxima e atual; outras recebem
+  Envenenado. Lama continua pelo tempo restante.
+
+9. REGRAS COMPLETAS DE FEITIÇOS (UM ÚNICO EFEITO)
+
+Nestes executores, valor é requerido pela validação, mas o comportamento abaixo
+é definido pelo motor. Alterar valor NÃO reprograma quantidades/durações fixas.
+Não copie para habilidade ativa nem misture com outro efeito da mesma carta.
+stoneVolley / TodasTropasInimigas: 5 pedras de 1, distribui esquerda→direita,
+  repete entre tropas vivas; sem tropas, restantes no mago.
+tornado / UnicoInimigo: escolhe TROPA, destrói estrutura vinculada, devolve
+  tropa à mão; 3 no mago inimigo ao fim de cada rodada, durante 2 rodadas.
+arrowRain / TodosInimigos: 3 no fim de cada rodada por 2 rodadas; única Chuva
+  de Flechas em campo. Mago Fogo: 5; Agua: congela tropas; Ar: Sangrando;
+  Terra: Cego. Veja descrições do catálogo para variações.
+protectionShield / UnicoAliado: bloqueia totalmente 3 golpes por 2 rodadas.
+tremor / TodasTropasInimigas: 4 nas tropas, Incapacitado 2 rodadas e Abalo em
+  estruturas neste turno. Mago Terra: 6 em tropas E mago, Atordoado nas tropas.
+lightOrb / TodosInimigos: Cego 2 rodadas. Mago Fogo também causa 3 de dano.
+sandstorm / TodosInimigos: Cego e 2 de dano ao fim de cada rodada por 2 rodadas.
+  Mago Ar também rouba uma carta do baralho adversário sem expor seu conteúdo.
+meteors / MultiplosInimigos: 2 por tropa selecionada. Com Golém próprio,
+  resolve em todas as tropas inimigas; não mago. Golém do inimigo não habilita.
+zarcosTear / Global: recupera 3 mana; ao usar OUTRA carta Zarcos depois, naquela
+  rodada, devolve esta Lágrima do cemitério à mão, uma ativação por cópia.
+strongFlow / Global: compra 3; ao usar OUTRA carta Zarcos depois, naquela
+  rodada, compra 1 adicional uma vez por cópia.
+As condições de Fluxo Forte/Lágrima expiram no fim da rodada, não são retroativas.
+Bola de Fogo 001 + Furacão 004 na mesma rodada, qualquer ordem: +6 de dano
+  adicionais a todos os inimigos, mantendo efeitos anteriores, uma vez por rodada.
+Jato d'água 002 cancela feitiço Fogo direcionado a tropa/mago, inclusive
+  múltiplos alvos, fora do turno. Nunca cancela assinatura. Janela 20 segundos
+  pausa turno; custa 3 e respeita limite comum. A resposta só cancela, sem dano.
+  O cancelado gasta mana/uso, vai ao cemitério e conta para passiva do mago Fogo.
+
+10. REGRAS GERAIS QUE O CATÁLOGO NÃO SOBRESCREVE
+
+Preparação começa com 5 mana, sem geração das cartas em campo; mobilização de
+tropa tem fluxo próprio. Geração normal inicia após a preparação. Preparação
+e primeiro turno de CADA jogador impedem ataque, habilidade e feitiço de dano.
+Máximo de mana 20. Sacrifício é exclusivo do Necromante. Duração de rodada
+é coletiva; não significa duas rodadas pessoais. Tropa/estrutura/mago podem
+ter habilidade; Armamento sem vida não pode usar cura própria.
+O motor valida custos, limites, alvo, turno, abertura e versão da partida.
+Animações, texto e arraste não permitem ignorar essas regras.
+
+11. EXEMPLOS PRONTOS E COMO ADAPTAR
+
+Os blocos EXEMPLO_JSON_INICIO/EXEMPLO_JSON_FIM abaixo são JSONs completos,
+verificados com o mesmo schema e validação de efeitos do catálogo.
+Copie só o JSON entre os marcadores. Para criar carta diferente, escolha um
+numeroCatalogo livre, mude nome/arte/descrição/atributos e revise regras.
+Nos exemplos reais, preserve o ID se estiver editando aquela mesma carta.
+publicado false significa rascunho, não falta de implementação.
+
+Exemplos genéricos adicionais cobrem cada tipo de carta e os seis elementos.
+Os IDs 990xxx são exemplos; confirme que estejam livres antes de criar.
+Não copie uma passiva da Dançarina para feitiço; attackAura exige Tropa.
+Para uma nova habilidade com os mesmos efeitos, basta outro id/nome/custoMana.
+Para regra inexistente, é preciso definir ambiguidade, executor e testes novos.
+
+12. CHECKLIST DE TESTE NO CATÁLOGO E EM PARTIDA
+
+1) Validar JSON e efeitos; revisar descrição contra comportamento.
+2) Salvar rascunho e conferir imagem, números, elemento, fraqueza e resistência.
+3) Testar uma nova partida com mana suficiente e outra com mana insuficiente.
+4) Testar preparação, primeiro turno, segundo uso na rodada e próxima rodada.
+5) Testar alvo vazio, errado, escondido, morto, estrutura e mago.
+6) Testar duração no primeiro e segundo turno da rodada, renovação e limpeza.
+7) Testar interação com escudo, resistência, dano periódico e passivas.
+8) Conferir o histórico nos dois jogadores e recuperar a partida após reconexão.
+9) Em buscas, testar cópia presente/ausente e condição já usada nesta partida.
+10) Publicar depois da revisão. Os exemplos não substituem confirmação das regras.
+
+Atualização destas seis cartas: scripts/update-combat-abilities.ts faz dry run
+por padrão. --apply grava backup em backups/ e usa comparação de versao.
+Preserva publicado e passivas personalizadas; atualiza apenas atributos indicados
+e as habilidades com IDs correspondentes. Banco tem precedência sobre JSON local.
+O diretório backups/ é privado, ignorado no Git e no deploy.
+Exceção autorizada nesta atualização: Nome Sagrado 053 e Nome Profano 054 são
+liberados para partidas. Os exemplos abaixo usam false para você revisar suas
+novas cartas antes de publicar. Cartas sem registro no banco usam catalog.json.
+
+Regenerar do Golém foi implementado como habilidade genérica de cura própria.
+A passiva de bônus contra inimigo abaixo de metade da vida não foi acrescentada
+por esta alteração de habilidades; attackBonus continuous atual avalia a fonte.
+Para criar essa passiva específica futuramente, é preciso ampliar a condição
+para o alvo do ataque e definir se protege/mede a tropa ou sua estrutura.
+
+EXEMPLOS COMPLETOS
+
+EXEMPLO_JSON_INICIO 025 — Golém
+{
+  "numeroCatalogo": "025",
+  "nome": "Golém",
+  "tipo": "Tropa",
+  "custoMana": 6,
+  "descricao": "Ataca uma vez por rodada. Regenerar: por 4 de mana, recupera 3 de vida própria, uma vez por rodada.",
+  "imgURL": "/assets/Cards/Golem.png",
+  "publicado": false,
+  "versao": 1,
+  "hp": 15,
+  "ataque": 4,
+  "manaGerada": 4,
+  "direcaoAtaque": "Frente",
+  "elemento": "Neutro",
+  "subtipo": "Invocação",
+  "resistencia": [
+    "Fogo"
+  ],
+  "fraqueza": [],
+  "habilidadesAtivas": [
+    {
+      "id": "regenerar",
+      "nome": "Regenerar",
+      "custoMana": 4,
+      "alvo": "UnicoAliado",
+      "alvoAutomatico": "Proprio",
+      "efeitos": [
+        {
+          "id": "heal",
+          "valor": 3
+        }
+      ]
+    }
+  ]
+}
+EXEMPLO_JSON_FIM
+
+EXEMPLO_JSON_INICIO 023 — Guerreiro
+{
+  "numeroCatalogo": "023",
+  "nome": "Guerreiro",
+  "tipo": "Tropa",
+  "custoMana": 3,
+  "descricao": "",
+  "imgURL": "/assets/Cards/Guerreiro.png",
+  "publicado": false,
+  "versao": 1,
+  "hp": 11,
+  "ataque": 3,
+  "manaGerada": 2,
+  "direcaoAtaque": "Universal",
+  "habilidadesAtivas": [
+    {
+      "id": "modoDefensivo",
+      "nome": "Modo Defensivo",
+      "custoMana": 2,
+      "alvo": "UnicoAliado",
+      "efeitos": [
+        {
+          "id": "status",
+          "status": "Interceptar",
+          "duracao": 2,
+          "unidade": "turno"
+        },
+        {
+          "id": "status",
+          "status": "ReducaoAtaqueTropa",
+          "duracao": 2,
+          "valor": 2,
+          "unidade": "turno"
+        }
+      ],
+      "alvoAutomatico": "Proprio",
+      "descricao": "Intercepta ataques básicos de tropas contra aliados e reduz 2 de cada golpe até o fim do próximo turno adversário. Havendo vários defensores, usa o primeiro da esquerda. Reutilizar renova, sem acumular."
+    },
+    {
+      "id": "modoOfensivo",
+      "nome": "Modo Ofensivo",
+      "custoMana": 2,
+      "alvo": "UnicoAliado",
+      "efeitos": [
+        {
+          "id": "status",
+          "status": "BonusAtaque",
+          "duracao": 2,
+          "valor": 2
+        }
+      ],
+      "alvoAutomatico": "Proprio",
+      "descricao": "Ganha +2 de ataque básico por 2 rodadas. Reutilizar renova, sem acumular."
+    }
+  ],
+  "habilidadesPassivas": [
+    {
+      "gatilho": "continuous",
+      "escopo": "proprio",
+      "condicoes": [
+        {
+          "tipo": "vidaPercentual",
+          "alvo": "fonte",
+          "percentual": 50,
+          "comparacao": "menor"
+        }
+      ],
+      "efeitos": [
+        {
+          "id": "attackBonus",
+          "valor": 1
+        }
+      ],
+      "descricao": "Com menos da metade de sua vida máxima, ganha +1 de dano de ataque básico."
+    }
+  ],
+  "elemento": "Neutro",
+  "subtipo": "Humano",
+  "resistencia": [
+    "Fogo",
+    "Ar"
+  ],
+  "fraqueza": []
+}
+EXEMPLO_JSON_FIM
+
+EXEMPLO_JSON_INICIO 110 — Cágado de magma
+{
+  "numeroCatalogo": "110",
+  "nome": "Cágado de magma",
+  "tipo": "Tropa",
+  "custoMana": 4,
+  "descricao": "Ataca uma vez por rodada. Ao receber um ataque básico, aplica queimação ao atacante, mesmo se o golpe não causar dano ou for fatal.",
+  "imgURL": "/assets/Cards/Cagado.png",
+  "publicado": false,
+  "versao": 1,
+  "hp": 14,
+  "ataque": 2,
+  "manaGerada": 3,
+  "direcaoAtaque": "Frente",
+  "subtipo": "Animal",
+  "habilidadesPassivas": [
+    {
+      "gatilho": "onAttacked",
+      "efeito": "aplicarStatusAtacante",
+      "status": "Queimado",
+      "duracao": 2,
+      "descricao": "Ao receber um ataque básico, aplica queimação ao atacante, mesmo se o golpe não causar dano ou for fatal."
+    }
+  ],
+  "elemento": "Fogo",
+  "resistencia": [
+    "Ar"
+  ],
+  "fraqueza": [
+    "Agua"
+  ],
+  "habilidadesAtivas": [
+    {
+      "id": "protecaoRochosa",
+      "nome": "Proteção Rochosa",
+      "custoMana": 4,
+      "alvo": "UnicoAliado",
+      "efeitos": [
+        {
+          "id": "status",
+          "status": "Esconder",
+          "duracao": 1
+        },
+        {
+          "id": "status",
+          "status": "ReducaoDano",
+          "duracao": 1,
+          "valor": 3,
+          "requerStatus": "Esconder"
+        }
+      ],
+      "alvoAutomatico": "Proprio",
+      "descricao": "Ganha Esconder por 1 rodada e reduz 3 de cada golpe nesse período."
+    },
+    {
+      "id": "derreter",
+      "nome": "Derreter",
+      "custoMana": 5,
+      "alvo": "UnicoInimigo",
+      "efeitos": [
+        {
+          "id": "damage",
+          "valor": 5
+        },
+        {
+          "id": "status",
+          "status": "Queimado",
+          "duracao": 2
+        }
+      ],
+      "alvoAutomatico": "Frontal",
+      "descricao": "Causa 5 de dano e Queimado à tropa diretamente à frente. Não pode ser usado com o slot vazio."
+    }
+  ]
+}
+EXEMPLO_JSON_FIM
+
+EXEMPLO_JSON_INICIO 117 — Esqueleto em Chamas
+{
+  "numeroCatalogo": "117",
+  "nome": "Esqueleto em Chamas",
+  "tipo": "Tropa",
+  "custoMana": 5,
+  "descricao": "Ataca uma vez por rodada. Tropas de Água ou tropas com direção Frontal não podem usar ataque básico contra esta carta. Feitiços e habilidades continuam permitidos.",
+  "imgURL": "/assets/Cards/Esqueleto em Chamas.png",
+  "publicado": false,
+  "versao": 1,
+  "hp": 10,
+  "ataque": 3,
+  "manaGerada": 3,
+  "direcaoAtaque": "Frente",
+  "subtipo": "Monstro",
+  "habilidadesPassivas": [
+    {
+      "gatilho": "onTargeted",
+      "efeito": "restringirAtaqueBasico",
+      "tipoAtacante": "Tropa",
+      "elemento": "Agua",
+      "direcao": "Frente",
+      "descricao": "Tropas de Água ou tropas com direção Frontal não podem usar ataque básico contra esta carta. Feitiços e habilidades continuam permitidos."
+    }
+  ],
+  "elemento": "Fogo",
+  "resistencia": [
+    "Ar"
+  ],
+  "fraqueza": [
+    "Agua"
+  ],
+  "habilidadesAtivas": [
+    {
+      "id": "olharFurioso",
+      "nome": "Olhar Furioso",
+      "custoMana": 4,
+      "alvo": "UnicoInimigo",
+      "efeitos": [
+        {
+          "id": "damage",
+          "valor": 5
+        },
+        {
+          "id": "status",
+          "status": "Incapacitado",
+          "duracao": 1
+        }
+      ],
+      "alvoAutomatico": "Frontal",
+      "descricao": "Causa 5 de dano à tropa diretamente à frente e impede seus ataques por 1 rodada."
+    },
+    {
+      "id": "assustar",
+      "nome": "Assustar",
+      "custoMana": 3,
+      "alvo": "TodasTropasInimigas",
+      "efeitos": [
+        {
+          "id": "damage",
+          "valor": 2
+        },
+        {
+          "id": "status",
+          "status": "Incapacitado",
+          "duracao": 1
+        }
+      ],
+      "descricao": "Causa 2 de dano a todas as tropas inimigas e Incapacitado por 1 rodada."
+    }
+  ]
+}
+EXEMPLO_JSON_FIM
+
+EXEMPLO_JSON_INICIO 053 — Nome Sagrado
+{
+  "numeroCatalogo": "053",
+  "nome": "Nome Sagrado",
+  "tipo": "Feitico",
+  "custoMana": 2,
+  "descricao": "Causa 3 de dano à última tropa inimiga que atacou uma tropa sua no turno anterior, mesmo com Esconder. Exige que ela continue em campo. Se você ainda não conjurou Nome Profano nesta partida, busca uma cópia dele e embaralha. Se não encontrar, avisa ambos os jogadores e mantém o baralho igual.",
+  "imgURL": "/assets/Cards/Nome Sagrado.png",
+  "publicado": false,
+  "versao": 1,
+  "alvo": "UnicoInimigo",
+  "elemento": "Neutro",
+  "alvoAutomatico": "UltimoAtacanteTropa",
+  "ignoraEsconder": true,
+  "tiposAlvo": [
+    "Tropa"
+  ],
+  "efeitos": [
+    {
+      "id": "damage",
+      "valor": 3
+    },
+    {
+      "id": "searchNamed",
+      "carta": "054",
+      "seNaoUsada": "054"
+    }
+  ]
+}
+EXEMPLO_JSON_FIM
+
+EXEMPLO_JSON_INICIO 054 — Nome Profano
+{
+  "numeroCatalogo": "054",
+  "nome": "Nome Profano",
+  "tipo": "Feitico",
+  "custoMana": 5,
+  "descricao": "Causa 5 de dano a uma tropa ou estrutura inimiga, sem atingir o mago. Se você ainda não conjurou Nome Sagrado nesta partida, busca uma cópia dele e embaralha. Se não encontrar, avisa ambos os jogadores e mantém o baralho igual.",
+  "imgURL": "/assets/Cards/Nome Profano.png",
+  "publicado": false,
+  "versao": 1,
+  "alvo": "UnicoInimigo",
+  "elemento": "Neutro",
+  "tiposAlvo": [
+    "Tropa",
+    "Estrutura"
+  ],
+  "efeitos": [
+    {
+      "id": "damage",
+      "valor": 5
+    },
+    {
+      "id": "searchNamed",
+      "carta": "053",
+      "seNaoUsada": "053"
+    }
+  ]
+}
+EXEMPLO_JSON_FIM
+
+EXEMPLO_JSON_INICIO 028 — Aprendiz de mago
+{
+  "numeroCatalogo": "028",
+  "nome": "Aprendiz de mago",
+  "tipo": "Mago",
+  "custoMana": 0,
+  "descricao": "Recupera 5 de mana, em vez de 3, se não houver tropas inimigas no início do seu turno. Pode devolver um ataque básico recebido de uma tropa inimiga uma vez por rodada, sem custo, escolhendo em até 20 segundos.",
+  "imgURL": "/assets/Cards/Aprendiz de Mago.png",
+  "publicado": false,
+  "versao": 1,
+  "hp": 18,
+  "ataque": 2,
+  "recuperacaoMana": 3,
+  "limites": [
+    {
+      "tropasMobilizadas": 3,
+      "tropaAtacam": 2,
+      "feiticosUsados": 3,
+      "feiticosUnicos": 1
+    }
+  ],
+  "elemento": "Neutro",
+  "habilidadesAtivas": [
+    {
+      "id": "refazerCaminhos",
+      "nome": "Refazer caminhos",
+      "custoMana": 5,
+      "alvo": "Cemiterio",
+      "descricao": "Escolha um feitiço do seu cemitério e devolva-o à mão. Consome a utilização de habilidade da carta nesta rodada."
+    }
+  ],
+  "habilidadesPassivas": [
+    {
+      "gatilho": "continuous",
+      "escopo": "proprio",
+      "condicoes": [
+        {
+          "tipo": "campoVazio",
+          "jogador": "inimigo"
+        }
+      ],
+      "efeitos": [
+        {
+          "id": "manaRecovery",
+          "valor": 5
+        }
+      ],
+      "descricao": "No início do próprio turno, a recuperação do mago passa de 3 para 5 mana se não houver tropas inimigas. A geração das outras cartas é somada normalmente, até 20 mana."
+    },
+    {
+      "gatilho": "onTargeted",
+      "escopo": "proprio",
+      "efeitos": [
+        {
+          "id": "reflectAttack",
+          "filtro": {
+            "tipo": "Tropa"
+          }
+        }
+      ],
+      "descricao": "Uma vez por rodada, pode cancelar um ataque básico recebido de uma tropa inimiga e devolver seu dano ao atacante. Resposta opcional de 20 segundos, gratuita e independente da habilidade. O turno fica pausado; sem resposta, recebe o ataque."
+    }
+  ]
+}
+EXEMPLO_JSON_FIM
+
+EXEMPLO_JSON_INICIO 108 — Necromante
+{
+  "numeroCatalogo": "108",
+  "nome": "Necromante",
+  "tipo": "Mago",
+  "custoMana": 0,
+  "descricao": "",
+  "imgURL": "/assets/Cards/Necromante.png",
+  "publicado": false,
+  "versao": 1,
+  "hp": 20,
+  "ataque": 2,
+  "recuperacaoMana": 3,
+  "limites": [
+    {
+      "tropasMobilizadas": 3,
+      "tropaAtacam": 2,
+      "feiticosUsados": 2,
+      "feiticosUnicos": 2
+    }
+  ],
+  "elemento": "Zarcos",
+  "habilidadesPassivas": [
+    {
+      "gatilho": "onRevive",
+      "efeito": "comprarCartaCemiterio"
+    },
+    {
+      "gatilho": "onSacrifice",
+      "efeito": "ganharVidaEManaSacrificio"
+    }
+  ],
+  "habilidadesAtivas": [
+    {
+      "id": "enganarAMorte",
+      "nome": "Enganar a Morte",
+      "custoMana": 4
+    },
+    {
+      "id": "ressurreicaoSombria",
+      "nome": "Ressurreição Sombria",
+      "custoMana": 5
+    }
+  ]
+}
+EXEMPLO_JSON_FIM
+
+EXEMPLO_JSON_INICIO 109 — Canhão de Mana Instável
+{
+  "numeroCatalogo": "109",
+  "nome": "Canhão de Mana Instável",
+  "tipo": "Estrutura",
+  "custoMana": 6,
+  "descricao": "",
+  "imgURL": "/assets/Cards/Canhão de Mana Instável.png",
+  "publicado": false,
+  "versao": 1,
+  "hp": 1,
+  "ataque": 2
+}
+EXEMPLO_JSON_FIM
+
+EXEMPLO_JSON_INICIO 111 — Dançarina das Chamas
+{
+  "numeroCatalogo": "111",
+  "nome": "Dançarina das Chamas",
+  "tipo": "Tropa",
+  "custoMana": 4,
+  "descricao": "Ataca uma vez por rodada. Esta carta e cada tropa de Fogo vizinha ganham +2 de ataque básico por ligação. No centro, com duas vizinhas, recebe +4. Auras de outras Dançarinas se acumulam.",
+  "imgURL": "/assets/Cards/Dançarina das Chamas.png",
+  "publicado": false,
+  "versao": 1,
+  "hp": 10,
+  "ataque": 2,
+  "manaGerada": 4,
+  "direcaoAtaque": "Universal",
+  "subtipo": "Humano",
+  "habilidadesPassivas": [
+    {
+      "gatilho": "continuous",
+      "efeito": "bonusAtaqueAdjacente",
+      "elemento": "Fogo",
+      "valor": 2,
+      "porVizinho": true,
+      "descricao": "Esta carta e cada tropa de Fogo vizinha ganham +2 de ataque básico por ligação. No centro, com duas vizinhas, recebe +4. Auras de outras Dançarinas se acumulam."
+    }
+  ],
+  "elemento": "Fogo",
+  "resistencia": [
+    "Ar"
+  ],
+  "fraqueza": [
+    "Agua"
+  ]
+}
+EXEMPLO_JSON_FIM
+
+EXEMPLO_JSON_INICIO 095 — Esqueleto
+{
+  "numeroCatalogo": "095",
+  "nome": "Esqueleto",
+  "tipo": "Tropa",
+  "custoMana": 3,
+  "descricao": "Ataca uma vez por rodada. Ganha +1 de ataque básico permanente e acumulável quando uma tropa aliada revivida volta ao campo.",
+  "imgURL": "/assets/Cards/Esqueleto.png",
+  "publicado": false,
+  "versao": 1,
+  "hp": 7,
+  "ataque": 3,
+  "manaGerada": 2,
+  "direcaoAtaque": "Frente",
+  "elemento": "Neutro",
+  "subtipo": "Monstro",
+  "fraqueza": [
+    "Terra"
+  ],
+  "resistencia": [],
+  "habilidadesAtivas": [
+    {
+      "id": "deslocar",
+      "nome": "Deslocar",
+      "custoMana": 4,
+      "descricao": "Causa 3 de dano à tropa inimiga diretamente à frente e aplica Atordoado por 1 rodada. Alvo automático; não pode ser usada se esse espaço estiver vazio."
+    }
+  ],
+  "habilidadesPassivas": [
+    {
+      "gatilho": "onRevive",
+      "escopo": "aliado",
+      "filtroEvento": {
+        "tipo": "Tropa"
+      },
+      "efeitos": [
+        {
+          "id": "growAttack",
+          "alvo": "fonte",
+          "valor": 1
+        }
+      ],
+      "descricao": "Cada tropa aliada revivida que volta ao campo concede +1 de ataque básico acumulável. O bônus não aumenta o dano das habilidades."
+    }
+  ]
+}
+EXEMPLO_JSON_FIM
+
+EXEMPLO_JSON_INICIO 098 — Palhaço
+{
+  "numeroCatalogo": "098",
+  "nome": "Palhaço",
+  "tipo": "Tropa",
+  "custoMana": 4,
+  "descricao": "Ataca uma vez por rodada. Quando qualquer outra tropa, aliada ou inimiga, morre, ganha +1 de vida atual e máxima, acumulável.",
+  "imgURL": "/assets/Cards/Palhaço.png",
+  "publicado": false,
+  "versao": 1,
+  "hp": 5,
+  "ataque": 2,
+  "manaGerada": 2,
+  "direcaoAtaque": "Frente",
+  "elemento": "Neutro",
+  "subtipo": "Humano",
+  "resistencia": [
+    "Ar"
+  ],
+  "fraqueza": [
+    "Terra"
+  ],
+  "habilidadesPassivas": [
+    {
+      "gatilho": "onDeath",
+      "escopo": "qualquer",
+      "excluirFonte": true,
+      "filtroEvento": {
+        "tipo": "Tropa"
+      },
+      "efeitos": [
+        {
+          "id": "growMaxHp",
+          "alvo": "fonte",
+          "valor": 1
+        }
+      ],
+      "descricao": "Ganha +1 de vida atual e máxima quando outra tropa morre, de qualquer jogador. Não conta a própria morte nem a destruição de estruturas. Bônus acumulável enquanto está vivo em campo."
+    }
+  ]
+}
+EXEMPLO_JSON_FIM
+
+EXEMPLO_JSON_INICIO 990000 — Exemplo Fogo
+{
+  "numeroCatalogo": "990000",
+  "nome": "Exemplo Fogo",
+  "tipo": "Feitico",
+  "custoMana": 2,
+  "elemento": "Fogo",
+  "alvo": "UnicoInimigo",
+  "efeitos": [
+    {
+      "id": "damage",
+      "valor": 3
+    }
+  ],
+  "descricao": "Escolha um inimigo e cause 3 de dano.",
+  "publicado": false,
+  "versao": 1
+}
+EXEMPLO_JSON_FIM
+
+EXEMPLO_JSON_INICIO 990001 — Exemplo Agua
+{
+  "numeroCatalogo": "990001",
+  "nome": "Exemplo Agua",
+  "tipo": "Feitico",
+  "custoMana": 2,
+  "elemento": "Agua",
+  "alvo": "UnicoAliado",
+  "efeitos": [
+    {
+      "id": "heal",
+      "valor": 3
+    }
+  ],
+  "descricao": "Escolha um aliado e cure 3.",
+  "publicado": false,
+  "versao": 1
+}
+EXEMPLO_JSON_FIM
+
+EXEMPLO_JSON_INICIO 990002 — Exemplo Terra
+{
+  "numeroCatalogo": "990002",
+  "nome": "Exemplo Terra",
+  "tipo": "Feitico",
+  "custoMana": 2,
+  "elemento": "Terra",
+  "alvo": "UnicoInimigo",
+  "efeitos": [
+    {
+      "id": "damage",
+      "valor": 3
+    }
+  ],
+  "descricao": "Escolha um inimigo e cause 3 de dano.",
+  "publicado": false,
+  "versao": 1
+}
+EXEMPLO_JSON_FIM
+
+EXEMPLO_JSON_INICIO 990003 — Exemplo Ar
+{
+  "numeroCatalogo": "990003",
+  "nome": "Exemplo Ar",
+  "tipo": "Feitico",
+  "custoMana": 2,
+  "elemento": "Ar",
+  "alvo": "UnicoInimigo",
+  "efeitos": [
+    {
+      "id": "damage",
+      "valor": 3
+    }
+  ],
+  "descricao": "Escolha um inimigo e cause 3 de dano.",
+  "publicado": false,
+  "versao": 1
+}
+EXEMPLO_JSON_FIM
+
+EXEMPLO_JSON_INICIO 990004 — Exemplo Zarcos
+{
+  "numeroCatalogo": "990004",
+  "nome": "Exemplo Zarcos",
+  "tipo": "Feitico",
+  "custoMana": 2,
+  "elemento": "Zarcos",
+  "alvo": "Global",
+  "efeitos": [
+    {
+      "id": "mana",
+      "valor": 2
+    }
+  ],
+  "descricao": "Recupera 2 mana.",
+  "publicado": false,
+  "versao": 1
+}
+EXEMPLO_JSON_FIM
+
+EXEMPLO_JSON_INICIO 990005 — Exemplo Neutro
+{
+  "numeroCatalogo": "990005",
+  "nome": "Exemplo Neutro",
+  "tipo": "Feitico",
+  "custoMana": 2,
+  "elemento": "Neutro",
+  "alvo": "UnicoInimigo",
+  "efeitos": [
+    {
+      "id": "damage",
+      "valor": 3
+    }
+  ],
+  "descricao": "Escolha um inimigo e cause 3 de dano.",
+  "publicado": false,
+  "versao": 1
+}
+EXEMPLO_JSON_FIM
+
+EXEMPLO_JSON_INICIO 990100 — Estrutura de exemplo
+{
+  "numeroCatalogo": "990100",
+  "nome": "Estrutura de exemplo",
+  "tipo": "Estrutura",
+  "custoMana": 2,
+  "elemento": "Terra",
+  "hp": 8,
+  "ataque": 2,
+  "descricao": "Protege a tropa vinculada. Reparar custa 2 e cura 3 de vida própria.",
+  "habilidadesAtivas": [
+    {
+      "id": "reparar",
+      "nome": "Reparar",
+      "custoMana": 2,
+      "alvo": "UnicoAliado",
+      "alvoAutomatico": "Proprio",
+      "efeitos": [
+        {
+          "id": "heal",
+          "valor": 3
+        }
+      ]
+    }
+  ],
+  "publicado": false,
+  "versao": 1
+}
+EXEMPLO_JSON_FIM
+
+EXEMPLO_JSON_INICIO 990101 — Armamento de exemplo
+{
+  "numeroCatalogo": "990101",
+  "nome": "Armamento de exemplo",
+  "tipo": "Armamento",
+  "custoMana": 2,
+  "elemento": "Neutro",
+  "bonusAtaque": 1,
+  "bonusHp": 2,
+  "palavrasChave": [
+    "Herança"
+  ],
+  "descricao": "Concede +1 ataque e +2 vida; permanece quando a tropa vinculada sai do campo.",
+  "publicado": false,
+  "versao": 1
+}
+EXEMPLO_JSON_FIM
+
+EXEMPLO_JSON_INICIO 990102 — Busca automática de exemplo
+{
+  "numeroCatalogo": "990102",
+  "nome": "Busca automática de exemplo",
+  "tipo": "Feitico",
+  "custoMana": 1,
+  "elemento": "Neutro",
+  "alvo": "Global",
+  "efeitos": [
+    {
+      "id": "searchNamed",
+      "carta": "053",
+      "seNaoUsada": "054"
+    }
+  ],
+  "descricao": "Se ainda não conjurou Nome Profano, busca Nome Sagrado.",
+  "publicado": false,
+  "versao": 1
+}
+EXEMPLO_JSON_FIM
+
+EXEMPLO_JSON_INICIO 990103 — Campo de exemplo
+{
+  "numeroCatalogo": "990103",
+  "nome": "Campo de exemplo",
+  "tipo": "Feitico",
+  "custoMana": 1,
+  "elemento": "Terra",
+  "alvo": "CampoInimigo",
+  "efeitos": [
+    {
+      "id": "field"
+    }
+  ],
+  "descricao": "Aplica Terra ao campo inimigo escolhido, ocupado ou vazio.",
+  "publicado": false,
+  "versao": 1
+}
+EXEMPLO_JSON_FIM
+
+EXEMPLO_JSON_INICIO 990104 — Dano e status de exemplo
+{
+  "numeroCatalogo": "990104",
+  "nome": "Dano e status de exemplo",
+  "tipo": "Feitico",
+  "custoMana": 3,
+  "elemento": "Fogo",
+  "alvo": "MultiplosInimigos",
+  "maxAlvos": 2,
+  "efeitos": [
+    {
+      "id": "damage",
+      "valor": 2
+    },
+    {
+      "id": "status",
+      "status": "Cego",
+      "duracao": 2
+    }
+  ],
+  "descricao": "Escolha até dois inimigos, cause 2 de dano e Cego por 2 rodadas.",
+  "publicado": false,
+  "versao": 1
+}
+EXEMPLO_JSON_FIM
+
+EXEMPLO_JSON_INICIO 990105 — Busca elemental de exemplo
+{
+  "numeroCatalogo": "990105",
+  "nome": "Busca elemental de exemplo",
+  "tipo": "Feitico",
+  "custoMana": 1,
+  "elemento": "Neutro",
+  "alvo": "Deck",
+  "efeitos": [
+    {
+      "id": "searchElemental"
+    }
+  ],
+  "descricao": "Escolha um feitiço de Fogo, Água, Terra ou Ar do baralho, ponha na mão e embaralhe.",
+  "publicado": false,
+  "versao": 1
+}
+EXEMPLO_JSON_FIM

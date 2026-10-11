@@ -96,6 +96,20 @@
           <h3>Exemplo de habilidade ativa</h3>
           <pre class="preline">
 { "id": "curaAliada", "nome": "Curar", "custoMana": 2, "alvo": "UnicoAliado", "efeitos": [{ "id": "heal", "valor": 3 }] }</pre>
+          <h3>Alvos automáticos e duração</h3>
+          <p class="hint">
+            Em habilidades, alvoAutomatico Proprio usa a própria carta com
+            UnicoAliado; Frontal usa a tropa à frente com UnicoInimigo. Em
+            feitiços, UltimoAtacanteTropa usa a última tropa que atacou uma
+            tropa sua no turno anterior. tiposAlvo restringe os tipos
+            permitidos. No efeito status, unidade pode ser turno ou rodada.
+            requerStatus vincula o benefício a outro status, como o casco a
+            Esconder.
+          </p>
+          <pre class="preline">
+{ "id": "regenerar", "nome": "Regenerar", "custoMana": 4, "alvo": "UnicoAliado", "alvoAutomatico": "Proprio", "efeitos": [{ "id": "heal", "valor": 3 }] }</pre>
+          <pre class="preline">
+{ "id": "searchNamed", "carta": "054", "seNaoUsada": "054" }</pre>
           <p class="hint">
             Para um comportamento novo, implemente sua regra e testes antes de
             registrá-lo como suportado. As partidas iniciadas conservam uma

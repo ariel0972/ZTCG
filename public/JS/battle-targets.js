@@ -3,6 +3,8 @@ export const automaticTargets = [
   "TodosInimigos",
   "TodasTropasInimigas",
 ];
+export const hasAutomaticTarget = (action) =>
+  !!action?.alvoAutomatico || automaticTargets.includes(action?.alvo);
 export const zoneTargets = ["Deck", "DeckOponente", "Cemiterio", "Mao"];
 export function actionTarget(selection) {
   return selection?.type === "ability" ? selection.ability : selection?.card;
@@ -33,7 +35,8 @@ export function spellSlotTarget(action, slot, userId) {
       target.statuses?.some(
         (s) => s.nome === "Esconder" && s.turnosRestantes > 0,
       ) &&
-      !automaticTargets.includes(type))
+      !automaticTargets.includes(type) &&
+      !action.ignoraEsconder)
   )
     return false;
   const earthTremorMage =
@@ -50,6 +53,9 @@ export function spellSlotTarget(action, slot, userId) {
   if (type === "TodosInimigos" && !["Tropa", "Mago"].includes(slot.card?.tipo))
     return false;
   const effects = action.efeitos || [];
+  if (action.alvoAutomatico && target.id !== action.automaticTargetId)
+    return false;
+  if (action.tiposAlvo && !action.tiposAlvo.includes(target.tipo)) return false;
   if (
     effects.some((e) => ["tornado", "meteors"].includes(e.id)) &&
     target.tipo !== "Tropa"
@@ -89,6 +95,8 @@ export function zoneCardAllowed(action, card) {
   return true;
 }
 export function targetDescription(action) {
+  if (action?.alvoAutomatico === "UltimoAtacanteTropa")
+    return "Atinge automaticamente a última tropa que atacou uma tropa sua no turno anterior, mesmo com Esconder.";
   if (action?.efeitos?.some((e) => ["tornado", "meteors"].includes(e.id)))
     return "Escolha as tropas inimigas destacadas e confirme.";
   const descriptions = {

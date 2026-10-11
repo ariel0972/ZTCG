@@ -130,6 +130,28 @@ void fakeDatabase().then(async (db) => {
         .hand.find((c) => c.numeroCatalogo === "011")!.elemento = "Agua";
     }
     game.player(owner).graveyard = [instance("001", owner)];
+    if (process.env.PREVIEW_EFFECTS === "1") {
+      game.state.slots.find((s) => s.id === `${owner}:front:0`)!.card =
+        instance("025", owner);
+      game.state.slots.find((s) => s.id === `${owner}:front:0`)!.card!.hpAtual =
+        11;
+      game.state.slots.find((s) => s.id === `${owner}:front:1`)!.card =
+        instance("110", owner);
+      game.state.slots.find((s) => s.id === `${owner}:front:2`)!.card =
+        instance("117", owner);
+      enemy.hpAtual = 25;
+      enemy.hp = 30;
+      game.player(owner).lastTroopAttacker = {
+        cardId: enemy.id,
+        turn: game.state.turn - 1,
+      };
+      game.player(owner).hand = ["053", "054", "005", "023"].map((id) =>
+        instance(id, owner),
+      );
+      game.player(owner).deck = game
+        .player(owner)
+        .deck.filter((c) => !["053", "054"].includes(c.numeroCatalogo));
+    }
     room.game = game.exportState();
     room.deadline = Date.now() + 120000;
     // Keep the fictitious opponent connected for this isolated visual fixture.

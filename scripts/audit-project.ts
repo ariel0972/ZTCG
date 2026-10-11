@@ -21,6 +21,7 @@ export async function auditProject(root = path.resolve(__dirname, "..")) {
   files.push(
     "README.md",
     "GUIA_DO_PROJETO.txt",
+    "MANUAL_EFEITOS_CATALOGO.txt",
     "package.json",
     "package-lock.json",
     "tsconfig.json",

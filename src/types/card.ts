@@ -63,6 +63,16 @@ export const effectSchema = z
     status: z.string().max(80).optional(),
     duracao: number.optional(),
     elemento: z.enum(elements).optional(),
+    unidade: z.enum(["turno", "rodada"]).optional(),
+    requerStatus: z.string().max(80).optional(),
+    carta: z
+      .string()
+      .regex(/^\d{3,6}$/)
+      .optional(),
+    seNaoUsada: z
+      .string()
+      .regex(/^\d{3,6}$/)
+      .optional(),
   })
   .strict();
 export const activeSchema = z
@@ -72,6 +82,7 @@ export const activeSchema = z
     custoMana: number,
     descricao: z.string().max(2000).optional(),
     alvo: z.enum(targets).optional(),
+    alvoAutomatico: z.enum(["Proprio", "Frontal"]).optional(),
     efeitos: z.array(effectSchema).max(12).optional(),
   })
   .strict();
@@ -269,6 +280,9 @@ export const cardSchema = z
     direcaoAtaque: z.enum(["Frente", "Diagonal", "Universal"]).optional(),
     alvo: z.enum(targets).optional(),
     maxAlvos: z.number().int().min(1).max(3).default(1),
+    alvoAutomatico: z.enum(["UltimoAtacanteTropa"]).optional(),
+    ignoraEsconder: z.boolean().optional(),
+    tiposAlvo: z.array(z.enum(cardTypes)).min(1).max(5).optional(),
     efeitos: z.array(effectSchema).max(12).default([]),
     habilidadesAtivas: z.array(activeSchema).max(12).default([]),
     habilidadesPassivas: z.array(passiveSchema).max(12).default([]),

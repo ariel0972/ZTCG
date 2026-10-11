@@ -1,6 +1,6 @@
 import { node } from "./auth.js";
 import { labels } from "./card-view.js";
-import { spellSlotTarget } from "./battle-targets.js";
+import { hasAutomaticTarget, spellSlotTarget } from "./battle-targets.js";
 
 export function attackValue(card, slot, slots = []) {
   if (card.tipo === "Estrutura") return card.ataque || 0;
@@ -139,11 +139,18 @@ export function dropAction(source, slot, state, userId) {
   if (
     !source ||
     state.status !== "ACTIVE" ||
-    (slot.terrain?.nome === "Lama" &&
+    (slot?.terrain?.nome === "Lama" &&
       source.type === "play" &&
       source.card.tipo === "Tropa")
   )
     return null;
+  if (
+    source.type === "play" &&
+    source.card.tipo === "Feitico" &&
+    hasAutomaticTarget(source.card)
+  )
+    return "play";
+  if (!slot) return null;
   const own = slot.ownerId === userId,
     card = source.card;
   if (source.type === "play") {
@@ -246,10 +253,12 @@ export function bindCardDrag(
       ghost.setAttribute("aria-hidden", "true");
       document.body.append(ghost);
       document.body.classList.add("dragging-card");
-      document.querySelectorAll("[data-slot-id]").forEach((el) => {
-        if (actionFor(source, el.dataset.slotId))
-          el.classList.add("drop-ready");
-      });
+      document
+        .querySelectorAll("[data-slot-id], [data-field-drop-zone]")
+        .forEach((el) => {
+          if (actionFor(source, el.dataset.slotId || "field"))
+            el.classList.add("drop-ready");
+        });
     }
     event.preventDefault();
     ghost.style.left = `${event.clientX}px`;
@@ -259,8 +268,8 @@ export function bindCardDrag(
       .forEach((el) => el.classList.remove("drop-over"));
     const target = document
       .elementFromPoint(event.clientX, event.clientY)
-      ?.closest("[data-slot-id]");
-    if (target && actionFor(source, target.dataset.slotId))
+      ?.closest("[data-slot-id], [data-field-drop-zone]");
+    if (target && actionFor(source, target.dataset.slotId || "field"))
       target.classList.add("drop-over");
   });
   element.addEventListener("pointerup", (event) => {
@@ -270,8 +279,8 @@ export function bindCardDrag(
     }
     const target = document
       .elementFromPoint(event.clientX, event.clientY)
-      ?.closest("[data-slot-id]");
-    const id = target?.dataset.slotId,
+      ?.closest("[data-slot-id], [data-field-drop-zone]");
+    const id = target && (target.dataset.slotId || "field"),
       action = id && actionFor(source, id);
     suppressed = true;
     clean();

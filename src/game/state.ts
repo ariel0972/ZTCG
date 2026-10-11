@@ -28,6 +28,8 @@ export interface Slot {
   appliedElement?: string;
 }
 export interface Player {
+  castCards?: string[];
+  lastTroopAttacker?: { cardId: string; turn: number };
   roundSpells?: string[];
   comboTriggered?: boolean;
   zarcosWatchers?: { cardId: string; kind: "flow" | "tear" }[];

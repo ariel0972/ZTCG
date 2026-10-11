@@ -505,10 +505,117 @@ test("Erosão descarta duas; Lava perfura adjacentes; Explosão transfere excess
     slot(h, "p2:front:0").card!.id,
   ]);
   assert.equal(h.player("p2").mage.hpAtual, mageHp - 3);
+  assert.ok(
+    h.state.log.some((line) => /Explosão.*recebeu 3 de dano/.test(line)),
+  );
+  assert.ok(
+    h.state.events?.some(
+      (event) =>
+        event.kind === "damage" &&
+        event.card.id === h.player("p2").mage.id &&
+        event.message?.includes("Explosão"),
+    ),
+  );
   const z = later(),
     spell = instance("002", "p1", { elemento: "Zarcos", custoMana: 3 });
   cast(z, spell, [z.player("p2").mage.id]);
   assert.equal(z.player("p1").mana, 19);
+});
+
+test("Regenerar é automático, cura somente Golém e respeita mana, teto, abertura e uma habilidade por rodada", () => {
+  const g = later();
+  const golem = instance("025");
+  golem.hpAtual = 11;
+  slot(g, "p1:front:0").card = golem;
+  g.player("p1").mana = 10;
+  assert.throws(
+    () =>
+      command(g, "p1", {
+        type: "ability",
+        slotId: "p1:front:0",
+        abilityId: "regenerar",
+        targets: [golem.id],
+      }),
+    /seleção/,
+  );
+  assert.equal(g.player("p1").mana, 10);
+  command(g, "p1", {
+    type: "ability",
+    slotId: "p1:front:0",
+    abilityId: "regenerar",
+    targets: [],
+  });
+  assert.equal(slot(g, "p1:front:0").card!.hpAtual, 14);
+  assert.equal(g.player("p1").mana, 6);
+  assert.equal(slot(g, "p1:front:0").card!.attacked, false);
+  assert.throws(
+    () =>
+      command(g, "p1", {
+        type: "ability",
+        slotId: "p1:front:0",
+        abilityId: "regenerar",
+        targets: [],
+      }),
+    /já utilizada/,
+  );
+  slot(g, "p1:front:0").card!.usedAbility = false;
+  command(g, "p1", {
+    type: "ability",
+    slotId: "p1:front:0",
+    abilityId: "regenerar",
+    targets: [],
+  });
+  assert.equal(slot(g, "p1:front:0").card!.hpAtual, 15);
+  const opening = battle();
+  slot(opening, "p1:front:0").card = instance("025");
+  assert.throws(
+    () =>
+      command(opening, "p1", {
+        type: "ability",
+        slotId: "p1:front:0",
+        abilityId: "regenerar",
+        targets: [],
+      }),
+    /primeiro turno/,
+  );
+});
+
+test("dano de fim de rodada identifica Chuva de Flechas, cada status e dano real após resistência e escudo", () => {
+  const g = later();
+  const victim = instance("021", "p2", { hp: 30, resistencia: ["Ar"] });
+  victim.statuses = [
+    { nome: "Escudo", valor: 1, turnosRestantes: 2 },
+    { nome: "Queimado", valor: 2, turnosRestantes: 2 },
+    { nome: "Envenenado", valor: 1, turnosRestantes: 3 },
+  ];
+  slot(g, "p2:front:0").card = victim;
+  g.state.ongoingSpells = [
+    {
+      id: "rain",
+      ownerId: "p1",
+      kind: "arrowRain",
+      rounds: 2,
+      damage: 6,
+      element: "Ar",
+    },
+  ];
+  command(g, "p1", { type: "endTurn" });
+  command(g, "p2", { type: "endTurn" });
+  assert.equal(slot(g, "p2:front:0").card!.hpAtual, 25);
+  assert.ok(
+    g.state.log.some((line) =>
+      /Chuva de Flechas.*recebeu 2 de dano/.test(line),
+    ),
+  );
+  assert.ok(
+    g.state.log.some((line) => /Queimado.*recebeu 2 de dano/.test(line)),
+  );
+  assert.ok(
+    g.state.log.some((line) => /Envenenado.*recebeu 1 de dano/.test(line)),
+  );
+  const recovered = Game.restore(JSON.parse(JSON.stringify(g.exportState())));
+  assert.deepEqual(recovered.state.log, g.state.log);
+  assert.equal(recovered.state.eventSequence, g.state.eventSequence);
 });
 
 test("Campo livre move uma vez por turno; Herança permanece; Flanquear permite slot de armamento", () => {
@@ -548,6 +655,319 @@ test("Campo livre move uma vez por turno; Herança permanece; Flanquear permite 
   slot(h, "p1:arm:front-left").card = inherited;
   command(h, "p1", { type: "sacrifice", slotId: "p1:front:0" });
   assert.equal(slot(h, "p1:arm:front-left").card!.id, inherited.id);
+});
+
+test("Cágado usa casco por uma rodada: esconde, reduz cada dano em 3 e perde o casco ao atacar", () => {
+  const g = later();
+  slot(g, "p1:front:0").card = instance("110");
+  g.player("p1").mana = 20;
+  command(g, "p1", {
+    type: "ability",
+    slotId: "p1:front:0",
+    abilityId: "protecaoRochosa",
+  });
+  const target = slot(g, "p1:front:0").card!;
+  assert.ok(target.statuses.some((s) => s.nome === "Esconder"));
+  (g as any).damage(
+    target.id,
+    5,
+    undefined,
+    false,
+    "Neutro",
+    undefined,
+    "Teste",
+  );
+  (g as any).damage(
+    target.id,
+    5,
+    undefined,
+    false,
+    "Neutro",
+    undefined,
+    "Teste",
+  );
+  assert.equal(target.hpAtual, 10);
+  slot(g, "p2:front:2").card = instance("021", "p2", {
+    hp: 30,
+    resistencia: [],
+    fraqueza: [],
+  });
+  command(g, "p1", {
+    type: "attack",
+    slotId: "p1:front:0",
+    targetId: "p2:front:2",
+  });
+  assert.ok(
+    !slot(g, "p1:front:0").card!.statuses.some((s) =>
+      ["Esconder", "ReducaoDano"].includes(s.nome),
+    ),
+  );
+});
+
+test("Derreter e Olhar Furioso usam a tropa frontal; Assustar atinge todas e incapacita uma rodada", () => {
+  for (const [cardId, abilityId, status] of [
+    ["110", "derreter", "Queimado"],
+    ["117", "olharFurioso", "Incapacitado"],
+  ]) {
+    const g = later();
+    slot(g, "p1:front:0").card = instance(cardId);
+    g.player("p1").mana = 20;
+    assert.throws(
+      () =>
+        command(g, "p1", { type: "ability", slotId: "p1:front:0", abilityId }),
+      /à frente/,
+    );
+    assert.equal(g.player("p1").mana, 20);
+    slot(g, "p2:front:2").card = instance("021", "p2", {
+      hp: 30,
+      resistencia: [],
+      fraqueza: [],
+    });
+    command(g, "p1", { type: "ability", slotId: "p1:front:0", abilityId });
+    assert.equal(slot(g, "p2:front:2").card!.hpAtual, 25);
+    assert.ok(
+      slot(g, "p2:front:2").card!.statuses.some((s) => s.nome === status),
+    );
+  }
+  const g = later();
+  slot(g, "p1:front:0").card = instance("117");
+  for (const column of [0, 1, 2])
+    slot(g, `p2:front:${column}`).card = instance("021", "p2", {
+      hp: 30,
+      resistencia: [],
+      fraqueza: [],
+    });
+  const hp = g.player("p2").mage.hpAtual;
+  g.player("p1").mana = 20;
+  command(g, "p1", {
+    type: "ability",
+    slotId: "p1:front:0",
+    abilityId: "assustar",
+  });
+  for (const column of [0, 1, 2]) {
+    assert.equal(slot(g, `p2:front:${column}`).card!.hpAtual, 28);
+    assert.equal(
+      slot(g, `p2:front:${column}`).card!.statuses.find(
+        (s) => s.nome === "Incapacitado",
+      )!.turnosRestantes,
+      1,
+    );
+  }
+  assert.equal(g.player("p2").mage.hpAtual, hp);
+});
+
+test("Guerreiro intercepta pela esquerda, não soma defesas nem reduz feitiços e expira no próximo turno adversário", () => {
+  const g = later();
+  for (const column of [0, 1]) {
+    slot(g, `p1:front:${column}`).card = instance("023");
+    g.player("p1").mana = 20;
+    command(g, "p1", {
+      type: "ability",
+      slotId: `p1:front:${column}`,
+      abilityId: "modoDefensivo",
+    });
+  }
+  slot(g, "p1:front:2").card = instance("021", "p1", { hp: 30 });
+  slot(g, "p2:front:0").card = instance("021", "p2", {
+    ataque: 5,
+    elemento: "Neutro",
+  });
+  command(g, "p1", { type: "endTurn" });
+  command(g, "p2", {
+    type: "attack",
+    slotId: "p2:front:0",
+    targetId: "p1:front:2",
+  });
+  assert.equal(slot(g, "p1:front:0").card!.hpAtual, 8);
+  assert.equal(slot(g, "p1:front:1").card!.hpAtual, 11);
+  assert.equal(slot(g, "p1:front:2").card!.hpAtual, 30);
+  (g as any).damage(
+    slot(g, "p1:front:0").card!.id,
+    3,
+    undefined,
+    false,
+    "Neutro",
+  );
+  assert.equal(slot(g, "p1:front:0").card!.hpAtual, 5);
+  command(g, "p2", { type: "endTurn" });
+  assert.ok(
+    !slot(g, "p1:front:0").card!.statuses.some((s) => s.nome === "Interceptar"),
+  );
+});
+
+test("Proteção Rochosa não reduz condições periódicas e a estrutura absorve o ataque interceptado", () => {
+  const g = later();
+  const turtle = instance("110");
+  slot(g, "p1:front:0").card = turtle;
+  g.player("p1").mana = 20;
+  command(g, "p1", {
+    type: "ability",
+    slotId: "p1:front:0",
+    abilityId: "protecaoRochosa",
+  });
+  applyStatus(slot(g, "p1:front:0").card!.statuses, "Queimado", 1);
+  command(g, "p1", { type: "endTurn" });
+  command(g, "p2", { type: "endTurn" });
+  assert.equal(slot(g, "p1:front:0").card!.hpAtual, 13);
+
+  const guarded = later();
+  const warrior = instance("023");
+  slot(guarded, "p1:front:0").card = warrior;
+  const structure = instance("021", "p1", {
+    tipo: "Estrutura",
+    hp: 2,
+    resistencia: [],
+    fraqueza: [],
+  });
+  slot(guarded, "p1:front:0").structure = structure;
+  slot(guarded, "p1:front:2").card = instance("021");
+  slot(guarded, "p2:front:0").card = instance("021", "p2", {
+    ataque: 5,
+    elemento: "Neutro",
+  });
+  guarded.player("p1").mana = 20;
+  command(guarded, "p1", {
+    type: "ability",
+    slotId: "p1:front:0",
+    abilityId: "modoDefensivo",
+  });
+  command(guarded, "p1", { type: "endTurn" });
+  command(guarded, "p2", {
+    type: "attack",
+    slotId: "p2:front:0",
+    targetId: "p1:front:2",
+  });
+  assert.equal(slot(guarded, "p1:front:0").card!.hpAtual, 11);
+  assert.equal(slot(guarded, "p1:front:0").structure, null);
+  assert.ok(guarded.player("p1").graveyard.some((c) => c.id === structure.id));
+  assert.equal(
+    slot(guarded, "p1:front:2").card!.hpAtual,
+    catalog.find((c) => c.numeroCatalogo === "021")!.hp,
+  );
+});
+
+test("Modo Ofensivo concede somente +2 de ataque básico, renova sem acumular e sobrevive à recuperação", () => {
+  const g = later();
+  slot(g, "p1:front:0").card = instance("023");
+  g.player("p1").mana = 20;
+  command(g, "p1", {
+    type: "ability",
+    slotId: "p1:front:0",
+    abilityId: "modoOfensivo",
+  });
+  command(g, "p1", { type: "endTurn" });
+  command(g, "p2", { type: "endTurn" });
+  command(g, "p1", {
+    type: "ability",
+    slotId: "p1:front:0",
+    abilityId: "modoOfensivo",
+  });
+  const current = slot(g, "p1:front:0").card!;
+  assert.equal(
+    current.statuses.filter((s) => s.nome === "BonusAtaque").length,
+    1,
+  );
+  assert.equal(
+    current.statuses.find((s) => s.nome === "BonusAtaque")!.turnosRestantes,
+    2,
+  );
+  const restored = Game.restore(JSON.parse(JSON.stringify(g.exportState())));
+  slot(restored, "p2:front:2").card = instance("021", "p2", {
+    hp: 30,
+    resistencia: [],
+    fraqueza: [],
+  });
+  assert.equal(
+    (
+      restored.snapshot("p1").slots.find((s) => s.id === "p1:front:0")!
+        .card as any
+    ).bonusAtaquePassivo,
+    2,
+  );
+  command(restored, "p1", {
+    type: "attack",
+    slotId: "p1:front:0",
+    targetId: "p2:front:2",
+  });
+  assert.equal(slot(restored, "p2:front:2").card!.hpAtual, 25);
+});
+
+test("Nome Sagrado usa último atacante de tropa do turno anterior, ignora Esconder e busca uma cópia", () => {
+  const g = later();
+  slot(g, "p1:front:0").card = instance("021", "p1", { hp: 30 });
+  slot(g, "p2:front:2").card = instance("021", "p2", {
+    hp: 30,
+    ataque: 2,
+    elemento: "Neutro",
+    resistencia: [],
+    fraqueza: [],
+  });
+  command(g, "p1", { type: "endTurn" });
+  command(g, "p2", {
+    type: "attack",
+    slotId: "p2:front:2",
+    targetId: "p1:front:0",
+  });
+  command(g, "p2", { type: "endTurn" });
+  slot(g, "p2:front:2").card!.statuses.push({
+    nome: "Esconder",
+    turnosRestantes: 2,
+  });
+  const counterpart = instance("054");
+  g.player("p1").deck.push(counterpart);
+  const restored = Game.restore(JSON.parse(JSON.stringify(g.exportState())));
+  cast(restored, instance("053"), []);
+  assert.equal(slot(restored, "p2:front:2").card!.hpAtual, 27);
+  assert.ok(restored.player("p1").hand.some((c) => c.id === counterpart.id));
+  const saved = restored.exportState();
+  slot(restored, "p2:front:2").card = null;
+  assert.throws(
+    () => cast(restored, instance("053"), []),
+    /não está disponível/,
+  );
+  assert.ok(restored.player("p1").castCards!.includes("053"));
+  const expired = Game.restore(saved);
+  expired.state.turn += 2;
+  assert.throws(
+    () => cast(expired, instance("053"), []),
+    /não está disponível/,
+  );
+});
+
+test("Nome Profano atinge estrutura, proíbe mago, não embaralha se busca vazia e usa histórico permanente", () => {
+  const g = later();
+  const structure = instance("021", "p2", {
+    tipo: "Estrutura",
+    hp: 20,
+    resistencia: [],
+    fraqueza: [],
+  });
+  slot(g, "p2:front:0").structure = structure;
+  assert.throws(
+    () => cast(g, instance("054"), [g.player("p2").mage.id]),
+    /Tipo de alvo/,
+  );
+  const before = g.player("p1").deck.map((c) => c.id);
+  cast(g, instance("054"), [structure.id]);
+  assert.equal(slot(g, "p2:front:0").structure!.hpAtual, 15);
+  assert.deepEqual(
+    g.player("p1").deck.map((c) => c.id),
+    before,
+  );
+  assert.ok(
+    g
+      .snapshot("p2")
+      .events.some(
+        (e) => e.kind === "notice" && e.message?.includes("não encontrou"),
+      ),
+  );
+  const sagrado = instance("053");
+  g.player("p1").deck.push(sagrado);
+  g.player("p1").castCards!.push("053");
+  const restored = Game.restore(JSON.parse(JSON.stringify(g.exportState())));
+  cast(restored, instance("054"), [structure.id]);
+  assert.ok(restored.player("p1").deck.some((c) => c.id === sagrado.id));
+  assert.ok(!restored.player("p1").hand.some((c) => c.id === sagrado.id));
 });
 
 test("cartas banidas/esquecidas não voltam pelo cemitério", () => {

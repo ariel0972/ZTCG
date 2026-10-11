@@ -1,4 +1,17 @@
 ZTCG — GUIA DO PROJETO, ARQUITETURA E PRÓXIMOS PASSOS
+Atualização de combate — 10/10/2026:
+- MANUAL_EFEITOS_CATALOGO.txt — Referência de todos os campos, alvos, efeitos,
+  habilidades, passivas, restrições e exemplos JSON completos para o catálogo.
+- scripts/update-combat-abilities.ts — Sincroniza as seis cartas de combate;
+  dry run, backup e controle de versão; preserva publicação e passivas existentes.
+- tests/catalog-manual.test.ts — Valida todos os exemplos TXT contra schema,
+  capacidades executáveis e modelo de persistência; verifica combinações inválidas.
+Habilidades adicionadas: Regenerar; Proteção Rochosa/Derreter; Olhar Furioso/
+Assustar; Modo Defensivo/Modo Ofensivo. Nome Sagrado e Nome Profano têm busca
+condicional persistida por partida. Alvos automáticos e filtros são reutilizáveis.
+Danos recebidos identificam fonte, valor e vida antes/depois, incluindo danos
+periódicos e excedente de Explosão. Arraste aceita feitiço automático no campo.
+
 Revisão: 07/10/2026. Escopo: todo o código, configuração, testes e assets próprios
 do projeto. node_modules, dist, .git, .vercel, backups e logs são dependências,
 artefatos gerados ou dados locais; não são fontes do jogo.

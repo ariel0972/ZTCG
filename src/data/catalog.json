@@ -619,22 +619,50 @@
     "nome": "Nome Sagrado",
     "tipo": "Feitico",
     "custoMana": 2,
-    "descricao": "",
+    "descricao": "Causa 3 de dano à última tropa inimiga que atacou uma tropa sua no turno anterior, mesmo com Esconder. Exige que ela continue em campo. Se você ainda não conjurou Nome Profano nesta partida, busca uma cópia dele e embaralha. Se não encontrar, avisa ambos os jogadores e mantém o baralho igual.",
     "imgURL": "/assets/Cards/Nome Sagrado.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
-    "alvo": "UnicoInimigo"
+    "alvo": "UnicoInimigo",
+    "elemento": "Neutro",
+    "alvoAutomatico": "UltimoAtacanteTropa",
+    "ignoraEsconder": true,
+    "tiposAlvo": ["Tropa"],
+    "efeitos": [
+      {
+        "id": "damage",
+        "valor": 3
+      },
+      {
+        "id": "searchNamed",
+        "carta": "054",
+        "seNaoUsada": "054"
+      }
+    ]
   },
   {
     "numeroCatalogo": "054",
-    "nome": "Nome profano",
+    "nome": "Nome Profano",
     "tipo": "Feitico",
-    "custoMana": 2,
-    "descricao": "",
+    "custoMana": 5,
+    "descricao": "Causa 5 de dano a uma tropa ou estrutura inimiga, sem atingir o mago. Se você ainda não conjurou Nome Sagrado nesta partida, busca uma cópia dele e embaralha. Se não encontrar, avisa ambos os jogadores e mantém o baralho igual.",
     "imgURL": "/assets/Cards/Nome Profano.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
-    "alvo": "UnicoInimigo"
+    "alvo": "UnicoInimigo",
+    "elemento": "Neutro",
+    "tiposAlvo": ["Tropa", "Estrutura"],
+    "efeitos": [
+      {
+        "id": "damage",
+        "valor": 5
+      },
+      {
+        "id": "searchNamed",
+        "carta": "053",
+        "seNaoUsada": "053"
+      }
+    ]
   },
   {
     "numeroCatalogo": "060",
@@ -1283,7 +1311,47 @@
     "ataque": 3,
     "manaGerada": 2,
     "direcaoAtaque": "Universal",
-    "habilidadesAtivas": [],
+    "habilidadesAtivas": [
+      {
+        "id": "modoDefensivo",
+        "nome": "Modo Defensivo",
+        "custoMana": 2,
+        "alvo": "UnicoAliado",
+        "efeitos": [
+          {
+            "id": "status",
+            "status": "Interceptar",
+            "duracao": 2,
+            "unidade": "turno"
+          },
+          {
+            "id": "status",
+            "status": "ReducaoAtaqueTropa",
+            "duracao": 2,
+            "valor": 2,
+            "unidade": "turno"
+          }
+        ],
+        "alvoAutomatico": "Proprio",
+        "descricao": "Intercepta ataques básicos de tropas contra aliados e reduz 2 de cada golpe até o fim do próximo turno adversário. Havendo vários defensores, usa o primeiro da esquerda. Reutilizar renova, sem acumular."
+      },
+      {
+        "id": "modoOfensivo",
+        "nome": "Modo Ofensivo",
+        "custoMana": 2,
+        "alvo": "UnicoAliado",
+        "efeitos": [
+          {
+            "id": "status",
+            "status": "BonusAtaque",
+            "duracao": 2,
+            "valor": 2
+          }
+        ],
+        "alvoAutomatico": "Proprio",
+        "descricao": "Ganha +2 de ataque básico por 2 rodadas. Reutilizar renova, sem acumular."
+      }
+    ],
     "habilidadesPassivas": [
       {
         "gatilho": "continuous",
@@ -1304,7 +1372,11 @@
         ],
         "descricao": "Com menos da metade de sua vida máxima, ganha +1 de dano de ataque básico."
       }
-    ]
+    ],
+    "elemento": "Neutro",
+    "subtipo": "Humano",
+    "resistencia": ["Fogo", "Ar"],
+    "fraqueza": []
   },
   {
     "numeroCatalogo": "024",
@@ -1342,15 +1414,34 @@
     "numeroCatalogo": "025",
     "nome": "Golém",
     "tipo": "Tropa",
-    "custoMana": 4,
-    "descricao": "",
+    "custoMana": 6,
+    "descricao": "Ataca uma vez por rodada. Regenerar: por 4 de mana, recupera 3 de vida própria, uma vez por rodada.",
     "imgURL": "/assets/Cards/Golem.png",
     "publicado": true,
     "versao": 1,
-    "hp": 1,
-    "ataque": 2,
-    "manaGerada": 1,
-    "direcaoAtaque": "Frente"
+    "hp": 15,
+    "ataque": 4,
+    "manaGerada": 4,
+    "direcaoAtaque": "Frente",
+    "elemento": "Neutro",
+    "subtipo": "Invocação",
+    "resistencia": ["Fogo"],
+    "fraqueza": [],
+    "habilidadesAtivas": [
+      {
+        "id": "regenerar",
+        "nome": "Regenerar",
+        "custoMana": 4,
+        "alvo": "UnicoAliado",
+        "alvoAutomatico": "Proprio",
+        "efeitos": [
+          {
+            "id": "heal",
+            "valor": 3
+          }
+        ]
+      }
+    ]
   },
   {
     "numeroCatalogo": "027",
@@ -1482,9 +1573,7 @@
     "direcaoAtaque": "Frente",
     "elemento": "Neutro",
     "subtipo": "Monstro",
-    "fraqueza": [
-      "Terra"
-    ],
+    "fraqueza": ["Terra"],
     "resistencia": [],
     "habilidadesAtivas": [
       {
@@ -1527,12 +1616,8 @@
     "direcaoAtaque": "Frente",
     "elemento": "Neutro",
     "subtipo": "Humano",
-    "resistencia": [
-      "Ar"
-    ],
-    "fraqueza": [
-      "Terra"
-    ],
+    "resistencia": ["Ar"],
+    "fraqueza": ["Terra"],
     "habilidadesPassivas": [
       {
         "gatilho": "onDeath",
@@ -1604,12 +1689,8 @@
       }
     ],
     "elemento": "Fogo",
-    "resistencia": [
-      "Ar"
-    ],
-    "fraqueza": [
-      "Agua"
-    ]
+    "resistencia": ["Ar"],
+    "fraqueza": ["Agua"]
   },
   {
     "numeroCatalogo": "110",
@@ -1635,11 +1716,50 @@
       }
     ],
     "elemento": "Fogo",
-    "resistencia": [
-      "Ar"
-    ],
-    "fraqueza": [
-      "Agua"
+    "resistencia": ["Ar"],
+    "fraqueza": ["Agua"],
+    "habilidadesAtivas": [
+      {
+        "id": "protecaoRochosa",
+        "nome": "Proteção Rochosa",
+        "custoMana": 4,
+        "alvo": "UnicoAliado",
+        "efeitos": [
+          {
+            "id": "status",
+            "status": "Esconder",
+            "duracao": 1
+          },
+          {
+            "id": "status",
+            "status": "ReducaoDano",
+            "duracao": 1,
+            "valor": 3,
+            "requerStatus": "Esconder"
+          }
+        ],
+        "alvoAutomatico": "Proprio",
+        "descricao": "Ganha Esconder por 1 rodada e reduz 3 de cada golpe nesse período."
+      },
+      {
+        "id": "derreter",
+        "nome": "Derreter",
+        "custoMana": 5,
+        "alvo": "UnicoInimigo",
+        "efeitos": [
+          {
+            "id": "damage",
+            "valor": 5
+          },
+          {
+            "id": "status",
+            "status": "Queimado",
+            "duracao": 2
+          }
+        ],
+        "alvoAutomatico": "Frontal",
+        "descricao": "Causa 5 de dano e Queimado à tropa diretamente à frente. Não pode ser usado com o slot vazio."
+      }
     ]
   },
   {
@@ -1667,12 +1787,8 @@
       }
     ],
     "elemento": "Fogo",
-    "resistencia": [
-      "Ar"
-    ],
-    "fraqueza": [
-      "Agua"
-    ]
+    "resistencia": ["Ar"],
+    "fraqueza": ["Agua"]
   },
   {
     "numeroCatalogo": "117",
@@ -1699,11 +1815,46 @@
       }
     ],
     "elemento": "Fogo",
-    "resistencia": [
-      "Ar"
-    ],
-    "fraqueza": [
-      "Agua"
+    "resistencia": ["Ar"],
+    "fraqueza": ["Agua"],
+    "habilidadesAtivas": [
+      {
+        "id": "olharFurioso",
+        "nome": "Olhar Furioso",
+        "custoMana": 4,
+        "alvo": "UnicoInimigo",
+        "efeitos": [
+          {
+            "id": "damage",
+            "valor": 5
+          },
+          {
+            "id": "status",
+            "status": "Incapacitado",
+            "duracao": 1
+          }
+        ],
+        "alvoAutomatico": "Frontal",
+        "descricao": "Causa 5 de dano à tropa diretamente à frente e impede seus ataques por 1 rodada."
+      },
+      {
+        "id": "assustar",
+        "nome": "Assustar",
+        "custoMana": 3,
+        "alvo": "TodasTropasInimigas",
+        "efeitos": [
+          {
+            "id": "damage",
+            "valor": 2
+          },
+          {
+            "id": "status",
+            "status": "Incapacitado",
+            "duracao": 1
+          }
+        ],
+        "descricao": "Causa 2 de dano a todas as tropas inimigas e Incapacitado por 1 rodada."
+      }
     ]
   },
   {
@@ -1901,12 +2052,8 @@
       }
     ],
     "elemento": "Fogo",
-    "fraqueza": [
-      "Agua"
-    ],
-    "resistencia": [
-      "Ar"
-    ],
+    "fraqueza": ["Agua"],
+    "resistencia": ["Ar"],
     "habilidadesAtivas": [
       {
         "id": "recuperarEnergia",
@@ -1946,12 +2093,8 @@
       }
     ],
     "elemento": "Agua",
-    "fraqueza": [
-      "Terra"
-    ],
-    "resistencia": [
-      "Fogo"
-    ],
+    "fraqueza": ["Terra"],
+    "resistencia": ["Fogo"],
     "habilidadesAtivas": [
       {
         "id": "protecaoAquatica",

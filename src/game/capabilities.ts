@@ -1,6 +1,7 @@
 import type { Card, Effect, TipoAlvoFeitico } from "../types/card";
 import { legacyPassiveTriggers } from "./legacy-passives";
 import { passiveEventTriggers, passiveActionIds } from "./passives";
+import { canonicalStatus } from "./status";
 
 export const effectIds = [
   "damage",
@@ -22,6 +23,7 @@ export const effectIds = [
   "meteors",
   "zarcosTear",
   "strongFlow",
+  "searchNamed",
 ] as const;
 export const abilityIds = [
   "protecaoAquatica",
@@ -59,6 +61,10 @@ const keywordIds = [
   "Flanquear",
 ];
 const statusIds = [
+  "BonusAtaque",
+  "ReducaoDano",
+  "ReducaoAtaqueTropa",
+  "Interceptar",
   "Abalo",
   "EscudoProtecao",
   "Incapacitado",
@@ -84,6 +90,15 @@ const statusIds = [
 ];
 export function playableErrors(card: Card): string[] {
   const errors: string[] = [];
+  if (
+    (card.alvoAutomatico || card.ignoraEsconder || card.tiposAlvo) &&
+    card.tipo !== "Feitico"
+  )
+    errors.push(
+      "Seleção e filtro de alvo do cartão são exclusivos de feitiços.",
+    );
+  if (card.alvoAutomatico && card.alvo !== "UnicoInimigo")
+    errors.push("Último atacante exige UnicoInimigo.");
   const specialTargets: Record<string, TipoAlvoFeitico> = {
     stoneVolley: "TodasTropasInimigas",
     tornado: "UnicoInimigo",
@@ -109,6 +124,33 @@ export function playableErrors(card: Card): string[] {
     for (const e of effects) {
       if (!(effectIds as readonly string[]).includes(e.id))
         errors.push(`Efeito ${e.id} não implementado.`);
+      if (e.id === "searchNamed" && !e.carta)
+        errors.push("Busca por carta exige carta (numeroCatalogo).");
+      if (e.id !== "searchNamed" && (e.carta || e.seNaoUsada))
+        errors.push("carta/seNaoUsada exigem searchNamed.");
+      if (
+        e.unidade &&
+        (e.id !== "status" ||
+          ["Envenenado", "Queimado", "Sangrando", "Congelado"].includes(
+            canonicalStatus(e.status ?? ""),
+          ))
+      )
+        errors.push(
+          "Unidade personalizada exige status sem duração elemental fixa.",
+        );
+      if (
+        e.id === "status" &&
+        ["BonusAtaque", "ReducaoDano", "ReducaoAtaqueTropa"].includes(
+          e.status ?? "",
+        ) &&
+        !e.valor
+      )
+        errors.push("Bônus/redução de dano exige valor positivo.");
+      if (
+        e.requerStatus &&
+        (e.id !== "status" || !statusIds.includes(e.requerStatus))
+      )
+        errors.push("requerStatus exige efeito status e um status suportado.");
       if (
         e.id === "status" &&
         (!e.status || !statusIds.includes(e.status) || !e.duracao)
@@ -120,6 +162,7 @@ export function playableErrors(card: Card): string[] {
         e.id !== "banish" &&
         e.id !== "forget" &&
         e.id !== "field" &&
+        e.id !== "searchNamed" &&
         e.valor === undefined
       )
         errors.push(`Defina valor para ${e.id}.`);
@@ -174,6 +217,15 @@ export function playableErrors(card: Card): string[] {
   if (card.tipo === "Feitico" && !card.efeitos.length)
     errors.push("Feitiço sem efeitos.");
   for (const h of card.habilidadesAtivas) {
+    if (
+      h.alvoAutomatico &&
+      (!h.efeitos?.length ||
+        h.alvo !==
+          (h.alvoAutomatico === "Proprio" ? "UnicoAliado" : "UnicoInimigo"))
+    )
+      errors.push(`Alvo automático incompatível na habilidade ${h.id}.`);
+    if (h.alvoAutomatico === "Frontal" && card.tipo !== "Tropa")
+      errors.push("Alvo frontal automático exige tropa.");
     if (h.efeitos?.length) {
       checkEffects(h.efeitos, h.alvo);
       if (h.efeitos.some((e) => specialTargets[e.id]))

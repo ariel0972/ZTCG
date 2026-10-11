@@ -63,7 +63,7 @@ test("cartas dinâmicas mostram vida atual, bônus de armamento e status com dur
 
 test("arraste distingue clique, cancela sem jogar e executa só uma soltura em destino válido", async () => {
   const dom = new JSDOM(
-    '<button id="card">Carta</button><button data-slot-id="slot">Destino</button>',
+    '<button id="card">Carta</button><button data-slot-id="slot">Destino</button><div data-field-drop-zone>Campo</div>',
   );
   const previous = Object.getOwnPropertyDescriptor(globalThis, "document");
   Object.defineProperty(globalThis, "document", {
@@ -113,11 +113,37 @@ test("arraste distingue clique, cancela sem jogar e executa só uma soltura em d
     assert.equal(drops, 1);
     assert.equal(clicks, 1);
     assert.equal(dom.window.document.querySelector(".drag-ghost"), null);
+    await new Promise((resolve) => setTimeout(resolve, 1));
+    const field = dom.window.document.querySelector("[data-field-drop-zone]")!;
+    (dom.window.document as any).elementFromPoint = () => field;
+    pointer("pointerdown", 10);
+    pointer("pointermove", 40);
+    pointer("pointerup", 40);
+    assert.equal(drops, 2);
   } finally {
     if (previous) Object.defineProperty(globalThis, "document", previous);
     else delete (globalThis as any).document;
     dom.window.close();
   }
+});
+
+test("feitiços automáticos aceitam campo vazio e fundo do campo; seleção individual continua obrigatória", async () => {
+  const modulePath = "../public/JS/battle-ui.js";
+  const { dropAction } = await import(modulePath);
+  const state = { status: "ACTIVE" };
+  const slot = { ownerId: "p2", kind: "Tropa", card: null };
+  for (const alvo of ["Global", "TodosInimigos", "TodasTropasInimigas"]) {
+    const source = { type: "play", card: { tipo: "Feitico", alvo } };
+    assert.equal(dropAction(source, undefined, state, "p1"), "play");
+    assert.equal(dropAction(source, slot, state, "p1"), "play");
+    assert.equal(dropAction(source, slot, { status: "FINISHED" }, "p1"), null);
+  }
+  const chosen = {
+    type: "play",
+    card: { tipo: "Feitico", alvo: "UnicoInimigo" },
+  };
+  assert.equal(dropAction(chosen, undefined, state, "p1"), null);
+  assert.equal(dropAction(chosen, slot, state, "p1"), null);
 });
 
 test("destinos de arraste respeitam preparação, lados, pântano e bloqueio após atacar", async () => {

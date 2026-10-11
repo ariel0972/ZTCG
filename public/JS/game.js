@@ -1,5 +1,6 @@
 import {
   automaticTargets,
+  hasAutomaticTarget,
   zoneTargets,
   actionTarget,
   spellSlotTarget,
@@ -234,6 +235,14 @@ function dragBinding(element, source) {
         source: from.card.tipo === "Estrutura" ? "structure" : "card",
       };
       targets = [];
+      if (
+        action === "play" &&
+        from.card.tipo === "Feitico" &&
+        hasAutomaticTarget(from.card)
+      ) {
+        void command({ type: "play", cardId: from.card.id, targets: [] });
+        return;
+      }
       selectSlot(state.slots.find((s) => s.id === id));
       if (
         action === "play" &&
@@ -266,7 +275,7 @@ function prepareHand(card) {
   targets = [];
   render();
 }
-function selectSlot(slot) {
+function selectSlot(slot, asStructure = false) {
   if (!myTurn() || pending) return;
   if (selected) {
     if (selected.type === "play" && selected.card.tipo !== "Feitico") {
@@ -308,12 +317,16 @@ function selectSlot(slot) {
     }
     if (selected.type === "play" || selected.type === "ability") {
       const action = targetAction();
+      const destination =
+        asStructure && action.alvo !== "Estrutura"
+          ? { ...slot, card: slot.structure, structure: null }
+          : slot;
       if (
-        automaticTargets.includes(action.alvo) ||
-        !spellSlotTarget(action, slot, user.id)
+        hasAutomaticTarget(action) ||
+        !spellSlotTarget(action, destination, user.id)
       )
         return;
-      const id = slotTargetId(action, slot);
+      const id = slotTargetId(action, destination);
       if (targets.includes(id)) targets = targets.filter((t) => t !== id);
       else if (targets.length < (action.maxAlvos || 1)) targets.push(id);
       render();
@@ -377,6 +390,7 @@ function handBlock(card) {
       return "Limite de mobilização atingido.";
   }
   if (card.tipo === "Feitico") {
+    if (card.spellBlockedReason) return card.spellBlockedReason;
     if (meHasStatus("Cego"))
       return "Seu mago está Cego e não pode usar feitiços.";
     const conditionalLight =
@@ -446,7 +460,7 @@ function renderTargetZones() {
     [
       "deck-zone",
       "deck-zone-footer",
-      action?.alvo === "Deck" || has(["draw", "strongFlow"]),
+      action?.alvo === "Deck" || has(["draw", "strongFlow", "searchNamed"]),
     ],
     ["graveyard", "graveyard-footer", action?.alvo === "Cemiterio"],
     [
@@ -655,7 +669,8 @@ function renderActions() {
           },
           state.openingBlocked
             ? "Bloqueado na preparação e no primeiro turno de cada jogador."
-            : ability.id === "deslocar" &&
+            : (ability.id === "deslocar" ||
+                  ability.alvoAutomatico === "Frontal") &&
                 !state.slots.some(
                   (s) =>
                     s.ownerId !== user.id &&
@@ -709,7 +724,7 @@ function renderActions() {
       panel.append(
         node(
           "p",
-          ["Global", "TodosInimigos", "TodasTropasInimigas"].includes(card.alvo)
+          hasAutomaticTarget(card)
             ? "Efeito sem seleção individual."
             : `Selecione os alvos e confirme (${targets.length}/${card.maxAlvos}).`,
           "hint",
@@ -724,7 +739,7 @@ function renderActions() {
           "Conjurar feitiço",
           () => command({ type: "play", cardId: card.id, targets }),
           handBlock(card) ||
-            (!automaticTargets.includes(card.alvo) && !targets.length
+            (!hasAutomaticTarget(card) && !targets.length
               ? "Selecione um alvo destacado."
               : ""),
         ),
@@ -896,7 +911,7 @@ function slotView(slot) {
     button.dataset.targetSide = slot.ownerId === user.id ? "ally" : "enemy";
     button.setAttribute(
       "aria-disabled",
-      String(!valid || automaticTargets.includes(targetAction().alvo)),
+      String(!valid || hasAutomaticTarget(targetAction())),
     );
     if (valid)
       button.append(
@@ -930,10 +945,26 @@ function slotView(slot) {
   );
   structureButton.type = "button";
   inspector.bind(structureButton, slot.structure);
+  if (isChoosingSpell()) {
+    const action = targetAction();
+    const destination =
+      action.alvo === "Estrutura"
+        ? slot
+        : { ...slot, card: slot.structure, structure: null };
+    const valid =
+      !hasAutomaticTarget(action) &&
+      spellSlotTarget(action, destination, user.id);
+    structureButton.classList.add(valid ? "spell-target" : "spell-unavailable");
+    structureButton.classList.toggle(
+      "selected",
+      targets.includes(slot.structure.id),
+    );
+    structureButton.setAttribute("aria-disabled", String(!valid));
+  }
   structureButton.onclick = (event) => {
     anchorAt(event, structureButton);
     if (isChoosingSpell()) {
-      selectSlot(slot);
+      selectSlot(slot, true);
       return;
     }
     selected = { type: "field", slot, card: slot.structure };

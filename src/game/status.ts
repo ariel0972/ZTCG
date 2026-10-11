@@ -4,6 +4,7 @@ export interface Status {
   turnosRestantes: number;
   unidade?: "rodada" | "turno";
   expiraNoTurno?: number;
+  requerStatus?: string;
 }
 const aliases: Record<string, string> = {
   Atordoamento: "Atordoado",
@@ -26,6 +27,7 @@ export function applyStatus(
   duration: number,
   value?: number,
   turn = 0,
+  unit?: "rodada" | "turno",
 ) {
   const nome = canonicalStatus(name);
   const existing = statuses.find((s) => canonicalStatus(s.nome) === nome);
@@ -63,16 +65,37 @@ export function applyStatus(
       turnosRestantes: duration,
       unidade: "rodada",
     });
+  const applied =
+    nome === "Escudo"
+      ? statuses.filter((s) => s.nome === nome).at(-1)!
+      : statuses.find((s) => s.nome === nome)!;
+  if (
+    unit &&
+    !["Envenenado", "Queimado", "Sangrando", "Congelado"].includes(nome)
+  ) {
+    applied.unidade = unit;
+    applied.turnosRestantes = duration;
+    if (unit === "turno") applied.expiraNoTurno = turn + duration - 1;
+    else delete applied.expiraNoTurno;
+  }
+  return applied;
 }
 
-export function tickRound(statuses: Status[]) {
+export function tickRound(
+  statuses: Status[],
+  onDamage?: (status: Status, value: number) => void,
+) {
   let damage = 0;
   for (const status of statuses) {
     if (status.unidade === "turno") continue;
     const name = canonicalStatus(status.nome);
-    if (["Sangrando", "Queimado", "Envenenado"].includes(name))
-      damage += status.valor ?? 1;
-    else if (["Peste Negra", "Leptospirose"].includes(name)) damage += 2;
+    const value = ["Sangrando", "Queimado", "Envenenado"].includes(name)
+      ? (status.valor ?? 1)
+      : ["Peste Negra", "Leptospirose"].includes(name)
+        ? 2
+        : 0;
+    damage += value;
+    if (value) onDamage?.(status, value);
     status.turnosRestantes--;
   }
   return damage;

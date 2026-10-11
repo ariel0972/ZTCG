@@ -91,6 +91,38 @@ test("feitiços distinguem aliado, inimigo, mago, campo vazio, estrutura e zonas
   assert.equal(target({ alvo: "UnicoAliado" }, enemy, "me"), false);
   assert.equal(target({ alvo: "UnicoInimigo" }, mage, "me"), true);
   assert.equal(
+    target(
+      { alvo: "UnicoInimigo", tiposAlvo: ["Tropa", "Estrutura"] },
+      mage,
+      "me",
+    ),
+    false,
+  );
+  assert.equal(
+    target(
+      {
+        alvo: "UnicoInimigo",
+        alvoAutomatico: "UltimoAtacanteTropa",
+        automaticTargetId: "other",
+      },
+      enemy,
+      "me",
+    ),
+    false,
+  );
+  assert.equal(
+    target(
+      {
+        alvo: "UnicoInimigo",
+        alvoAutomatico: "UltimoAtacanteTropa",
+        automaticTargetId: troop.id,
+      },
+      enemy,
+      "me",
+    ),
+    true,
+  );
+  assert.equal(
     target({ alvo: "UnicoInimigo" }, { ...enemy, card: null }, "me"),
     false,
   );

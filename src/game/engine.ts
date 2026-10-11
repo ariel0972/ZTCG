@@ -251,7 +251,7 @@ export class Game {
   }
   private log(text: string) {
     this.state.log.push(text);
-    this.state.log = this.state.log.slice(-30);
+    this.state.log = this.state.log.slice(-100);
   }
   private spend(player: Player, cost: number) {
     if (player.mana < cost) this.fail("Mana insuficiente.");
@@ -421,6 +421,7 @@ export class Game {
     piercing = false,
     element = attacker?.elemento,
     source?: Instance,
+    cause?: string,
   ) {
     const slot = this.targetSlot(id);
     if (!slot) this.fail("Alvo não encontrado.");
@@ -446,6 +447,13 @@ export class Game {
           : bypassFrozen
             ? this.player(slot.ownerId).mage
             : (slot.card ?? this.player(slot.ownerId).mage);
+    const origin =
+      cause ??
+      (attacker
+        ? `Ataque de ${attacker.nome}`
+        : source
+          ? `Efeito de ${source.nome}`
+          : "Dano");
     let remaining = value;
     const protection = target.statuses.find(
       (s) =>
@@ -457,6 +465,13 @@ export class Game {
       protection.valor!--;
       if (protection.valor! <= 0)
         target.statuses = target.statuses.filter((s) => s !== protection);
+      this.reportDamage(
+        target,
+        0,
+        origin,
+        target.hpAtual,
+        "bloqueado por Escudo de Proteção",
+      );
       return;
     }
     if (element && target.fraqueza.includes(element)) remaining *= 2;
@@ -468,6 +483,14 @@ export class Game {
       remaining = Math.floor(remaining / 2);
     if (this.has(target, "armaduraPoderosa"))
       remaining = Math.max(0, remaining - 2);
+    for (const reduction of target.statuses.filter(
+      (s) =>
+        (s.nome === "ReducaoDano" ||
+          (s.nome === "ReducaoAtaqueTropa" && attacker?.tipo === "Tropa")) &&
+        s.turnosRestantes > 0 &&
+        (!s.requerStatus || this.has(target, s.requerStatus)),
+    ))
+      remaining = Math.max(0, remaining - (reduction.valor ?? 0));
     const shield = target.statuses.find(
       (s) => s.nome === "Escudo" && (s.valor ?? 0) > 0,
     );
@@ -484,6 +507,13 @@ export class Game {
         : 0;
     const hpBefore = target.hpAtual;
     target.hpAtual -= remaining;
+    this.reportDamage(
+      target,
+      remaining,
+      origin,
+      hpBefore,
+      remaining === 0 && value > 0 ? "dano reduzido ou absorvido" : undefined,
+    );
     const killer = source ?? attacker;
     if (hpBefore > 0 && target.hpAtual <= 0 && killer)
       target.killedBy = { ownerId: killer.ownerId, cardId: killer.id };
@@ -494,7 +524,28 @@ export class Game {
         card: target,
         attackerId: killer?.id,
       });
-    if (excess) this.player(target.ownerId).mage.hpAtual -= excess;
+    if (excess) {
+      const mage = this.player(target.ownerId).mage;
+      const before = mage.hpAtual;
+      mage.hpAtual -= excess;
+      this.reportDamage(
+        mage,
+        excess,
+        `${this.has(target, "Explosão") ? "Explosão" : "Sobrepujar"} de ${target.nome} (${origin})`,
+        before,
+      );
+    }
+  }
+  private reportDamage(
+    target: Instance,
+    value: number,
+    origin: string,
+    before: number,
+    detail?: string,
+  ) {
+    const message = `${origin}: ${target.nome} (${this.player(target.ownerId).nome}) recebeu ${value} de dano${detail ? `, ${detail}` : ""}. Vida: ${Math.max(0, before)} → ${Math.max(0, target.hpAtual)}.`;
+    this.log(message);
+    this.event("damage", target, message);
   }
   private heal(
     card: Instance,
@@ -802,6 +853,7 @@ export class Game {
           false,
           action.elemento,
           source,
+          `Passiva de ${source.nome}`,
         );
         return true;
       case "heal": {
@@ -839,6 +891,7 @@ export class Game {
     type: TipoAlvoFeitico | undefined,
     ids: string[],
     max = 1,
+    ignoreHidden = false,
   ): string[] {
     if (!type) this.fail("Tipo de alvo não definido.");
     if (new Set(ids).size !== ids.length || ids.length > max)
@@ -909,7 +962,12 @@ export class Game {
         this.fail("Selecione um inimigo.");
       if (type === "Estrutura" && !slot.structure)
         this.fail("Selecione uma estrutura.");
-      if (slot.ownerId !== owner && card && this.has(card, "Esconder"))
+      if (
+        !ignoreHidden &&
+        slot.ownerId !== owner &&
+        card &&
+        this.has(card, "Esconder")
+      )
         this.fail("Esta carta está escondida.");
     }
     return type === "Estrutura"
@@ -931,6 +989,7 @@ export class Game {
     ids: string[],
     element?: Card["elemento"],
     source?: Instance,
+    cause?: string,
   ) {
     const player = this.player(ownerId);
     for (const effect of effects) {
@@ -944,6 +1003,7 @@ export class Game {
               false,
               effect.elemento ?? element,
               source,
+              cause,
             );
           break;
         case "heal":
@@ -957,13 +1017,16 @@ export class Game {
           for (const id of ids) {
             const card = this.findCard(id) ?? this.targetSlot(id)?.card;
             if (!card) this.fail("Status exige uma carta.");
-            applyStatus(
+            const applied = applyStatus(
               card.statuses,
               effect.status!,
               effect.duracao!,
               effect.status === "Escudo" ? (effect.valor ?? 3) : effect.valor,
               this.state.turn,
+              effect.unidade,
             );
+            if (applied && effect.requerStatus)
+              applied.requerStatus = effect.requerStatus;
             this.trigger("onStatusApplied", {
               ownerId: card.ownerId,
               cardId: card.id,
@@ -989,6 +1052,29 @@ export class Game {
           if (i < 0) this.fail("Escolha um feitiço elemental do seu deck.");
           player.hand.push(player.deck.splice(i, 1)[0]);
           this.shuffle(player.deck);
+          break;
+        }
+        case "searchNamed": {
+          if (
+            effect.seNaoUsada &&
+            player.castCards?.includes(effect.seNaoUsada)
+          )
+            break;
+          const index = player.deck.findIndex(
+            (c) => c.numeroCatalogo === effect.carta,
+          );
+          if (index < 0) {
+            const message = `${player.nome}: a busca por carta ${effect.carta} não encontrou nenhuma cópia. O baralho permanece igual.`;
+            this.log(message);
+            this.event("notice", source ?? player.mage, message);
+          } else {
+            const found = player.deck.splice(index, 1)[0];
+            player.hand.push(found);
+            this.shuffle(player.deck);
+            this.log(
+              `${player.nome} buscou ${found.nome} e embaralhou o baralho.`,
+            );
+          }
           break;
         }
         case "banish":
@@ -1105,7 +1191,15 @@ export class Game {
       case "Lava":
         for (const adjacent of this.front(slot.ownerId))
           if (Math.abs(adjacent.column - slot.column) === 1 && adjacent.card)
-            this.damage(adjacent.card.id, 2, undefined, true);
+            this.damage(
+              adjacent.card.id,
+              2,
+              undefined,
+              true,
+              undefined,
+              undefined,
+              "Lava",
+            );
         break;
       case "Congelar":
         if (card)
@@ -1161,16 +1255,29 @@ export class Game {
         (card.assinatura ? limits.feiticosUnicos : limits.feiticosUsados)
       )
         this.fail("Limite de feitiços atingido.");
+      const selection = this.spellSelection(card, user, cmd.targets);
       const ids = this.validateTargets(
         user,
         this.spellTarget(card, user),
-        cmd.targets,
+        selection,
         card.maxAlvos,
+        card.ignoraEsconder,
       );
+      if (
+        card.tiposAlvo &&
+        ids.some((id) => {
+          const s = this.targetSlot(id);
+          const target = id === s?.structure?.id ? s.structure : s?.card;
+          return !target || !card.tiposAlvo!.includes(target.tipo);
+        })
+      )
+        this.fail("Tipo de alvo não permitido por este feitiço.");
       this.spend(player, card.custoMana);
       const bonus = spellDamageBonus(player.mage, card.elemento);
       player.hand.splice(index, 1);
       player.graveyard.push(card);
+      (player.castCards ??= []).push(card.numeroCatalogo);
+      player.castCards = [...new Set(player.castCards)];
       this.event("spell", card);
       if (card.assinatura) player.counters.unique++;
       else player.counters.spells++;
@@ -1292,6 +1399,8 @@ export class Game {
         ),
         ids,
         card.elemento,
+        card,
+        `${card.nome} (${this.player(user).nome})`,
       );
     }
     const player = this.player(user);
@@ -1306,7 +1415,15 @@ export class Game {
         this.fail("Combinação de dano bloqueada na preparação.");
       player.comboTriggered = true;
       for (const id of this.enemyTargets(user, true))
-        this.damage(id, 6, undefined, false, "Fogo");
+        this.damage(
+          id,
+          6,
+          undefined,
+          false,
+          "Fogo",
+          undefined,
+          "Combinação Bola de Fogo + Furacão",
+        );
       this.log(
         "Bola de Fogo + Furacão: 6 de dano adicionais em todos os inimigos.",
       );
@@ -1321,6 +1438,33 @@ export class Game {
           (s.card?.tipo === "Tropa" || (mage && s.kind === "Mago")),
       )
       .map((s) => s.id);
+  }
+  private spellSelection(card: Instance, user: string, ids: string[]) {
+    if (!card.alvoAutomatico) return ids;
+    if (ids.length) this.fail("Este feitiço usa alvo automático.");
+    const last = this.player(user).lastTroopAttacker;
+    const target = last && this.findCard(last.cardId);
+    if (
+      !last ||
+      last.turn !== this.state.turn - 1 ||
+      target?.tipo !== "Tropa" ||
+      target.hpAtual <= 0 ||
+      target.ownerId === user ||
+      !this.state.slots.some((s) => s.card?.id === target.id)
+    )
+      this.fail(
+        "A última tropa que atacou uma tropa sua no turno anterior não está disponível.",
+      );
+    return [target.id];
+  }
+  private spellBlockReason(card: Instance, user: string) {
+    if (!card.alvoAutomatico) return "";
+    try {
+      this.spellSelection(card, user, []);
+      return "";
+    } catch (error) {
+      return (error as Error).message;
+    }
   }
   private earthGolem(user: string) {
     return this.state.slots.some(
@@ -1386,7 +1530,15 @@ export class Game {
     ) => {
       if (element) this.react(user, targets, element);
       for (const target of targets)
-        this.damage(target, damage, undefined, false, element);
+        this.damage(
+          target,
+          damage,
+          undefined,
+          false,
+          element,
+          undefined,
+          card.nome,
+        );
     };
     const ongoing = (
       kind: "tornado" | "arrowRain" | "sandstorm",
@@ -1496,7 +1648,15 @@ export class Game {
         if (card.elemento) this.react(user, ids, card.elemento);
         if (mageElement === "Fogo")
           for (const id of ids)
-            this.damage(id, 3 + bonus, undefined, false, card.elemento);
+            this.damage(
+              id,
+              3 + bonus,
+              undefined,
+              false,
+              card.elemento,
+              undefined,
+              card.nome,
+            );
         status(ids, "Cego", 2);
         break;
       case "sandstorm":
@@ -1543,8 +1703,22 @@ export class Game {
           ? [this.opponent(spell.ownerId).mage.id]
           : this.enemyTargets(spell.ownerId, true);
       if (spell.element) this.react(spell.ownerId, targets, spell.element);
+      const name =
+        spell.kind === "tornado"
+          ? "Furacão"
+          : spell.kind === "arrowRain"
+            ? "Chuva de Flechas"
+            : "Furacão de Areia";
       for (const id of targets)
-        this.damage(id, spell.damage, undefined, false, spell.element);
+        this.damage(
+          id,
+          spell.damage,
+          undefined,
+          false,
+          spell.element,
+          undefined,
+          `${name} (${this.player(spell.ownerId).nome}, fim da rodada)`,
+        );
       spell.rounds--;
       this.log(
         `${spell.kind === "tornado" ? "Furacão" : spell.kind === "arrowRain" ? "Chuva de Flechas" : "Furacão de Areia"} causou dano no fim da rodada.`,
@@ -1590,6 +1764,9 @@ export class Game {
     player.hand.splice(player.hand.indexOf(card), 1);
     player.graveyard.push(card);
     player.counters.spells++;
+    player.castCards = [
+      ...new Set([...(player.castCards ?? []), card.numeroCatalogo]),
+    ];
     delete this.state.pendingSpell;
     this.trigger("onSpellCast", {
       ownerId: user,
@@ -1738,19 +1915,38 @@ export class Game {
     const sourceError = this.attackSourceError(user, slot, card);
     if (sourceError) this.fail(sourceError);
     if (!card) this.fail("Carta ausente.");
-    const enemy = this.opponent(user),
-      target = this.state.slots.find(
-        (s) => s.id === cmd.targetId && s.ownerId === enemy.id,
-      );
+    const enemy = this.opponent(user);
+    let target = this.state.slots.find(
+      (s) => s.id === cmd.targetId && s.ownerId === enemy.id,
+    );
     if (!target) this.fail("Selecione um slot inimigo.");
     const targetError = this.attackTargetError(slot, card, target);
     if (targetError) this.fail(targetError);
+    if (card.tipo === "Tropa") {
+      const interceptor = this.front(enemy.id)
+        .filter(
+          (s) =>
+            s.card && s.card.hpAtual > 0 && this.has(s.card, "Interceptar"),
+        )
+        .sort((a, b) => a.column - b.column)[0];
+      if (interceptor && interceptor !== target) {
+        this.log(
+          `${interceptor.card!.nome} interceptou o ataque de ${card.nome} destinado a ${target.card?.nome ?? enemy.mage.nome}.`,
+        );
+        target = interceptor;
+      }
+      if (target.card?.tipo === "Tropa")
+        enemy.lastTroopAttacker = { cardId: card.id, turn: this.state.turn };
+    }
     this.event("attack", card);
     card.attacked = true;
     p.combatStarted = true;
     if (card.tipo !== "Mago") p.counters.attacks++;
     card.palavrasChave = card.palavrasChave.filter((k) => k !== "Esconder");
     card.statuses = card.statuses.filter((s) => s.nome !== "Esconder");
+    card.statuses = card.statuses.filter(
+      (s) => !s.requerStatus || this.has(card, s.requerStatus),
+    );
     if (this.has(card, "Cegueira") || this.has(card, "Cego")) {
       if (this.rng() < 0.5) {
         if (target.card)
@@ -1765,6 +1961,9 @@ export class Game {
     }
     const damage =
       (card.ataque ?? 0) +
+      card.statuses
+        .filter((s) => s.nome === "BonusAtaque" && s.turnosRestantes > 0)
+        .reduce((sum, s) => sum + (s.valor ?? 0), 0) +
       adjacentAttackBonus(card, this.state.slots) +
       (card.tipo === "Estrutura"
         ? 0
@@ -1836,7 +2035,15 @@ export class Game {
     const attackedCard = target.card;
     if (reflect && reactionCard) {
       reactionCard.reflectedAttackRound = this.state.round;
-      this.damage(card.id, damage, undefined, false, element, reactionCard);
+      this.damage(
+        card.id,
+        damage,
+        undefined,
+        false,
+        element,
+        reactionCard,
+        `Ataque devolvido por ${reactionCard.nome}`,
+      );
       this.event(
         "reaction",
         reactionCard,
@@ -1909,9 +2116,33 @@ export class Game {
         "Habilidades bloqueadas na preparação e no primeiro turno de cada jogador.",
       );
     if (ability.efeitos?.length) {
-      const targets = this.validateTargets(user, ability.alvo, cmd.targets);
+      let selected = cmd.targets;
+      if (ability.alvoAutomatico) {
+        if (selected.length)
+          this.fail("Esta habilidade não aceita seleção de alvos.");
+        if (ability.alvoAutomatico === "Proprio") selected = [card.id];
+        else {
+          const front = this.front(this.opponent(user).id).find(
+            (s) =>
+              s.column === 2 - slot.column &&
+              s.card?.tipo === "Tropa" &&
+              s.card.hpAtual > 0,
+          );
+          if (!front?.card)
+            this.fail("Não há tropa inimiga diretamente à frente.");
+          selected = [front.card.id];
+        }
+      }
+      const targets = this.validateTargets(user, ability.alvo, selected);
       this.spend(p, ability.custoMana);
-      this.effects(user, ability.efeitos, targets, card.elemento, card);
+      this.effects(
+        user,
+        ability.efeitos,
+        targets,
+        card.elemento,
+        card,
+        `${ability.nome} de ${card.nome}`,
+      );
     } else {
       switch (ability.id) {
         case "refazerCaminhos": {
@@ -1941,7 +2172,15 @@ export class Game {
           if (!target?.card)
             this.fail("Não há tropa inimiga diretamente à frente.");
           this.spend(p, ability.custoMana);
-          this.damage(target.id, 3, undefined, false, card.elemento, card);
+          this.damage(
+            target.id,
+            3,
+            undefined,
+            false,
+            card.elemento,
+            card,
+            `${ability.nome} de ${card.nome}`,
+          );
           this.effects(
             user,
             [{ id: "status", status: "Atordoado", duracao: 1 }],
@@ -2007,7 +2246,15 @@ export class Game {
         }
         case "ataqueFurtivo":
           this.spend(p, ability.custoMana);
-          this.damage(this.opponent(user).mage.id, 2);
+          this.damage(
+            this.opponent(user).mage.id,
+            2,
+            undefined,
+            false,
+            undefined,
+            undefined,
+            `${ability.nome} de ${card.nome}`,
+          );
           break;
         case "ordemDaEspada":
           this.spend(p, ability.custoMana);
@@ -2015,7 +2262,15 @@ export class Game {
             (s) =>
               s.ownerId === this.opponent(user).id && s.card?.tipo === "Tropa",
           ))
-            this.damage(s.id, 3, undefined, false, undefined, card);
+            this.damage(
+              s.id,
+              3,
+              undefined,
+              false,
+              undefined,
+              card,
+              `${ability.nome} de ${card.nome}`,
+            );
           break;
         case "armaduraPoderosa":
           this.spend(p, ability.custoMana);
@@ -2127,7 +2382,18 @@ export class Game {
     for (const card of this.state.slots
       .flatMap((s) => [s.card, s.structure])
       .filter((c): c is Instance => c !== null)) {
-      if (roundEnded) card.hpAtual -= tickRound(card.statuses);
+      if (roundEnded) {
+        tickRound(card.statuses, (status, value) => {
+          const before = card.hpAtual;
+          card.hpAtual -= value;
+          this.reportDamage(
+            card,
+            value,
+            `${status.nome} (fim da rodada)`,
+            before,
+          );
+        });
+      }
       for (const status of card.statuses)
         if (status.unidade === "turno") {
           status.turnosRestantes = Math.max(
@@ -2313,10 +2579,13 @@ export class Game {
         card: slot.card
           ? {
               ...slot.card,
-              bonusAtaquePassivo: adjacentAttackBonus(
-                slot.card,
-                this.state.slots,
-              ),
+              bonusAtaquePassivo:
+                adjacentAttackBonus(slot.card, this.state.slots) +
+                slot.card.statuses
+                  .filter(
+                    (s) => s.nome === "BonusAtaque" && s.turnosRestantes > 0,
+                  )
+                  .reduce((sum, s) => sum + (s.valor ?? 0), 0),
             }
           : null,
         ...(slot.ownerId === user
@@ -2350,10 +2619,17 @@ export class Game {
         forgotten: p.forgotten,
         ...(p.id === user
           ? {
-              hand: p.hand.map((c) => ({
-                ...c,
-                alvo: this.spellTarget(c, p.id),
-              })),
+              hand: p.hand.map((c) => {
+                const reason = this.spellBlockReason(c, p.id);
+                return {
+                  ...c,
+                  alvo: this.spellTarget(c, p.id),
+                  spellBlockedReason: reason,
+                  ...(c.alvoAutomatico && !reason
+                    ? { automaticTargetId: this.spellSelection(c, p.id, [])[0] }
+                    : {}),
+                };
+              }),
               deck: [...p.deck].sort((a, b) => a.nome.localeCompare(b.nome)),
             }
           : {}),
