@@ -289,7 +289,7 @@ test("Escudeiro intercepta coluna central e prioridade esquerda inclui Guerreiro
       fraqueza: [],
       resistencia: [],
     });
-    slot(g, "p1:front:2").card = instance("020", "p1", {
+    slot(g, "p1:front:2").card = instance("021", "p1", {
       hp: 12,
       fraqueza: [],
       resistencia: [],
@@ -308,6 +308,13 @@ test("Escudeiro intercepta coluna central e prioridade esquerda inclui Guerreiro
     });
     assert.equal(slot(g, "p1:front:0").card!.hpAtual, central ? 5 : 9);
     assert.equal(slot(g, "p1:front:2").card!.hpAtual, central ? 12 : 8);
+    const announcement = g.state
+      .events!.filter((e) => e.kind === "attack")
+      .at(-1)!.message;
+    if (central) {
+      assert.match(announcement!, /Alvo escolhido: Cavaleiro/);
+      assert.match(announcement!, /Escudeiro .*interceptou/);
+    } else assert.doesNotMatch(announcement!, /interceptou/);
   }
   const g = make();
   slot(g, "p1:front:0").card = instance("023");

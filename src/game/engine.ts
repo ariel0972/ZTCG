@@ -2184,9 +2184,14 @@ export class Game {
     if (!target) this.fail("Selecione um slot inimigo.");
     const targetError = this.attackTargetError(slot, card, target);
     if (targetError) this.fail(targetError);
+    let interception = "";
     if (card.tipo === "Tropa") {
       const interceptor = attackInterceptor(card, target, this.state.slots);
       if (interceptor && interceptor.card.id !== target.card?.id) {
+        const protection = interceptor.card.statuses.find(
+          (s) => s.nome === "Interceptar",
+        )?.origin;
+        interception = ` Alvo escolhido: ${target.card?.nome ?? enemy.mage.nome} (${enemy.nome}). ${interceptor.card.nome} (${enemy.nome}) interceptou ${protection ? `pela habilidade ${protection}` : "pela sua passiva"}.`;
         this.log(
           `${interceptor.card.nome} interceptou o ataque de ${card.nome} destinado a ${target.card?.nome ?? enemy.mage.nome}.`,
         );
@@ -2202,7 +2207,7 @@ export class Game {
     this.event(
       "attack",
       card,
-      `Ataque: ${card.nome} (${p.nome}) atacou ${announcedDefender.nome} (${this.player(announcedDefender.ownerId).nome}).`,
+      `Ataque: ${card.nome} (${p.nome}) atacou ${announcedDefender.nome} (${this.player(announcedDefender.ownerId).nome}).${interception}`,
     );
     card.attacked = true;
     p.combatStarted = true;

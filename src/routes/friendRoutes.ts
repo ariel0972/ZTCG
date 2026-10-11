@@ -53,6 +53,7 @@ export function friendRoutes(game: DurableGame) {
           avatarURL: user?.avatarURL,
           status: r.status,
           incoming: r.requestedBy !== req.userId,
+          requestedAt: r.createdAt,
         };
       }),
     });

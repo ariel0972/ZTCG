@@ -1,8 +1,9 @@
 import { createSiteNavigation } from "./site-navigation.js";
+import { createSocialNotifications } from "./social-notifications.js";
 export function token() {
   return sessionStorage.getItem("token") || localStorage.getItem("token");
 }
-let refreshing;
+let refreshing, socialNotifications;
 export async function api(path, options = {}, renewed = false) {
   const controller = new AbortController(),
     timeout = setTimeout(() => controller.abort(), 10000);
@@ -77,6 +78,7 @@ export function rememberSession(data, remember) {
   storage.setItem("playerProfile", JSON.stringify(data.user));
 }
 export async function logout() {
+  socialNotifications?.close();
   try {
     await api("/auth/logout", { method: "POST", body: "{}" });
   } catch {}
@@ -143,26 +145,15 @@ export async function navbar() {
     const button = node("button", "Sair", "quiet");
     button.onclick = logout;
     host.append(button);
-    const friendsLink = nav?.querySelector('a[href="/HTML/friends.html"]');
-    if (friendsLink) {
-      const updateInvites = async () => {
-        if (document.hidden || !token()) return;
-        try {
-          const result = await api("/friends/invites");
-          const count = result.invites.filter(
-            (i) => i.to === user.id && i.status === "pending",
-          ).length;
-          friendsLink.textContent = count ? `Amigos (${count})` : "Amigos";
-          friendsLink.title = count
-            ? `${count} convite(s) de partida recebido(s)`
-            : "Amizades e convites";
-        } catch {
-          /* A página atual continua disponível se a consulta falhar. */
-        }
-      };
-      void updateInvites();
-      window.setInterval(updateInvites, 10000);
-    }
+    socialNotifications?.close();
+    socialNotifications = createSocialNotifications({ user, api });
+    navigator.serviceWorker?.addEventListener("message", (event) => {
+      if (
+        event.data?.type === "social:open-invites" &&
+        event.data.userId === user.id
+      )
+        location.assign("/HTML/friends.html#invites");
+    });
     return user;
   } catch (e) {
     const link = node("a", "Entrar novamente");

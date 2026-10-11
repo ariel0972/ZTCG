@@ -1,0 +1,490 @@
+/* The field uses the viewport. The hand continues below it in normal flow. */
+@media (max-width: 1100px) {
+  .match-page.in-match > .topbar {
+    display: none;
+  }
+  .match-page.in-match .page {
+    max-width: none;
+    margin: 0 auto;
+    padding: 0 max(5px, env(safe-area-inset-right)) 0
+      max(5px, env(safe-area-inset-left));
+  }
+  .match-page.in-match .match-top {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 3px 0;
+    margin: 0;
+  }
+  .match-page.in-match .match-top .eyebrow {
+    display: none;
+  }
+  .match-page.in-match .match-top h1 {
+    margin: 0;
+    font-size: 12px;
+  }
+  .match-page.in-match .match-top .toolbar {
+    gap: 4px;
+    margin: 0;
+    flex-wrap: nowrap;
+  }
+  .match-page.in-match .match-top button {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+  .match-page.in-match .match-connection {
+    margin: 0;
+    font-size: 9px;
+  }
+  .match-page.in-match .battle-arena {
+    display: flex;
+    flex-direction: column;
+    border-radius: 12px;
+    overflow: visible;
+  }
+  .match-page.in-match .player-hud {
+    padding: 5px 8px;
+    gap: 4px;
+  }
+  .match-page.in-match .duelist-deck-name {
+    display: none;
+  }
+  .match-page.in-match .duelist-identity {
+    min-width: 0;
+    font-size: 11px;
+    gap: 5px;
+  }
+  .match-page.in-match .duelist-identity a {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .match-page.in-match .duelist-avatar {
+    width: 26px;
+    height: 26px;
+    font-size: 16px;
+  }
+  .match-page.in-match .duelist-resources {
+    gap: 8px;
+  }
+  .match-page.in-match .resource {
+    min-width: 27px;
+    font-size: 7px;
+    line-height: 1.1;
+  }
+  .match-page.in-match .resource b {
+    font-size: 15px;
+  }
+  .match-page.in-match .resource small {
+    display: block;
+    font-size: 7px;
+  }
+  .match-page.in-match .duelist-limits {
+    gap: 3px;
+  }
+  .match-page.in-match .limit-token {
+    font-size: 8px;
+    padding: 1px 4px;
+  }
+  .match-page.in-match .battle-board {
+    display: block;
+    padding: 0 4px;
+  }
+  .match-page.in-match .board-center {
+    width: 100%;
+  }
+  .match-page.in-match .board-row {
+    margin: 8px 0;
+    gap: 4px;
+  }
+  .match-page.in-match .front-row {
+    display: grid;
+    grid-template-columns: 22px repeat(3, minmax(0, 96px)) 22px;
+    justify-content: center;
+    gap: 4px;
+  }
+  .match-page.in-match .front-row .board-slot,
+  .match-page.in-match .front-row .board-slot-wrap {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    aspect-ratio: 0.78;
+  }
+  .match-page.in-match .front-row .board-slot-wrap > .board-slot {
+    height: 100%;
+    aspect-ratio: auto;
+  }
+  .match-page.in-match .board-slot[data-kind="Armamento"] {
+    width: 22px;
+    height: 40px;
+    min-height: 40px;
+    font-size: 0;
+  }
+  .match-page.in-match
+    .board-slot[data-kind="Armamento"]:not(.occupied)::after {
+    content: "⚔";
+    font-size: 12px;
+    display: grid;
+    place-items: center;
+    height: 100%;
+  }
+  .match-page.in-match .rear-row {
+    gap: 12px;
+    min-height: 96px;
+  }
+  .match-page.in-match .rear-row .board-slot[data-kind="Mago"] {
+    width: 65px;
+    height: 84px;
+    min-height: 84px;
+  }
+  .match-page.in-match .board-row .live-heading {
+    height: 20px;
+    padding: 2px 3px;
+  }
+  .match-page.in-match .board-row .live-name {
+    font-size: 9px;
+  }
+  .match-page.in-match .board-row .live-cost {
+    width: 16px;
+    height: 16px;
+    font-size: 11px;
+  }
+  .match-page.in-match .board-row .live-art {
+    inset: 20px 2px 25px;
+  }
+  .match-page.in-match .board-row .live-stat {
+    min-width: 20px;
+    height: 20px;
+    font-size: 14px;
+  }
+  .match-page.in-match .board-row .live-stats {
+    bottom: 2px;
+    left: 2px;
+    right: 2px;
+    padding: 0;
+  }
+  .match-page.in-match .board-row .live-type {
+    display: none;
+  }
+  .match-page.in-match .board-row .live-effects {
+    top: 21px;
+  }
+  .match-page.in-match .board-row .effect-token {
+    font-size: 8px;
+    padding: 0 2px;
+  }
+  .match-page.in-match .board-row .live-usage {
+    bottom: 25px;
+    font-size: 8px;
+    padding: 1px 2px;
+  }
+  .match-page.in-match .zone-piles {
+    position: absolute;
+    padding: 0 !important;
+    gap: 6px;
+    flex-direction: column;
+    margin: 0;
+  }
+  .match-page.in-match .enemy-zone-piles {
+    left: 3px;
+    top: 4px;
+  }
+  .match-page.in-match .own-zone-piles {
+    right: 3px;
+    bottom: 35px;
+  }
+  .match-page.in-match .zone-pile {
+    width: 34px;
+  }
+  .match-page.in-match .zone-pile img {
+    height: 39px;
+  }
+  .match-page.in-match .zone-pile-caption {
+    font-size: 7px;
+  }
+  .match-page.in-match .player-field {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px;
+  }
+  .match-page.in-match .player-rows {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  .match-page.in-match .turn-time {
+    grid-column: 1;
+    grid-row: 2;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 3px;
+  }
+  .match-page.in-match .turn-time > span {
+    display: none;
+  }
+  .match-page.in-match .turn-action {
+    grid-column: 2;
+    grid-row: 2;
+    justify-content: flex-end;
+  }
+  .match-page.in-match .turn-action button {
+    padding: 5px 10px;
+    font-size: 10px;
+    border-radius: 7px;
+  }
+  .match-page.in-match #turn-clock {
+    font-size: 10px;
+    padding: 5px 8px;
+  }
+  .match-page.in-match .arena-divider {
+    height: 10px;
+  }
+  .match-page.in-match .hand-dock {
+    padding: 12px 8px;
+    border-top: 1px solid #7594a244;
+  }
+  .match-page.in-match .hand-heading > span {
+    display: none;
+  }
+  .match-page.in-match .hand-heading h2 {
+    font-size: 13px;
+  }
+  .match-page.in-match .hand {
+    min-height: 140px;
+    padding: 8px 2px;
+    gap: 8px;
+  }
+  .match-page.in-match .battle-hand-card {
+    width: 96px;
+    height: 132px;
+  }
+  .match-page.in-match .hand-arrow {
+    flex-basis: 28px;
+    height: 44px;
+  }
+  .match-page.in-match .battle-footer {
+    gap: 8px;
+  }
+  .match-page.in-match .battle-footer .toolbar {
+    margin: 6px 0;
+    gap: 4px;
+  }
+  .match-page.in-match .battle-footer button {
+    padding: 5px 8px;
+    font-size: 10px;
+  }
+  .match-page.in-match .match-history {
+    margin: 6px 0;
+    font-size: 10px;
+  }
+  .match-page.in-match .battle-events {
+    top: 35px;
+    right: 8px;
+    width: 210px;
+  }
+  .match-page.in-match .battle-event {
+    padding: 4px 6px;
+    font-size: 10px;
+  }
+  .match-page.in-match .battle-event img {
+    width: 18px;
+    height: 25px;
+  }
+  .match-page.in-match .board-slot-wrap.mounted-slot {
+    display: block;
+    position: relative;
+  }
+  .match-page.in-match .mounted-slot > .board-slot {
+    height: 100%;
+  }
+  .match-page.in-match .rider-action {
+    position: absolute;
+    width: 54%;
+    height: 72%;
+    min-height: 0;
+    right: -2px;
+    top: -4px;
+    bottom: auto;
+    margin: 0;
+    padding: 0;
+    z-index: 2;
+  }
+  .match-page.in-match .rider-action > small {
+    display: none;
+  }
+  .match-page.in-match .rider-action .live-card {
+    height: 100%;
+  }
+  .match-page.in-match .rider-action .live-art {
+    height: auto;
+  }
+  .match-page.in-match .structure-action {
+    font-size: 8px;
+    padding: 2px;
+  }
+}
+@media (max-width: 1100px) and (orientation: landscape) and (max-height: 600px) {
+  .match-page.in-match {
+    --troop-height: clamp(68px, calc((100dvh - 156px) / 2), 156px);
+  }
+  .match-page.in-match .match-top > div:first-child {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .match-page.in-match .player-hud {
+    grid-template-columns: minmax(60px, 1fr) auto auto;
+    padding: 3px 8px;
+  }
+  .match-page.in-match .duelist-identity {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .match-page.in-match .duelist-limits {
+    grid-column: 2;
+    grid-row: 1;
+    flex-wrap: wrap;
+    max-width: 180px;
+  }
+  .match-page.in-match .duelist-resources {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .match-page.in-match .limit-token {
+    font-size: 7px;
+  }
+  .match-page.in-match .battle-board {
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr) 76px;
+    grid-template-rows: var(--troop-height) var(--troop-height) 28px;
+    gap: 8px 5px;
+    padding: 4px 3px;
+  }
+  .match-page.in-match .board-center,
+  .match-page.in-match .player-field,
+  .match-page.in-match .player-rows {
+    display: contents;
+  }
+  .match-page.in-match .board-center::before {
+    display: none;
+  }
+  .match-page.in-match .battle-arena[data-active-side="me"] .battle-board {
+    background: linear-gradient(to top, #b5e7ff26, transparent 55%);
+  }
+  .match-page.in-match .battle-arena[data-active-side="enemy"] .battle-board {
+    background: linear-gradient(to bottom, #b5e7ff26, transparent 55%);
+  }
+  .match-page.in-match #enemy-front {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .match-page.in-match #my-front {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .match-page.in-match .front-row {
+    grid-template-columns: 24px repeat(3, calc(var(--troop-height) * 0.78)) 24px;
+    margin: 0;
+    justify-content: space-evenly;
+  }
+  .match-page.in-match .front-row .board-slot,
+  .match-page.in-match .front-row .board-slot-wrap {
+    height: var(--troop-height);
+    min-height: 0;
+  }
+  .match-page.in-match .front-row .board-slot[data-kind="Armamento"] {
+    height: 42px;
+  }
+  .match-page.in-match .rear-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-content: center;
+    gap: 3px;
+    min-height: 0;
+    margin: 0;
+    width: 72px;
+  }
+  .match-page.in-match #enemy-back {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .match-page.in-match #my-back {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .match-page.in-match .rear-row .board-slot[data-kind="Mago"] {
+    order: -1;
+    width: 53px;
+    height: 68px;
+    min-height: 0;
+  }
+  .match-page.in-match .rear-row .board-slot[data-kind="Armamento"] {
+    width: 25px;
+    height: 18px;
+    min-height: 18px;
+  }
+  .match-page.in-match .zone-piles {
+    position: static;
+    justify-self: center;
+    align-self: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 72px;
+    gap: 6px;
+  }
+  .match-page.in-match .enemy-zone-piles {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .match-page.in-match .own-zone-piles {
+    grid-column: 3;
+    grid-row: 2;
+  }
+  .match-page.in-match .zone-pile {
+    width: 32px;
+  }
+  .match-page.in-match .zone-pile img {
+    height: 46px;
+  }
+  .match-page.in-match .arena-divider {
+    display: none;
+  }
+  .match-page.in-match .turn-time {
+    grid-column: 1 / 3;
+    grid-row: 3;
+  }
+  .match-page.in-match .turn-action {
+    grid-column: 2 / 4;
+    grid-row: 3;
+  }
+  .match-page.in-match .turn-action button {
+    margin-right: 8px;
+  }
+}
+@media (max-width: 560px) and (orientation: landscape) {
+  .match-page.in-match .battle-board {
+    grid-template-columns: 62px minmax(0, 1fr) 62px;
+  }
+  .match-page.in-match .front-row {
+    grid-template-columns: 18px repeat(3, calc(var(--troop-height) * 0.78)) 18px;
+    gap: 3px;
+  }
+  .match-page.in-match .rear-row,
+  .match-page.in-match .zone-piles {
+    width: 60px;
+  }
+  .match-page.in-match .zone-pile {
+    width: 27px;
+  }
+  .match-page.in-match .duelist-limits {
+    max-width: 150px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .battle-event {
+    transition: none;
+  }
+}

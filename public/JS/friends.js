@@ -12,6 +12,12 @@ let user,
   lastSnapshot;
 const $ = (id) => document.getElementById(id);
 createSocialTabs($("social-tabs"));
+function requestedTab() {
+  if (location.hash === "#invites") $("invites-tab").click();
+  else if (location.hash === "#requests") $("requests-tab").click();
+}
+requestedTab();
+window.addEventListener("hashchange", requestedTab);
 function person(player) {
   const identity = node("div", "", "social-person"),
     avatar = node("img"),

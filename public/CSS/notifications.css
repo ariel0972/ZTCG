@@ -1,0 +1,91 @@
+.social-notification-toggle {
+  position: fixed;
+  right: 16px;
+  bottom: 18px;
+  z-index: 145;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  background: #183743;
+  color: #e3ce9c;
+  font-size: 23px;
+  box-shadow: 0 4px 18px #0007;
+}
+.social-notification-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #b84c53;
+  color: white;
+  border-radius: 20px;
+  padding: 2px 5px;
+  font: 700 11px system-ui;
+}
+.social-notifications {
+  position: fixed;
+  right: 16px;
+  bottom: 72px;
+  z-index: 146;
+  width: min(360px, calc(100vw - 24px));
+  max-height: min(560px, calc(100dvh - 90px));
+  overflow-y: auto;
+  padding: 16px;
+  border: 1px solid #65828c;
+  border-radius: 16px;
+  background: #14242e;
+  box-shadow: 0 12px 40px #0009;
+  box-sizing: border-box;
+}
+.social-notification-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.social-notification-heading h2 {
+  font-size: 18px;
+  margin: 0;
+}
+.social-notification-item,
+.social-notification-toast {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  margin: 10px 0;
+  border: 1px solid #6993a066;
+  border-radius: 9px;
+  background: #1c3540;
+  color: #e4f2fa;
+  text-decoration: none;
+  font-size: 13px;
+}
+.social-notification-item[data-read="true"] {
+  background: #192b34;
+}
+.social-notifications > button {
+  font-size: 12px;
+  margin-top: 8px;
+}
+.social-notification-toasts {
+  position: fixed;
+  z-index: 145;
+  right: 16px;
+  top: 90px;
+  width: min(340px, calc(100vw - 32px));
+  pointer-events: none;
+}
+.social-notification-toast {
+  pointer-events: auto;
+  box-shadow: 0 8px 24px #0008;
+}
+.match-page.in-match .social-notification-toggle {
+  right: 8px;
+  bottom: 8px;
+  width: 34px;
+  height: 34px;
+  font-size: 18px;
+}
+.match-page.in-match .social-notification-toasts {
+  top: 40px;
+}

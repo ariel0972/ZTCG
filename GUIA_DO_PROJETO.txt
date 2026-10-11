@@ -904,7 +904,8 @@ Quando chegam mais avisos, uma fila limitada a 40 aguarda espaços livres,
 preservando o mínimo de 3 segundos dos avisos já visíveis. O histórico é completo.
 Efeitos elementais duram cerca de 3,4 segundos e respeitam movimento reduzido.
 Durante partidas em celular a navegação principal é escondida; em paisagem
-campo e mão ficam lado a lado. Tela inteira depende do suporte do navegador.
+o campo ocupa a área principal e a mão fica abaixo, acessível por rolagem.
+Tela inteira depende do suporte do navegador.
 O lobby mantém o menu, e Nova partida restaura a navegação.
 /ranking mostra pódio e lista paginada (20 abaixo do pódio). Vitórias totais
 exigem uma partida concluída; desempate por taxa exata e ordem de cadastro
@@ -919,3 +920,16 @@ As oito reações vêm da mesma fonte reactions.ts usada durante as partidas.
 - public/JS/rules.js — Inicializa navegação e apresenta reações obtidas da fonte compartilhada do motor.
 - public/CSS/community.css — Apresentação responsiva de ranking, pódio, lista e guia de regras.
 - tests/ranking.test.ts — Verifica classificação pública, estatísticas reais, elegibilidade, desempates, paginação, ausência de dados privados e páginas.
+
+ATUALIZAÇÃO — AVISOS SOCIAIS E CAMPO MOBILE (11/10/2026)
+- public/JS/social-notifications.js — Central de pedidos e convites em qualquer página autenticada; consulta a cada 5 segundos inclusive em segundo plano, deduplica por conta, permite ativar avisos no dispositivo e verifica partida ativa antes de redirecionar os dois participantes após aceite.
+- public/notification-worker.js — Worker somente de notificações: clicar no convite abre a aba de convites, sem cache ou interceptação de requisições do jogo.
+- public/CSS/notifications.css — Botão de notificações, contador de não lidas, painel e avisos pequenos; importado por app.css.
+- public/CSS/battle-mobile.css — Campo completo com cartas proporcionais, magos e pilhas nas laterais em paisagem; mão abaixo para rolagem. Mantém slots, montarias e alvos reais.
+- tests/social-notifications.test.ts — Pedidos recebidos, expiração, deduplicação, permissão explícita, aviso persistente em segundo plano e redirecionamento de ambos somente para partidas ativas.
+Ativar avisos no dispositivo pede permissão por clique. Convites fazem um toque
+curto quando o navegador permite áudio; aviso do sistema usa silent=false.
+O som e a entrega podem ser limitados pelo navegador, suspensão de abas ou
+configurações do dispositivo. Não há Web Push: o site precisa continuar aberto.
+Não há mudanças em regras de interceptação. O aviso do ataque mostra também o
+alvo escolhido e identifica a passiva/habilidade que fez outro defensor recebê-lo.
