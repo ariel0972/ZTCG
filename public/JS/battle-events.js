@@ -1,5 +1,7 @@
 // Sequence numbers survive persistence and prevent replay on reconnect.
+import { createBattleEffects } from "./battle-effects.js";
 export function createBattleEvents(host = document.body) {
+  const effects = createBattleEffects(host);
   const panel = document.createElement("section");
   panel.className = "battle-events";
   panel.setAttribute("aria-label", "Últimas jogadas");
@@ -20,6 +22,7 @@ export function createBattleEvents(host = document.body) {
     damage: "Dano recebido",
     notice: "Aviso",
     mount: "Montaria",
+    elementalReaction: "Reação elemental",
   };
   function show(event) {
     const card = event.card;
@@ -45,6 +48,8 @@ export function createBattleEvents(host = document.body) {
     );
     if (
       face &&
+      event.kind !== "damage" &&
+      event.kind !== "elementalReaction" &&
       !globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches
     ) {
       face.animate?.(
@@ -59,6 +64,7 @@ export function createBattleEvents(host = document.body) {
   return {
     notify(event) {
       show(event);
+      effects.show(event);
     },
     update(snapshot) {
       const events = snapshot.events || [];
@@ -66,11 +72,14 @@ export function createBattleEvents(host = document.body) {
         matchId = snapshot.id;
         sequence = events.at(-1)?.sequence || 0;
         panel.replaceChildren();
+        effects.reset();
         return;
       }
       const fresh = events.filter((e) => e.sequence > sequence);
       if (!fresh.length) return;
       sequence = fresh.at(-1).sequence;
+      // Keep field feedback for every hit, even when the toast list is capped.
+      for (const event of fresh) effects.show(event);
       for (const event of fresh.slice(-5)) {
         show(event);
       }
@@ -78,6 +87,7 @@ export function createBattleEvents(host = document.body) {
     close() {
       for (const timer of timers) clearTimeout(timer);
       timers.clear();
+      effects.close();
       panel.remove();
     },
   };

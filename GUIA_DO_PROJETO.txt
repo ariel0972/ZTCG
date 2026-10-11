@@ -501,6 +501,7 @@ Para arquivo novo, escrever sua responsabilidade aqui: audit/check exigem a entr
 - public/JS/admin.js — Controlador do catálogo: edição/importação JSON, modelos, validação e salvamento com expectedVersion.
 - public/JS/auth.js — API com timeout/renovação, sessão, navbar, avisos temporários e criação segura de elementos.
 - public/JS/battle-events.js — Avisos públicos por sequência de evento sem repetir histórico após reconexão.
+- public/JS/battle-effects.js — Animações breves das oito reações e do dano confirmado, com fraqueza/resistência, limite de efeitos e movimento reduzido.
 - public/JS/battle-ui.js — Face dinâmica da carta, bônus exibidos, sugestões de destinos e arraste/toque.
 - public/JS/card-backs.js — Lista versos e renderiza pilhas de deck/cemitério; preferência local de disposição da mesa.
 - public/JS/card-inspection.js — Inspeção por hover/foco/I/botão direito/toque, detalhes e imagem integral.
@@ -719,6 +720,7 @@ Para arquivo novo, escrever sua responsabilidade aqui: audit/check exigem a entr
 - tests/engine.test.ts — Contratos/decks, publicação executável, privacidade, rollback, alvos estruturais, combate e idempotência.
 - tests/frontend.test.ts — Interface de construtor/admin em DOM com catálogo, filtros, limite, detalhes, salvamento e segurança de texto.
 - tests/game-performance.test.ts — Snapshot imediato/atrasado, confirmação após falha de consulta e avisos sem repetição.
+- tests/battle-effects.test.ts — Eventos persistidos das reações, modificadores reais de dano, proteção por estrutura e efeitos visuais sem repetição.
 - tests/http.test.ts — Contas, decks, revisões, admin/catálogo, posse, rejeição de deck não executável e páginas sem banco.
 - tests/inspection.test.ts — Detalhes por hover/foco/teclado/toque e imagem integral da carta.
 - tests/mages.test.ts — Atributos, ativas/passivas dos magos de Fogo/Água e custo/bônus/cura.

@@ -1578,3 +1578,250 @@
     margin-left: 0;
   }
 }
+
+/* Transient server-confirmed effects: no continuous animation or input capture. */
+.battle-effects-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 115;
+  pointer-events: none;
+  overflow: hidden;
+}
+.battle-effect {
+  position: absolute;
+  pointer-events: none;
+}
+.battle-effect__wash {
+  position: absolute;
+  inset: 8px;
+  border-radius: 15px;
+  background: radial-gradient(ellipse, var(--effect-color), transparent 70%);
+  opacity: 0;
+  animation: battle-wash 1800ms ease-out both;
+}
+.battle-effect__symbol {
+  position: absolute;
+  top: 36%;
+  left: 50%;
+  font-size: 38px;
+  line-height: 1;
+  color: var(--effect-color);
+  text-shadow:
+    0 0 16px var(--effect-color),
+    0 2px 3px #000;
+  animation: battle-symbol 2000ms ease-out both;
+}
+.battle-effect__label {
+  position: absolute;
+  top: calc(64% + var(--label-offset, 0px));
+  left: 50%;
+  width: max-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  border: 1px solid var(--effect-color);
+  border-radius: 7px;
+  background: #10202bf2;
+  color: var(--effect-color);
+  font:
+    700 12px/1.3 system-ui,
+    sans-serif;
+  text-align: center;
+  box-shadow: 0 3px 12px #0008;
+  animation: battle-label 2350ms ease-out both;
+}
+.battle-effect__particle {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--effect-color);
+  box-shadow: 0 0 9px var(--effect-color);
+  animation: battle-particle 1500ms var(--delay) ease-out both;
+}
+.battle-effect[data-kind="reaction"] .battle-effect__label {
+  top: 84%;
+}
+.battle-effect--lava .battle-effect__wash,
+.battle-effect--lama .battle-effect__wash {
+  top: 55%;
+  border-radius: 50%;
+  border-bottom: 3px solid var(--effect-color);
+}
+.battle-effect--lava .battle-effect__particle {
+  height: 14px;
+  border-radius: 80% 20% 70% 30%;
+}
+.battle-effect--vapor .battle-effect__particle {
+  width: 25px;
+  height: 25px;
+  background: radial-gradient(circle, #effaffb0, transparent 70%);
+  box-shadow: none;
+  animation-name: battle-steam;
+}
+.battle-effect--lama .battle-effect__particle {
+  top: 65%;
+  width: 12px;
+  animation-name: battle-mud;
+}
+.battle-effect--erosao .battle-effect__particle,
+.battle-effect--congelar .battle-effect__particle {
+  border-radius: 1px;
+  transform: rotate(45deg);
+}
+.battle-effect--explosao .battle-effect__wash {
+  background: repeating-conic-gradient(
+    from 15deg,
+    transparent 0deg 25deg,
+    #ffcf6960 26deg 30deg
+  );
+}
+.battle-effect--zarconizado .battle-effect__symbol {
+  animation-name: battle-lightning;
+}
+.battle-effect--florescer .battle-effect__particle {
+  border-radius: 90% 0 90% 0;
+  animation-name: battle-steam;
+}
+.battle-effect--resistance .battle-effect__wash {
+  border: 2px solid var(--effect-color);
+  background: #91dfed18;
+}
+.battle-effect--damage .battle-effect__wash {
+  background: transparent;
+}
+.battle-effect--damage .battle-effect__particle {
+  display: none;
+}
+.battle-effect--still .battle-effect__wash {
+  animation: none;
+  opacity: 0.2;
+}
+.battle-effect--still .battle-effect__symbol {
+  animation: none;
+  transform: translateX(-50%);
+}
+.battle-effect--still .battle-effect__label {
+  animation: none;
+  transform: translateX(-50%);
+}
+.match-page .board-slot[data-terrain="Lama"] {
+  background-image: radial-gradient(
+    ellipse at bottom,
+    #8b603b70,
+    transparent 75%
+  );
+  border-color: #ac885c;
+}
+@keyframes battle-wash {
+  0% {
+    opacity: 0;
+    transform: scale(0.65);
+  }
+  25% {
+    opacity: 0.45;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.15);
+  }
+}
+@keyframes battle-symbol {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 10px) scale(0.5);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1.1);
+  }
+  65% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -20px);
+  }
+}
+@keyframes battle-label {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 6px);
+  }
+  12%,
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -14px);
+  }
+}
+@keyframes battle-particle {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.4);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--dy)) scale(0.2);
+  }
+}
+@keyframes battle-steam {
+  0% {
+    opacity: 0;
+    transform: translate(0, 15px) scale(0.5);
+  }
+  25% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), -45px) scale(1.4);
+  }
+}
+@keyframes battle-mud {
+  0% {
+    opacity: 0;
+    transform: translate(0, -10px);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), 30px) scale(0.3);
+  }
+}
+@keyframes battle-lightning {
+  0%,
+  30%,
+  50%,
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.8);
+  }
+  15%,
+  40%,
+  60% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.2);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .battle-effect * {
+    animation: none !important;
+  }
+  .battle-effect__wash {
+    opacity: 0.2;
+  }
+  .battle-effect__symbol,
+  .battle-effect__label {
+    transform: translateX(-50%);
+  }
+}

@@ -1,5 +1,21 @@
 import type { Card } from "../types/card";
 import type { Status } from "./status";
+import type { ReactionName } from "./reactions";
+
+export interface BattleDamage {
+  amount: number;
+  element?: Card["elemento"];
+  modifiers?: ("weakness" | "resistance")[];
+}
+export interface BattleEvent {
+  sequence: number;
+  kind: string;
+  message?: string;
+  card: { id: string; nome: string; imgURL: string; ownerId: string };
+  slotId?: string;
+  reaction?: ReactionName;
+  damage?: BattleDamage;
+}
 
 export interface Instance extends Card {
   id: string;
@@ -101,12 +117,7 @@ export interface State {
   players: Player[];
   slots: Slot[];
   log: string[];
-  events?: {
-    sequence: number;
-    kind: string;
-    message?: string;
-    card: { id: string; nome: string; imgURL: string; ownerId: string };
-  }[];
+  events?: BattleEvent[];
   eventSequence?: number;
 }
 export interface DeckDefinition {

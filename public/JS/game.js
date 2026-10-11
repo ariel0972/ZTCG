@@ -860,6 +860,7 @@ function slotView(slot) {
   const card = slot.card;
   button.dataset.kind = slot.kind;
   button.dataset.slotId = slot.id;
+  if (slot.terrain) button.dataset.terrain = slot.terrain.nome;
   if (card) {
     button.classList.add("occupied");
     if (card.attacked) button.classList.add("exhausted");

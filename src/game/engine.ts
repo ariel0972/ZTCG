@@ -1,5 +1,6 @@
 import { playableErrors } from "./capabilities";
 import type { Instance, Slot, Player, State, DeckDefinition } from "./state";
+import type { BattleEvent, BattleDamage } from "./state";
 import { slotCards } from "./state";
 import {
   adjacentAttackBonus,
@@ -480,13 +481,13 @@ export class Game {
       );
       return;
     }
-    if (element && target.fraqueza.includes(element)) remaining *= 2;
-    if (
-      element &&
+    const weakness = !!element && target.fraqueza.includes(element);
+    const resistance =
+      !!element &&
       target.resistencia.includes(element) &&
-      !this.has(target, "Vapor")
-    )
-      remaining = Math.floor(remaining / 2);
+      !this.has(target, "Vapor");
+    if (weakness) remaining *= 2;
+    if (resistance) remaining = Math.floor(remaining / 2);
     if (this.has(target, "armaduraPoderosa"))
       remaining = Math.max(0, remaining - 2);
     for (const reduction of target.statuses.filter(
@@ -523,7 +524,22 @@ export class Game {
       remaining,
       origin,
       hpBefore,
-      remaining === 0 && value > 0 ? "dano reduzido ou absorvido" : undefined,
+      [
+        remaining === 0 && value > 0 ? "dano reduzido ou absorvido" : "",
+        weakness ? `fraqueza a ${element === "Agua" ? "Água" : element}` : "",
+        resistance
+          ? `resistência a ${element === "Agua" ? "Água" : element}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("; ") || undefined,
+      {
+        element,
+        modifiers: [
+          ...(weakness ? ["weakness" as const] : []),
+          ...(resistance ? ["resistance" as const] : []),
+        ],
+      },
     );
     const killer = source ?? attacker;
     if (hpBefore > 0 && target.hpAtual <= 0 && killer)
@@ -563,10 +579,14 @@ export class Game {
     origin: string,
     before: number,
     detail?: string,
+    elemental?: Omit<BattleDamage, "amount">,
   ) {
     const message = `${origin}: ${target.nome} (${this.player(target.ownerId).nome}) recebeu ${value} de dano${detail ? `, ${detail}` : ""}. Vida: ${Math.max(0, before)} → ${Math.max(0, target.hpAtual)}.`;
     this.log(message);
-    this.event("damage", target, message);
+    this.event("damage", target, message, {
+      slotId: this.targetSlot(target.id)?.id,
+      damage: { amount: value, ...elemental },
+    });
   }
   private heal(
     card: Instance,
@@ -623,11 +643,17 @@ export class Game {
     delete card.revivedFromGraveyard;
     delete card.killedBy;
   }
-  private event(kind: string, card: Instance, message?: string) {
+  private event(
+    kind: string,
+    card: Pick<Instance, "id" | "nome" | "imgURL" | "ownerId">,
+    message?: string,
+    details?: Pick<BattleEvent, "slotId" | "reaction" | "damage">,
+  ) {
     this.state.eventSequence = (this.state.eventSequence ?? 0) + 1;
     (this.state.events ??= []).push({
       sequence: this.state.eventSequence,
       kind,
+      ...details,
       ...(message ? { message } : {}),
       card: {
         id: card.id,
@@ -1314,6 +1340,17 @@ export class Game {
         this.fail(
           "Esta reação pode causar dano e não pode ser ativada na preparação.",
         );
+      this.event(
+        "elementalReaction",
+        card ?? {
+          id: slot.id,
+          nome: `Campo ${slot.column + 1}`,
+          imgURL: "",
+          ownerId: slot.ownerId,
+        },
+        `${reaction} ativado.`,
+        { slotId: slot.id, reaction },
+      );
       this.resolveReaction(reaction, ownerId, card, slot);
       this.log(
         `${reaction} foi ativado em ${card?.nome ?? `campo ${slot.column + 1}`}.`,

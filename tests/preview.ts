@@ -164,8 +164,35 @@ void fakeDatabase().then(async (db) => {
         instance(id, owner),
       );
     }
+    if (process.env.PREVIEW_REACTIONS === "1") {
+      for (let column = 0; column < 3; column++) {
+        const target = instance("021", enemy.ownerId);
+        target.nome = ["Alvo de Lava", "Alvo resistente", "Alvo vulnerável"][
+          column
+        ];
+        target.hp = target.hpAtual = 30;
+        target.elemento = column === 0 ? "Terra" : "Fogo";
+        target.resistencia = column === 1 ? ["Fogo"] : [];
+        target.fraqueza = column === 2 ? ["Fogo"] : [];
+        game.state.slots.find(
+          (s) => s.id === `${enemy.ownerId}:front:${column}`,
+        )!.card = target;
+      }
+      game.player(owner).hand = ["Fogo", "Agua"].map((element) => {
+        const spell = instance("001", owner);
+        spell.nome =
+          element === "Fogo" ? "Chamas da prévia" : "Águas da prévia";
+        spell.elemento = element as Instance["elemento"];
+        spell.custoMana = 1;
+        spell.alvo = "TodasTropasInimigas";
+        spell.maxAlvos = 3;
+        spell.efeitos = [{ id: "damage", valor: 4 }];
+        return spell;
+      });
+    }
     room.game = game.exportState();
-    room.deadline = Date.now() + 120000;
+    room.deadline =
+      Date.now() + (process.env.PREVIEW_REACTIONS === "1" ? 1200000 : 120000);
     // Keep the fictitious opponent connected for this isolated visual fixture.
     await store.touch(enemy.ownerId, Date.now() + 3600000);
   }
