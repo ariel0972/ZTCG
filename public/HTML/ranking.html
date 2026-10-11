@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Ranking · Zacornia</title>
+    <link rel="icon" href="/assets/icons/favicon.svg" />
+    <link rel="stylesheet" href="/CSS/app.css" />
+    <link rel="stylesheet" href="/CSS/community.css" />
+    <script type="module" src="/JS/ranking.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">ZACORNIA <small>TRADING CARD GAME</small></a>
+      <nav aria-label="Principal">
+        <a href="/">Decks</a><a href="/HTML/index.html">Jogar</a
+        ><a href="/HTML/perfil.html">Perfil</a>
+      </nav>
+      <div id="account" class="account"></div>
+    </header>
+    <main class="community-page">
+      <p class="eyebrow">DUELISTAS DE ZACORNIA</p>
+      <h1>Ranking</h1>
+      <p class="muted">
+        Veja o ranking da comunidade. Descubra quem mais vence e acompanhe
+        quantas partidas cada jogador já disputou.
+      </p>
+      <p class="ranking-intro">
+        Você entra no ranking ao concluir sua primeira partida. Na aba de taxa
+        de vitória, é preciso ter pelo menos 10 partidas completas.
+      </p>
+      <div class="ranking-tabs" role="tablist" aria-label="Classificação">
+        <button
+          id="wins-tab"
+          role="tab"
+          aria-selected="true"
+          aria-controls="ranking-panel"
+        >
+          Vitórias totais <small>Toda a jornada</small>
+        </button>
+        <button
+          id="rate-tab"
+          role="tab"
+          aria-selected="false"
+          aria-controls="ranking-panel"
+          tabindex="-1"
+        >
+          Taxa de vitória <small>A partir de 10 partidas</small>
+        </button>
+      </div>
+      <section
+        id="ranking-panel"
+        role="tabpanel"
+        aria-labelledby="wins-tab"
+        aria-busy="true"
+        class="ranking-surface"
+      >
+        <div class="ranking-heading">
+          <div>
+            <p class="eyebrow" id="ranking-kicker">VITÓRIAS TOTAIS</p>
+            <h2 id="ranking-title">Os melhores duelistas</h2>
+          </div>
+          <span id="ranking-total" class="muted"></span>
+        </div>
+        <p id="ranking-status" role="status" class="muted">
+          Carregando classificação…
+        </p>
+        <div id="ranking-podium" class="ranking-podium"></div>
+        <ol id="ranking-list" class="ranking-list" start="4"></ol>
+        <div class="ranking-pagination">
+          <button id="ranking-prev" hidden>Anterior</button
+          ><span id="ranking-page"></span
+          ><button id="ranking-next" hidden>Próxima</button
+          ><button id="ranking-retry" hidden>Tentar novamente</button>
+        </div>
+      </section>
+      <p id="ranking-criteria" class="hint">
+        Vitórias de toda a conta. Empates: maior taxa de vitória e, depois,
+        ordem de cadastro.
+      </p>
+    </main>
+    <p id="message" class="message" role="status" hidden></p>
+  </body>
+</html>

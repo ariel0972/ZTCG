@@ -1,4 +1,6 @@
 export interface Status {
+  originOwnerId?: string;
+  origin?: string;
   nome: string;
   valor?: number;
   turnosRestantes: number;

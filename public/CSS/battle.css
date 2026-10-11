@@ -109,7 +109,7 @@
   isolation: isolate;
   width: 100%;
   height: 100%;
-  border-radius: 12px;
+  border-radius: 8px;
   overflow: hidden;
   border: 1px solid #bda572;
   background: #1b252e;
@@ -1302,33 +1302,45 @@
   top: 80px;
   z-index: 40;
   display: grid;
-  gap: 8px;
+  gap: 5px;
   pointer-events: none;
-  width: min(260px, 65vw);
+  width: min(235px, 60vw);
 }
 .battle-event {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
+  gap: 7px;
+  padding: 6px 8px;
   background: #12232ef2;
   border: 1px solid #7b987e;
   border-radius: 10px;
   box-shadow: 0 6px 18px #0005;
-  font-size: 0.85rem;
-  animation: battle-event-in 0.3s ease-out;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  animation: battle-event-in 0.45s ease-out;
+  transition:
+    opacity 0.65s,
+    transform 0.65s;
 }
 .battle-event img {
-  width: 38px;
-  height: 53px;
+  width: 24px;
+  height: 34px;
   object-fit: contain;
   border-radius: 3px;
 }
-.battle-event--death {
-  border-color: #c66b73;
+.battle-event[data-side="enemy"] {
+  border-color: #d47e86;
+  background: #381c25f2;
+  color: #ffe4e6;
 }
-.battle-event--spell {
-  border-color: #69b6e7;
+.battle-event[data-side="me"] {
+  border-color: #66b7ed;
+  background: #122b42f2;
+  color: #e0f2ff;
+}
+.battle-event--leaving {
+  opacity: 0;
+  transform: translateX(18px);
 }
 @keyframes battle-event-in {
   from {
@@ -1344,15 +1356,15 @@
   .battle-events {
     top: 65px;
     right: 8px;
-    width: 210px;
+    width: min(200px, 60vw);
   }
   .battle-event {
-    font-size: 0.75rem;
-    padding: 6px;
+    font-size: 0.7rem;
+    padding: 5px 7px;
   }
   .battle-event img {
-    width: 26px;
-    height: 36px;
+    width: 20px;
+    height: 28px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1597,7 +1609,7 @@
   border-radius: 15px;
   background: radial-gradient(ellipse, var(--effect-color), transparent 70%);
   opacity: 0;
-  animation: battle-wash 1800ms ease-out both;
+  animation: battle-wash 2500ms ease-out both;
 }
 .battle-effect__symbol {
   position: absolute;
@@ -1609,7 +1621,7 @@
   text-shadow:
     0 0 16px var(--effect-color),
     0 2px 3px #000;
-  animation: battle-symbol 2000ms ease-out both;
+  animation: battle-symbol 2800ms ease-out both;
 }
 .battle-effect__label {
   position: absolute;
@@ -1628,7 +1640,7 @@
     sans-serif;
   text-align: center;
   box-shadow: 0 3px 12px #0008;
-  animation: battle-label 2350ms ease-out both;
+  animation: battle-label 3350ms ease-out both;
 }
 .battle-effect__particle {
   position: absolute;
@@ -1639,7 +1651,7 @@
   border-radius: 50%;
   background: var(--effect-color);
   box-shadow: 0 0 9px var(--effect-color);
-  animation: battle-particle 1500ms var(--delay) ease-out both;
+  animation: battle-particle 2100ms var(--delay) ease-out both;
 }
 .battle-effect[data-kind="reaction"] .battle-effect__label {
   top: 84%;
@@ -1823,5 +1835,680 @@
   .battle-effect__symbol,
   .battle-effect__label {
     transform: translateX(-50%);
+  }
+}
+
+/* Navigation stays available in the lobby; the mobile duel uses its screen. */
+@media (max-width: 1100px) {
+  .match-page.in-match > .topbar {
+    display: none;
+  }
+  .match-page.in-match .page {
+    margin: 4px auto;
+  }
+  .match-page.in-match .battle-events {
+    top: 34px;
+    right: 8px;
+  }
+}
+@media (max-width: 700px) and (orientation: portrait) {
+  .match-page.in-match .match-top .eyebrow {
+    display: none;
+  }
+  .match-page.in-match .match-top h1 {
+    margin: 0;
+  }
+  .match-page.in-match .match-connection {
+    margin: 0;
+    font-size: 9px;
+  }
+  .match-page.in-match .board-row {
+    margin: 5px 0;
+  }
+  .match-page.in-match .front-row .board-slot,
+  .match-page.in-match .front-row .board-slot-wrap {
+    height: 100px;
+    min-height: 100px;
+  }
+  .match-page.in-match .rear-row .board-slot[data-kind="Mago"] {
+    height: 78px;
+    min-height: 78px;
+  }
+  .match-page.in-match .board-slot[data-kind="Armamento"] {
+    height: 48px;
+    min-height: 48px;
+  }
+  .match-page.in-match .player-hud {
+    padding: 5px 8px;
+    gap: 4px;
+  }
+  .match-page.in-match .hand-heading > span {
+    display: none;
+  }
+  .match-page.in-match .hand {
+    padding: 9px 3px;
+    min-height: 132px;
+  }
+  .match-page.in-match .battle-hand-card {
+    height: 114px;
+    width: 82px;
+  }
+}
+@media (max-width: 1100px) and (orientation: landscape) and (max-height: 600px) {
+  .match-page.in-match .page {
+    max-width: none;
+    padding: 0 max(5px, env(safe-area-inset-right)) 0
+      max(5px, env(safe-area-inset-left));
+    margin: 2px auto;
+  }
+  .match-page.in-match .match-top {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    margin: 0 0 2px;
+    padding: 0 4px;
+  }
+  .match-page.in-match .match-top .eyebrow {
+    display: none;
+  }
+  .match-page.in-match .match-top h1 {
+    display: inline;
+    font-size: 12px;
+    margin: 0;
+  }
+  .match-page.in-match .match-top > div:first-child {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .match-page.in-match .match-top .toolbar {
+    margin: 0;
+    gap: 5px;
+  }
+  .match-page.in-match .match-top button {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+  .match-page.in-match .match-connection {
+    margin: 0;
+    font-size: 9px;
+  }
+  .match-page.in-match .battle-arena {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 142px;
+    border-radius: 12px;
+  }
+  .match-page.in-match .enemy-hud {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .match-page.in-match .battle-board {
+    grid-column: 1;
+    grid-row: 2;
+    grid-template-columns: 42px minmax(0, 1fr) 42px;
+    padding: 0 3px;
+    gap: 3px;
+  }
+  .match-page.in-match .my-hud {
+    grid-column: 1;
+    grid-row: 3;
+  }
+  .match-page.in-match .hand-dock {
+    grid-column: 2;
+    grid-row: 1 / 4;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    padding: 8px 4px;
+    border-left: 1px solid #53687544;
+  }
+  .match-page.in-match .hand-heading {
+    justify-content: center;
+  }
+  .match-page.in-match .hand-heading h2 {
+    font-size: 11px;
+  }
+  .match-page.in-match .hand-heading h2 span {
+    display: block;
+    margin: 4px 0 0;
+    text-align: center;
+  }
+  .match-page.in-match .hand-heading > span {
+    display: none;
+  }
+  .match-page.in-match .hand-carousel {
+    gap: 3px;
+  }
+  .match-page.in-match .hand {
+    min-height: 0;
+    padding: 10px 2px;
+    gap: 6px;
+  }
+  .match-page.in-match .battle-hand-card {
+    width: 78px;
+    height: 110px;
+  }
+  .match-page.in-match .hand-arrow {
+    flex-basis: 23px;
+    height: 44px;
+    font-size: 24px;
+  }
+  .match-page.in-match .board-center {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .match-page.in-match .zone-piles {
+    flex-direction: column;
+    gap: 8px;
+    padding: 4px 0 !important;
+  }
+  .match-page.in-match .enemy-zone-piles {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .match-page.in-match .own-zone-piles {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .match-page.in-match .zone-pile {
+    width: 40px;
+  }
+  .match-page.in-match .zone-pile img {
+    height: 42px;
+  }
+  .match-page.in-match .zone-pile-caption {
+    font-size: 7px;
+  }
+  .match-page.in-match .board-row {
+    gap: 4px;
+    margin: 3px 0;
+  }
+  .match-page.in-match .rear-row {
+    gap: 12px;
+  }
+  .match-page.in-match .front-row .board-slot,
+  .match-page.in-match .front-row .board-slot-wrap {
+    width: clamp(64px, 10vw, 84px);
+    height: 67px;
+    min-height: 67px;
+  }
+  .match-page.in-match .board-slot[data-kind="Armamento"] {
+    width: 28px;
+    height: 40px;
+    min-height: 40px;
+    font-size: 7px;
+  }
+  .match-page.in-match .rear-row .board-slot[data-kind="Mago"] {
+    width: 72px;
+    height: 52px;
+    min-height: 52px;
+  }
+  .match-page.in-match .board-row .live-heading {
+    height: 16px;
+    padding: 1px 3px;
+  }
+  .match-page.in-match .board-row .live-name {
+    font-size: 8px;
+  }
+  .match-page.in-match .board-row .live-cost {
+    width: 14px;
+    height: 14px;
+    font-size: 9px;
+  }
+  .match-page.in-match .board-row .live-art {
+    inset: 16px 2px 19px;
+  }
+  .match-page.in-match .board-row .live-stat {
+    min-width: 17px;
+    height: 17px;
+    font-size: 12px;
+  }
+  .match-page.in-match .board-row .live-stats {
+    bottom: 1px;
+    padding: 0 3px;
+  }
+  .match-page.in-match .board-row .live-type {
+    display: none;
+  }
+  .match-page.in-match .board-row .live-effects {
+    top: 16px;
+  }
+  .match-page.in-match .board-row .effect-token {
+    font-size: 7px;
+    padding: 0 2px;
+  }
+  .match-page.in-match .board-row .live-usage {
+    bottom: 19px;
+    font-size: 7px;
+    padding: 0;
+  }
+  .match-page.in-match .player-hud {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 3px 8px;
+    gap: 3px;
+  }
+  .match-page.in-match .duelist-identity {
+    grid-column: 1;
+    grid-row: 1;
+    font-size: 10px;
+    gap: 5px;
+    min-width: 0;
+  }
+  .match-page.in-match .duelist-identity a {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .match-page.in-match .duelist-avatar {
+    width: 22px;
+    height: 22px;
+    font-size: 14px;
+  }
+  .match-page.in-match .duelist-deck-name {
+    display: none;
+  }
+  .match-page.in-match .duelist-resources {
+    grid-column: 2;
+    grid-row: 1;
+    gap: 8px;
+  }
+  .match-page.in-match .resource {
+    min-width: 25px;
+  }
+  .match-page.in-match .resource b {
+    font-size: 13px;
+    line-height: 1.1;
+  }
+  .match-page.in-match .resource small {
+    font-size: 6px;
+  }
+  .match-page.in-match .duelist-limits {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    gap: 4px;
+    flex-wrap: nowrap;
+  }
+  .match-page.in-match .limit-token {
+    font-size: 7px;
+    padding: 1px 5px;
+  }
+  .match-page.in-match .arena-divider {
+    height: 5px;
+    font-size: 8px;
+  }
+  .match-page.in-match .player-field {
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+  }
+  .match-page.in-match .player-rows {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  .match-page.in-match .turn-time {
+    grid-column: 1;
+    grid-row: 2;
+    gap: 4px;
+    flex-direction: row;
+    justify-content: flex-start;
+  }
+  .match-page.in-match .turn-time > span {
+    display: none;
+  }
+  .match-page.in-match .turn-action {
+    grid-column: 2;
+    grid-row: 2;
+    justify-content: flex-end;
+  }
+  .match-page.in-match .turn-action button {
+    padding: 4px 8px;
+    border-radius: 7px;
+    font-size: 9px;
+  }
+  .match-page.in-match #turn-clock {
+    font-size: 10px;
+    padding: 3px 7px;
+  }
+  .match-page.in-match .battle-footer {
+    gap: 8px;
+  }
+  .match-page.in-match .battle-footer .toolbar {
+    margin: 3px 0;
+    gap: 4px;
+  }
+  .match-page.in-match .battle-footer button {
+    padding: 4px 7px;
+    font-size: 9px;
+  }
+  .match-page.in-match .match-history {
+    margin: 4px 0;
+    font-size: 9px;
+  }
+  .match-page.in-match .match-history summary {
+    font-size: 9px;
+  }
+  .match-page.in-match .battle-events {
+    width: 190px;
+    top: 28px;
+  }
+  .match-page.in-match .battle-event {
+    padding: 4px 6px;
+    font-size: 9px;
+  }
+  .match-page.in-match .battle-event img {
+    width: 18px;
+    height: 25px;
+  }
+  .match-page.in-match .board-slot-wrap.mounted-slot {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    height: 67px;
+    min-height: 67px;
+  }
+  .match-page.in-match .mounted-slot > .board-slot {
+    width: 100%;
+    height: 67px;
+    min-height: 67px;
+  }
+  .match-page.in-match .rider-action {
+    width: 100%;
+    height: 67px;
+    padding: 0;
+    margin: 0;
+  }
+  .match-page.in-match .rider-action > small {
+    display: none;
+  }
+  .match-page.in-match .rider-action .live-card {
+    height: 67px;
+  }
+  .match-page.in-match .rider-action .live-heading {
+    height: 16px;
+  }
+  .match-page.in-match .rider-action .live-art {
+    inset: 16px 2px 19px;
+  }
+  .match-page.in-match .structure-action {
+    font-size: 7px;
+    padding: 1px 2px;
+  }
+}
+
+@media (max-width: 1100px) and (orientation: landscape) and (max-height: 600px) {
+  .match-page.in-match .front-row .board-slot,
+  .match-page.in-match .front-row .board-slot-wrap {
+    height: clamp(44px, 15vh, 67px);
+    min-height: clamp(44px, 15vh, 67px);
+  }
+  .match-page.in-match .rear-row .board-slot[data-kind="Mago"] {
+    height: clamp(34px, 11vh, 52px);
+    min-height: clamp(34px, 11vh, 52px);
+  }
+  .match-page.in-match .board-row {
+    margin: 2px 0;
+  }
+  .match-page.in-match .player-hud {
+    grid-template-columns: minmax(36px, 1fr) auto auto;
+  }
+  .match-page.in-match .duelist-resources {
+    grid-column: 3;
+  }
+  .match-page.in-match .resource {
+    font-size: 6px;
+    line-height: 1.1;
+  }
+  .match-page.in-match .resource small {
+    display: block;
+  }
+  .match-page.in-match .duelist-limits {
+    grid-column: 2;
+    grid-row: 1;
+    flex-wrap: wrap;
+    max-width: 174px;
+    gap: 2px;
+  }
+  .match-page.in-match .limit-token {
+    font-size: 6px;
+    padding: 1px 3px;
+  }
+  .match-page.in-match .board-slot-wrap.mounted-slot,
+  .match-page.in-match .mounted-slot > .board-slot,
+  .match-page.in-match .rider-action,
+  .match-page.in-match .rider-action .live-card {
+    height: clamp(44px, 15vh, 67px);
+    min-height: clamp(44px, 15vh, 67px);
+  }
+  .match-page.in-match .rider-action .live-art {
+    height: auto;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .battle-event {
+    transition: none;
+  }
+}
+@media (max-width: 1100px) and (orientation: landscape) and (max-height: 600px) {
+  .match-page.in-match .board-slot[data-kind="Armamento"] {
+    height: 28px;
+    min-height: 28px;
+  }
+  .match-page.in-match .battle-footer button {
+    padding: 3px 6px;
+    font-size: 8px;
+  }
+}
+@media (max-width: 1100px) and (orientation: landscape) and (max-height: 600px) {
+  .match-page.in-match .page {
+    margin: 0 auto;
+  }
+  .match-page.in-match .match-top {
+    margin-bottom: 0;
+  }
+  .match-page.in-match .match-top button {
+    padding: 3px 8px;
+  }
+}
+@media (max-width: 700px) and (orientation: portrait) {
+  .match-page.in-match .match-top {
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    padding: 0;
+    margin-bottom: 4px;
+  }
+  .match-page.in-match .match-top > div:first-child {
+    min-width: 0;
+  }
+  .match-page.in-match .match-top h1 {
+    font-size: 12px;
+  }
+  .match-page.in-match .match-top button {
+    font-size: 9px;
+    padding: 5px 6px;
+  }
+  .match-page.in-match .match-top .toolbar {
+    gap: 4px;
+    flex-wrap: nowrap;
+  }
+  .match-page.in-match .battle-board {
+    grid-template-columns: 32px minmax(0, 1fr) 32px;
+    padding: 0 2px;
+    gap: 2px;
+  }
+  .match-page.in-match .board-center {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .match-page.in-match .zone-piles {
+    flex-direction: column;
+    padding: 4px 0 !important;
+    gap: 8px;
+  }
+  .match-page.in-match .enemy-zone-piles {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .match-page.in-match .own-zone-piles {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .match-page.in-match .zone-pile {
+    width: 30px;
+  }
+  .match-page.in-match .zone-pile img {
+    height: 42px;
+  }
+  .match-page.in-match .zone-pile-caption {
+    font-size: 7px;
+  }
+  .match-page.in-match .board-row {
+    gap: 3px;
+    margin: 4px 0;
+  }
+  .match-page.in-match .front-row .board-slot,
+  .match-page.in-match .front-row .board-slot-wrap {
+    width: clamp(48px, 17vw, 75px);
+    height: clamp(66px, 11vh, 90px);
+    min-height: clamp(66px, 11vh, 90px);
+  }
+  .match-page.in-match .board-slot[data-kind="Armamento"] {
+    width: 16px;
+    height: 34px;
+    min-height: 34px;
+    font-size: 6px;
+    overflow-wrap: anywhere;
+  }
+  .match-page.in-match .rear-row .board-slot[data-kind="Mago"] {
+    width: 64px;
+    height: clamp(50px, 8vh, 68px);
+    min-height: clamp(50px, 8vh, 68px);
+  }
+  .match-page.in-match .board-row .live-heading {
+    height: 20px;
+    padding: 2px;
+  }
+  .match-page.in-match .board-row .live-name {
+    font-size: 8px;
+  }
+  .match-page.in-match .board-row .live-cost {
+    width: 15px;
+    height: 15px;
+    font-size: 10px;
+  }
+  .match-page.in-match .board-row .live-art {
+    inset: 20px 2px 23px;
+  }
+  .match-page.in-match .board-row .live-stat {
+    height: 18px;
+    min-width: 18px;
+    font-size: 13px;
+  }
+  .match-page.in-match .board-row .live-stats {
+    bottom: 2px;
+    padding: 0 2px;
+  }
+  .match-page.in-match .board-row .live-usage {
+    bottom: 22px;
+    font-size: 7px;
+  }
+  .match-page.in-match .board-row .live-effects {
+    top: 21px;
+  }
+  .match-page.in-match .board-row .effect-token {
+    font-size: 7px;
+    padding: 0 1px;
+  }
+  .match-page.in-match .duelist-identity {
+    font-size: 10px;
+    gap: 4px;
+    min-width: 0;
+  }
+  .match-page.in-match .duelist-identity a {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .match-page.in-match .duelist-deck-name {
+    display: none;
+  }
+  .match-page.in-match .duelist-avatar {
+    width: 24px;
+    height: 24px;
+  }
+  .match-page.in-match .resource {
+    font-size: 7px;
+    line-height: 1.1;
+  }
+  .match-page.in-match .resource small {
+    display: block;
+  }
+  .match-page.in-match .resource b {
+    font-size: 15px;
+  }
+  .match-page.in-match .duelist-resources {
+    gap: 6px;
+  }
+  .match-page.in-match .limit-token {
+    font-size: 7px;
+    padding: 1px 4px;
+  }
+  .match-page.in-match .turn-time {
+    gap: 2px;
+  }
+  .match-page.in-match #turn-clock {
+    font-size: 10px;
+    padding: 4px 6px;
+  }
+  .match-page.in-match .turn-action button {
+    padding: 6px 8px;
+    font-size: 10px;
+    border-radius: 8px;
+  }
+  .match-page.in-match .hand-dock {
+    padding: 6px 6px 0;
+  }
+  .match-page.in-match .hand {
+    min-height: 108px;
+    padding: 8px 2px;
+  }
+  .match-page.in-match .battle-hand-card {
+    width: 70px;
+    height: 92px;
+  }
+  .match-page.in-match .hand-arrow {
+    height: 40px;
+    flex-basis: 25px;
+  }
+  .match-page.in-match .battle-footer .toolbar {
+    gap: 4px;
+    margin: 5px 0;
+  }
+  .match-page.in-match .battle-footer button {
+    font-size: 9px;
+    padding: 5px 6px;
+  }
+  .match-page.in-match .match-history {
+    margin: 5px 0;
+  }
+  .match-page.in-match .match-history summary {
+    font-size: 9px;
+  }
+  .match-page.in-match .board-slot-wrap.mounted-slot {
+    height: auto;
+    min-height: 0;
+  }
+}
+@media (max-width: 700px) {
+  .match-page.in-match .board-slot[data-kind="Armamento"]:not(.occupied) {
+    font-size: 0;
+  }
+  .match-page.in-match
+    .board-slot[data-kind="Armamento"]:not(.occupied)::after {
+    content: "⚔";
+    font-size: 10px;
+    display: grid;
+    place-items: center;
+    height: 100%;
   }
 }

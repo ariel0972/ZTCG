@@ -88,7 +88,7 @@ export function createBattleEffects(host = document.body) {
         },
         { transform: "translateX(0)", boxShadow: "0 0 0 transparent" },
       ],
-      { duration: 600, easing: "ease-out" },
+      { duration: 950, easing: "ease-out" },
     );
     while (animations.size >= 16) {
       const oldest = animations.values().next().value;
@@ -106,7 +106,7 @@ export function createBattleEffects(host = document.body) {
       if (doc.hidden) return;
       const reaction =
         event.kind === "elementalReaction" && reactions[event.reaction];
-      const damage = event.kind === "damage" && event.damage;
+      const damage = ["damage", "block"].includes(event.kind) && event.damage;
       if (
         !reaction &&
         (!damage || !Number.isFinite(damage.amount) || damage.amount < 0)
@@ -202,7 +202,7 @@ export function createBattleEffects(host = document.body) {
       layer.append(effect);
       active.set(effect, {
         anchor,
-        timer: setTimeout(() => remove(effect), 2450),
+        timer: setTimeout(() => remove(effect), 3450),
       });
       if (damage) flash(anchor, variant, color);
     },

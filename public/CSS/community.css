@@ -1,0 +1,318 @@
+.community-page {
+  max-width: 1150px;
+  margin: 42px auto;
+  padding: 0 24px;
+}
+.ranking-tabs {
+  display: flex;
+  gap: 12px;
+  margin: 26px 0 18px;
+}
+.ranking-tabs button {
+  min-width: 200px;
+  padding: 16px 20px;
+  text-align: left;
+  font-weight: 700;
+}
+.ranking-tabs small {
+  display: block;
+  margin-top: 6px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.ranking-tabs [aria-selected="true"] {
+  background: linear-gradient(135deg, #3f5142, #28382f);
+  border-color: var(--accent);
+  color: #f4ddaa;
+}
+.ranking-surface {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: linear-gradient(135deg, #1d292b, #151d23);
+}
+.ranking-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 26px;
+  border-bottom: 1px solid var(--line);
+}
+.ranking-heading h2 {
+  margin: 0;
+}
+#ranking-status {
+  padding: 22px;
+  margin: 0;
+}
+.ranking-podium {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: end;
+  padding: 42px 24px 24px;
+}
+.podium-player {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 14px 24px;
+  min-height: 250px;
+  border: 1px solid #7c8d9b;
+  border-radius: 16px;
+  background: radial-gradient(ellipse at top, #3e505a, #16222a 75%);
+  text-align: center;
+}
+.podium-player[data-position="1"] {
+  grid-column: 2;
+  grid-row: 1;
+  min-height: 280px;
+  border-color: #d7b979;
+  background: radial-gradient(ellipse at top, #5c4b30, #222823 75%);
+  box-shadow: 0 0 32px #cfb47716;
+}
+.podium-player[data-position="2"] {
+  grid-column: 1;
+  grid-row: 1;
+}
+.podium-player[data-position="3"] {
+  grid-column: 3;
+  grid-row: 1;
+  border-color: #ba8965;
+}
+.rank-position {
+  color: var(--accent);
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.podium-player .rank-position {
+  position: absolute;
+  top: 14px;
+  left: 16px;
+}
+.rank-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #31434b;
+  border: 1px solid var(--line);
+}
+.podium-player .rank-avatar {
+  width: 76px;
+  height: 76px;
+  border: 2px solid #9bacb3;
+}
+.podium-player[data-position="1"] .rank-avatar {
+  border-color: var(--accent);
+}
+.rank-crown {
+  position: absolute;
+  top: -26px;
+  font-size: 44px;
+  color: #f4d482;
+  line-height: 1;
+  text-shadow: 0 2px 16px #c2a45b66;
+}
+.rank-identity {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+.rank-identity strong {
+  overflow-wrap: anywhere;
+  font-size: 16px;
+}
+.rank-identity span,
+.rank-detail {
+  font-size: 12px;
+}
+.rank-metric {
+  color: #ead49d;
+  font-size: 20px;
+  white-space: nowrap;
+}
+.ranking-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.ranking-list li {
+  border-top: 1px solid var(--line);
+}
+.rank-player {
+  display: grid;
+  grid-template-columns: 34px 46px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 26px;
+}
+.rank-player:hover,
+.podium-player:hover {
+  background-color: #34494a;
+  text-decoration: none;
+}
+.rank-player .rank-detail {
+  grid-column: 3;
+  grid-row: 2;
+  margin-top: -8px;
+}
+.rank-player .rank-position,
+.rank-player .rank-avatar,
+.rank-player .rank-metric {
+  grid-row: 1 / 3;
+}
+.ranking-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 18px;
+  font-size: 12px;
+}
+#ranking-criteria {
+  margin: 16px 4px;
+  line-height: 1.6;
+}
+.rules-layout {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 28px;
+  margin-top: 28px;
+  align-items: start;
+}
+.rules-index {
+  position: sticky;
+  top: 18px;
+  display: grid;
+  padding: 16px;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.rules-content {
+  min-width: 0;
+}
+.rules-content section {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 26px;
+  margin-bottom: 18px;
+  scroll-margin-top: 20px;
+  line-height: 1.7;
+}
+.rules-content li {
+  margin: 8px 0;
+}
+.rules-content dl {
+  margin: 0;
+}
+.rules-content dt {
+  font-weight: 700;
+  color: #dec692;
+  margin-top: 16px;
+}
+.rules-content dd {
+  margin: 4px 0 12px;
+  color: #b8c8cb;
+}
+.reaction-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.reaction-rule {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.reaction-rule h3 {
+  margin-bottom: 4px;
+}
+.reaction-rule p {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+@media (max-width: 700px) {
+  .community-page {
+    margin: 24px auto;
+    padding: 0 14px;
+  }
+  .ranking-tabs {
+    gap: 8px;
+  }
+  .ranking-tabs button {
+    min-width: 0;
+    flex: 1;
+    padding: 12px;
+  }
+  .ranking-heading {
+    padding: 20px 16px;
+  }
+  .ranking-heading h2 {
+    font-size: 19px;
+  }
+  .ranking-podium {
+    gap: 8px;
+    padding: 36px 10px 18px;
+  }
+  .podium-player {
+    min-height: 205px;
+    padding: 28px 5px 16px;
+    gap: 10px;
+  }
+  .podium-player[data-position="1"] {
+    min-height: 230px;
+  }
+  .podium-player .rank-avatar {
+    width: 52px;
+    height: 52px;
+  }
+  .podium-player .rank-identity strong {
+    font-size: 13px;
+  }
+  .podium-player .rank-metric {
+    font-size: 14px;
+  }
+  .podium-player .rank-detail {
+    font-size: 10px;
+  }
+  .rank-player {
+    grid-template-columns: 26px 36px minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 16px 12px;
+  }
+  .rank-player .rank-avatar {
+    width: 36px;
+    height: 36px;
+  }
+  .rank-player .rank-metric {
+    font-size: 14px;
+  }
+  .rank-player .rank-identity strong {
+    font-size: 14px;
+  }
+  .rank-player .rank-detail {
+    font-size: 10px;
+  }
+  .rules-layout {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .rules-index {
+    position: static;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    font-size: 12px;
+  }
+  .rules-content section {
+    padding: 20px;
+  }
+  .reaction-grid {
+    grid-template-columns: 1fr;
+  }
+}

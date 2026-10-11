@@ -126,8 +126,9 @@ Combate: depois de atacar não se mobilizam tropas no mesmo turno. Habilidade um
 vez por carta por rodada; feitiços comuns e assinaturas têm limites separados.
 Mago ataca apenas sem tropas próprias. Frente mira a coluna visual oposta;
 Diagonal mira adjacentes; Universal lateral mira frente/centro e central mira as
-três colunas. Guardar e Esconder alteram alvos. Tropas congeladas não bloqueiam
-o mago. Estrutura frontal protege sua tropa sem transferir sobra; Abalo desativa
+três colunas. Guardar e Esconder alteram alvos. Tropas congeladas continuam
+recebendo dano no próprio slot; Guardar fica desativado. Estrutura frontal
+protege sua tropa sem transferir sobra; Abalo desativa
 essa proteção no turno. Estruturas atacam usando o limite de ataques de tropas.
 Armamentos aumentam atributos de cartas vinculadas. Flanquear usa seus slots;
 Herança mantém armamento após morte; Campo livre permite movimento por turno.
@@ -890,3 +891,31 @@ ATUALIZAÇÃO — PERFIL E AMIZADES (10/10/2026)
 - Validação: 7 testes de interface/social/perfis/navegação aprovados; typecheck e
   build sem erros; envio/cancelamento e perfil de amigo conferidos no navegador local.
 
+
+ATUALIZAÇÃO — AVISOS, CELULAR, RANKING E REGRAS (11/10/2026)
+Ataques contra uma tropa Congelada atingem a própria tropa, com a proteção
+normal de sua estrutura. Congelado continua impedindo ataques/habilidades;
+não desvia dano ao mago, inclusive quando o atacante usa Modo Ofensivo.
+Os avisos identificam atacante, alvo e jogadores. A origem controla a cor:
+azul para o jogador local, vermelho para o oponente. Dano periódico guarda
+origem nos status novos; registros antigos continuam compatíveis. Até seis
+avisos aparecem, com 3,2 segundos antes da saída e desaparecimento escalonado.
+Quando chegam mais avisos, uma fila limitada a 40 aguarda espaços livres,
+preservando o mínimo de 3 segundos dos avisos já visíveis. O histórico é completo.
+Efeitos elementais duram cerca de 3,4 segundos e respeitam movimento reduzido.
+Durante partidas em celular a navegação principal é escondida; em paisagem
+campo e mão ficam lado a lado. Tela inteira depende do suporte do navegador.
+O lobby mantém o menu, e Nova partida restaura a navegação.
+/ranking mostra pódio e lista paginada (20 abaixo do pódio). Vitórias totais
+exigem uma partida concluída; desempate por taxa exata e ordem de cadastro
+(ObjectId). Taxa exige dez partidas; desempate por vitórias e ordem de cadastro.
+Totais vêm dos registros de Match, não dos contadores antigos da conta.
+/regras apresenta preparação, mana, campo, efeitos, estados e montarias.
+As oito reações vêm da mesma fonte reactions.ts usada durante as partidas.
+- src/routes/rankingRoutes.ts — API pública de ranking: agrega resultados, filtra elegibilidade, ordena e pagina sem expor dados privados.
+- public/HTML/ranking.html — Página pública com explicação, abas por vitórias e taxa, pódio e classificação restante.
+- public/JS/ranking.js — Carrega classificação, alterna abas acessíveis, pagina e liga cada jogador ao perfil público.
+- public/HTML/regras.html — Regras vigentes organizadas por objetivo, preparação, turno, combate, efeitos, estados e montarias.
+- public/JS/rules.js — Inicializa navegação e apresenta reações obtidas da fonte compartilhada do motor.
+- public/CSS/community.css — Apresentação responsiva de ranking, pódio, lista e guia de regras.
+- tests/ranking.test.ts — Verifica classificação pública, estatísticas reais, elegibilidade, desempates, paginação, ausência de dados privados e páginas.

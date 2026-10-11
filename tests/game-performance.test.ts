@@ -115,11 +115,11 @@ test("avisos de jogadas não repetem após reconexão e mostram morte sem carta 
     view.notify({
       ...event,
       kind: "block",
-      message: "A passiva impede este ataque básico.",
+      message: "Ataque Guerreiro foi bloqueado por passiva de Cavaleiro.",
     });
     assert.match(
       dom.window.document.body.textContent!,
-      /Ataque impedido.*passiva impede/,
+      /Ataque Guerreiro foi bloqueado por passiva de Cavaleiro/,
     );
     assert.equal(
       dom.window.document.querySelectorAll(".battle-event--passive").length,

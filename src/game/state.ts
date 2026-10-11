@@ -11,6 +11,8 @@ export interface BattleEvent {
   sequence: number;
   kind: string;
   message?: string;
+  summary?: string;
+  originOwnerId?: string;
   card: { id: string; nome: string; imgURL: string; ownerId: string };
   slotId?: string;
   reaction?: ReactionName;

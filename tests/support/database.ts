@@ -99,6 +99,40 @@ export async function fakeDatabase() {
   patch(User, "find", (filter = {}) =>
     query(find(users, filter).map(document)),
   );
+  // Isolated ranking aggregation: no real database is contacted in UI/API tests.
+  patch(User, "aggregate", (pipeline) => {
+    const minimum =
+      pipeline.find((s: any) => s.$match)?.$match?.partidas?.$gte ?? 0;
+    const order = pipeline.find((s: any) => s.$sort).$sort;
+    const facet = pipeline.find((s: any) => s.$facet).$facet;
+    const rows = users
+      .map((u) => {
+        const played = find(matches, { "players.userId": u._id });
+        const vitorias = played.filter((m) => equal(m.winner, u._id)).length;
+        return {
+          ...u,
+          partidas: played.length,
+          vitorias,
+          rate: played.length ? vitorias / played.length : 0,
+        };
+      })
+      .filter((u) => u.partidas >= minimum)
+      .sort((a, b) => {
+        for (const [key, direction] of Object.entries(order)) {
+          if (a[key] < b[key]) return -Number(direction);
+          if (a[key] > b[key]) return Number(direction);
+        }
+        return 0;
+      });
+    const skip = facet.players[0].$skip;
+    return Promise.resolve([
+      {
+        podium: rows.slice(0, 3),
+        players: rows.slice(skip, skip + facet.players[1].$limit),
+        total: [{ count: rows.length }],
+      },
+    ]);
+  });
   function update(row: any, change: any) {
     if (
       change.$set?.nomeKey &&

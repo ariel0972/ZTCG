@@ -261,7 +261,7 @@ test("reação também funciona em outra carta e não intercepta feitiço ou hab
   respond(g, "p2", true);
   assert.equal(from.card!.hpAtual, 4);
 });
-test("reação acompanha o destinatário real: mago atrás de congelado e estrutura protetora", () => {
+test("congelado recebe o ataque sem acionar reação do mago; estrutura continua protegendo", () => {
   const g = make(),
     from = slot(g, "p1", 0),
     to = slot(g, "p2", 2);
@@ -270,11 +270,10 @@ test("reação acompanha o destinatário real: mago atrás de congelado e estrut
   to.card = instance("020", "p2", { hp: 20 });
   to.card.statuses = [{ nome: "Congelado", turnosRestantes: 2 }];
   act(g, { type: "attack", slotId: from.id, targetId: to.id });
-  assert.equal(g.state.pendingAttack!.defenderId, g.player("p2").mage.id);
-  respond(g, "p2", true);
+  assert.equal(g.state.pendingAttack, undefined);
   assert.equal(g.player("p2").mage.hpAtual, 18);
-  assert.equal(to.card!.hpAtual, 20);
-  assert.equal(from.card!.hpAtual, 16);
+  assert.equal(to.card!.hpAtual, 16);
+  assert.equal(from.card!.hpAtual, 20);
   const protectedGame = make(),
     source = slot(protectedGame, "p1", 0),
     destination = slot(protectedGame, "p2", 2);
@@ -290,6 +289,7 @@ test("reação acompanha o destinatário real: mago atrás de congelado e estrut
     ],
   });
   destination.structure = instance("020", "p2", { tipo: "Estrutura", hp: 20 });
+  destination.card.statuses = [{ nome: "Congelado", turnosRestantes: 2 }];
   act(protectedGame, {
     type: "attack",
     slotId: source.id,

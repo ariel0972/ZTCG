@@ -37,6 +37,7 @@ Abra `http://127.0.0.1:3187`. Contas `p1@test.local`, `p2@test.local`, `p3@test.
 - Feitiços 001–010, Lágrima de Zarcos e Fluxo Forte, reações elementais e passivas reutilizáveis estão implementados. Jato d’água permite resposta de 20 segundos, persistida, a feitiços comuns de Fogo dirigidos a tropas/magos; o relógio normal fica pausado.
 - Turno/preparação: 120 segundos. Três turnos consecutivos sem ação válida causam derrota. Desconexão: após 15 segundos sem presença, há 90 segundos de tolerância. A fila e os convites expiram em cinco minutos.
 - Resultados são persistidos e reconhecidos individualmente. Revanche exige os dois jogadores. Perfis mostram estatísticas do histórico completo e apenas os decks que o dono publicou.
+- `/ranking` reúne o pódio e a lista por vitórias (uma partida concluída) ou taxa de vitória (mínimo de dez). `/regras` explica o jogo e as reações elementais. Ataques contra tropas Congeladas atingem a própria tropa, preservando a proteção da estrutura.
 
 O catálogo local tem 130 definições, 44 publicadas nesta revisão. `npm run audit` informa as quantidades atuais; registros válidos do banco prevalecem sobre a definição local. Publicação técnica não comprova fidelidade à arte nem balanceamento.
 

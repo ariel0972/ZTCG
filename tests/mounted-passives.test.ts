@@ -254,17 +254,7 @@ test("Cachorro retalia cada ataque contra o mago, fora do alcance e mesmo em gol
     g.state.turn = 4;
     slot(g, "p1:front:1").card = instance("063");
     slot(g, "p1:front:1").card!.attacked = true;
-    slot(g, "p1:front:2").card = instance("020", "p1", {
-      fraqueza: [],
-      resistencia: [],
-    });
-    applyStatus(
-      slot(g, "p1:front:2").card!.statuses,
-      "Congelado",
-      2,
-      undefined,
-      g.state.turn,
-    );
+    slot(g, "p1:front:2").card = null;
     slot(g, "p2:front:0").card = instance("020", "p2", {
       hp: 30,
       ataque: 4,
@@ -351,8 +341,7 @@ test("retaliação respeita incapacidades e a estrutura do atacante", () => {
     g.state.turn = 4;
     const dog = instance("063");
     slot(g, "p1:front:0").card = dog;
-    slot(g, "p1:front:2").card = instance("020");
-    applyStatus(slot(g, "p1:front:2").card!.statuses, "Congelado", 2);
+    slot(g, "p1:front:2").card = null;
     if (status !== "Estrutura") applyStatus(dog.statuses, status, 2);
     const attack = slot(g, "p2:front:1");
     attack.card = instance("020", "p2", {

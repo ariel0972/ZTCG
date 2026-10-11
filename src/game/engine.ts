@@ -426,22 +426,17 @@ export class Game {
     element = attacker?.elemento,
     source?: Instance,
     cause?: string,
+    originOwnerId?: string,
   ) {
     const slot = this.targetSlot(id);
     if (!slot) this.fail("Alvo não encontrado.");
     // A estrutura absorve o golpe inteiro, inclusive o excedente.
     // Sem tropa vinculada, ela não protege o mago.
-    const bypassFrozen =
-      !!attacker &&
-      id === slot.id &&
-      slot.card?.tipo === "Tropa" &&
-      hasStatus(slot.card.statuses, ["Congelado"]);
     const protectedByStructure =
       slot.structure &&
       slot.structure.hpAtual > 0 &&
       slot.card?.tipo === "Tropa" &&
       id !== slot.structure.id &&
-      !bypassFrozen &&
       !hasStatus(slot.structure!.statuses, ["Abalo"]) &&
       !piercing;
     const target =
@@ -449,10 +444,8 @@ export class Game {
         ? slot.structure
         : protectedByStructure
           ? slot.structure!
-          : bypassFrozen
-            ? this.player(slot.ownerId).mage
-            : ((id === slot.rider?.id ? slot.rider : slot.card) ??
-              this.player(slot.ownerId).mage);
+          : ((id === slot.rider?.id ? slot.rider : slot.card) ??
+            this.player(slot.ownerId).mage);
     if (target.hpAtual <= 0) return;
     const origin =
       cause ??
@@ -477,32 +470,42 @@ export class Game {
         0,
         origin,
         target.hpAtual,
-        "bloqueado por Escudo de Proteção",
+        `bloqueado por ${protection.origin ?? `Escudo de Proteção de ${target.nome}`}`,
+        undefined,
+        target.ownerId,
       );
       return;
     }
     const weakness = !!element && target.fraqueza.includes(element);
+    const blockers: string[] = [];
     const resistance =
       !!element &&
       target.resistencia.includes(element) &&
       !this.has(target, "Vapor");
     if (weakness) remaining *= 2;
     if (resistance) remaining = Math.floor(remaining / 2);
-    if (this.has(target, "armaduraPoderosa"))
+    if (this.has(target, "armaduraPoderosa")) {
+      blockers.push(`Armadura Poderosa de ${target.nome}`);
       remaining = Math.max(0, remaining - 2);
+    }
     for (const reduction of target.statuses.filter(
       (s) =>
         (s.nome === "ReducaoDano" ||
           (s.nome === "ReducaoAtaqueTropa" && attacker?.tipo === "Tropa")) &&
         s.turnosRestantes > 0 &&
         (!s.requerStatus || this.has(target, s.requerStatus)),
-    ))
+    )) {
+      if ((reduction.valor ?? 0) > 0)
+        blockers.push(reduction.origin ?? `redução de dano de ${target.nome}`);
       remaining = Math.max(0, remaining - (reduction.valor ?? 0));
+    }
     const shield = target.statuses.find(
       (s) => s.nome === "Escudo" && (s.valor ?? 0) > 0,
     );
     if (shield) {
       const absorbed = Math.min(remaining, shield.valor!);
+      if (absorbed > 0)
+        blockers.push(shield.origin ?? `Escudo de ${target.nome}`);
       shield.valor! -= absorbed;
       remaining -= absorbed;
     }
@@ -525,7 +528,9 @@ export class Game {
       origin,
       hpBefore,
       [
-        remaining === 0 && value > 0 ? "dano reduzido ou absorvido" : "",
+        remaining === 0 && value > 0
+          ? `bloqueado por ${[...new Set(blockers)].join(" e ") || `resistência de ${target.nome}`}`
+          : "",
         weakness ? `fraqueza a ${element === "Agua" ? "Água" : element}` : "",
         resistance
           ? `resistência a ${element === "Agua" ? "Água" : element}`
@@ -540,6 +545,7 @@ export class Game {
           ...(resistance ? ["resistance" as const] : []),
         ],
       },
+      originOwnerId ?? source?.ownerId ?? attacker?.ownerId,
     );
     const killer = source ?? attacker;
     if (hpBefore > 0 && target.hpAtual <= 0 && killer)
@@ -560,6 +566,7 @@ export class Game {
         element,
         source,
         `Excedente de ${target.nome} (${origin})`,
+        originOwnerId,
       );
     if (excess) {
       const mage = this.player(target.ownerId).mage;
@@ -570,6 +577,9 @@ export class Game {
         excess,
         `${this.has(target, "Explosão") ? "Explosão" : "Sobrepujar"} de ${target.nome} (${origin})`,
         before,
+        undefined,
+        undefined,
+        originOwnerId ?? source?.ownerId ?? attacker?.ownerId,
       );
     }
   }
@@ -580,10 +590,17 @@ export class Game {
     before: number,
     detail?: string,
     elemental?: Omit<BattleDamage, "amount">,
+    originOwnerId?: string,
   ) {
     const message = `${origin}: ${target.nome} (${this.player(target.ownerId).nome}) recebeu ${value} de dano${detail ? `, ${detail}` : ""}. Vida: ${Math.max(0, before)} → ${Math.max(0, target.hpAtual)}.`;
     this.log(message);
-    this.event("damage", target, message, {
+    const blocked = value === 0 && !!detail && origin.startsWith("Ataque de ");
+    const summary = blocked
+      ? `Ataque ${origin.slice(10)} foi bloqueado por ${detail!.split(";")[0].replace(/^bloqueado por /, "")} (${this.player(target.ownerId).nome}).`
+      : `${origin}: ${target.nome} (${this.player(target.ownerId).nome}) recebeu ${value} de dano${elemental?.modifiers?.length ? ` (${elemental.modifiers.map((m) => (m === "weakness" ? "fraqueza" : "resistência")).join(" e ")})` : ""}.`;
+    this.event(blocked ? "block" : "damage", target, message, {
+      summary,
+      originOwnerId: blocked ? target.ownerId : originOwnerId,
       slotId: this.targetSlot(target.id)?.id,
       damage: { amount: value, ...elemental },
     });
@@ -647,7 +664,10 @@ export class Game {
     kind: string,
     card: Pick<Instance, "id" | "nome" | "imgURL" | "ownerId">,
     message?: string,
-    details?: Pick<BattleEvent, "slotId" | "reaction" | "damage">,
+    details?: Pick<
+      BattleEvent,
+      "slotId" | "reaction" | "damage" | "originOwnerId" | "summary"
+    >,
   ) {
     this.state.eventSequence = (this.state.eventSequence ?? 0) + 1;
     (this.state.events ??= []).push({
@@ -836,7 +856,11 @@ export class Game {
       this.log(
         `${source.nome} retaliou contra ${attacker.nome}, sem consumir seu ataque normal.`,
       );
-      this.event("attack", source, "Retaliação");
+      this.event(
+        "attack",
+        source,
+        `Ataque: ${source.nome} (${this.player(source.ownerId).nome}) atacou ${defender.nome} (${this.player(defender.ownerId).nome}) por retaliação.`,
+      );
       source.palavrasChave = source.palavrasChave.filter(
         (k) => k !== "Esconder",
       );
@@ -1212,6 +1236,9 @@ export class Game {
             );
             if (applied && effect.requerStatus)
               applied.requerStatus = effect.requerStatus;
+            applied.originOwnerId = source?.ownerId ?? ownerId;
+            applied.origin =
+              cause ?? (source ? `Efeito de ${source.nome}` : undefined);
             this.trigger("onStatusApplied", {
               ownerId: card.ownerId,
               cardId: card.id,
@@ -1349,7 +1376,7 @@ export class Game {
           ownerId: slot.ownerId,
         },
         `${reaction} ativado.`,
-        { slotId: slot.id, reaction },
+        { slotId: slot.id, reaction, originOwnerId: ownerId },
       );
       this.resolveReaction(reaction, ownerId, card, slot);
       this.log(
@@ -1398,6 +1425,7 @@ export class Game {
               undefined,
               undefined,
               "Lava",
+              ownerId,
             );
         break;
       case "Congelar":
@@ -1419,7 +1447,7 @@ export class Game {
           card.hp = (card.hp ?? 0) + 1;
           card.hpAtual++;
         } else {
-          applyStatus(card.statuses, "Envenenado", 3);
+          applyStatus(card.statuses, "Envenenado", 3).originOwnerId = ownerId;
           this.trigger("onStatusApplied", {
             ownerId: card.ownerId,
             cardId: card.id,
@@ -1629,6 +1657,7 @@ export class Game {
           "Fogo",
           undefined,
           "Combinação Bola de Fogo + Furacão",
+          user,
         );
       this.log(
         "Bola de Fogo + Furacão: 6 de dano adicionais em todos os inimigos.",
@@ -1752,6 +1781,7 @@ export class Game {
           element,
           undefined,
           card.nome,
+          user,
         );
     };
     const ongoing = (
@@ -1778,7 +1808,13 @@ export class Game {
         const s = this.targetSlot(id),
           target = this.findCard(id) ?? s?.card;
         if (target) {
-          applyStatus(target.statuses, name, duration, value, this.state.turn);
+          applyStatus(
+            target.statuses,
+            name,
+            duration,
+            value,
+            this.state.turn,
+          ).originOwnerId = user;
           this.trigger("onStatusApplied", {
             ownerId: target.ownerId,
             cardId: target.id,
@@ -1936,6 +1972,7 @@ export class Game {
           spell.element,
           undefined,
           `${name} (${this.player(spell.ownerId).nome}, fim da rodada)`,
+          spell.ownerId,
         );
       spell.rounds--;
       this.log(
@@ -2120,7 +2157,7 @@ export class Game {
         )
         .map((target) => [
           target.id,
-          `${target.card!.nome}: a passiva impede este ataque básico.`,
+          `Ataque ${card.nome} foi bloqueado pela passiva de ${target.card!.nome} (${this.player(target.ownerId).nome}).`,
         ]),
     );
   }
@@ -2161,7 +2198,12 @@ export class Game {
       if (target.card?.tipo === "Tropa")
         enemy.lastTroopAttacker = { cardId: card.id, turn: this.state.turn };
     }
-    this.event("attack", card);
+    const announcedDefender = this.basicAttackDefender(target);
+    this.event(
+      "attack",
+      card,
+      `Ataque: ${card.nome} (${p.nome}) atacou ${announcedDefender.nome} (${this.player(announcedDefender.ownerId).nome}).`,
+    );
     card.attacked = true;
     p.combatStarted = true;
     if (card.tipo !== "Mago") p.counters.attacks++;
@@ -2227,20 +2269,14 @@ export class Game {
     );
   }
   private basicAttackDefender(target: Slot): Instance {
-    const frozen =
-      target.card?.tipo === "Tropa" &&
-      hasStatus(target.card.statuses, ["Congelado"]);
     if (
       target.structure &&
       target.structure.hpAtual > 0 &&
       target.card?.tipo === "Tropa" &&
-      !frozen &&
       !hasStatus(target.structure.statuses, ["Abalo"])
     )
       return target.structure;
-    return frozen
-      ? this.player(target.ownerId).mage
-      : (target.card ?? this.player(target.ownerId).mage);
+    return target.card ?? this.player(target.ownerId).mage;
   }
   private canReflectAttack(card: Instance, attacker: Instance) {
     return (
@@ -2436,6 +2472,7 @@ export class Game {
             card.elemento,
             card,
             `${ability.nome} de ${card.nome}`,
+            user,
           );
           this.effects(
             user,
@@ -2510,6 +2547,7 @@ export class Game {
             undefined,
             undefined,
             `${ability.nome} de ${card.nome}`,
+            user,
           );
           break;
         case "ordemDaEspada":
@@ -2648,6 +2686,9 @@ export class Game {
             value,
             `${status.nome} (fim da rodada)`,
             before,
+            undefined,
+            undefined,
+            status.originOwnerId,
           );
           const position = this.targetSlot(card.id);
           if (
@@ -2663,6 +2704,7 @@ export class Game {
               undefined,
               undefined,
               `Excedente de ${status.nome} em ${card.nome}`,
+              status.originOwnerId,
             );
         });
       }

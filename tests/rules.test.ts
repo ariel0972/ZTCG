@@ -386,7 +386,8 @@ test("mago ataca apenas sem tropas; congelado não bloqueia e descongela no fim 
     slotId: "p1:mage",
     targetId: "p2:front:1",
   });
-  assert.equal(g.player("p2").mage.hpAtual, hp - 2);
+  assert.equal(g.player("p2").mage.hpAtual, hp);
+  assert.equal(slot(g, "p2:front:1").card!.hpAtual, c.hp! - 2);
   command(g, "p1", { type: "endTurn" });
   assert.ok(slot(g, "p2:front:1").card!.statuses.length);
   command(g, "p2", { type: "endTurn" });
@@ -890,6 +891,52 @@ test("Modo Ofensivo concede somente +2 de ataque básico, renova sem acumular e 
     targetId: "p2:front:2",
   });
   assert.equal(slot(restored, "p2:front:2").card!.hpAtual, 25);
+});
+
+test("Guerreiro em Modo Ofensivo atinge a tropa Congelada, com ou sem estrutura, sem desviar ao mago", () => {
+  for (const protectedTarget of [false, true]) {
+    const g = later();
+    slot(g, "p1:front:0").card = instance("023");
+    const target = slot(g, "p2:front:2");
+    target.card = instance("021", "p2", {
+      hp: 30,
+      resistencia: [],
+      fraqueza: [],
+    });
+    applyStatus(target.card.statuses, "Congelado", 2, undefined, g.state.turn);
+    if (protectedTarget)
+      target.structure = instance("020", "p2", {
+        tipo: "Estrutura",
+        hp: 30,
+        resistencia: [],
+        fraqueza: [],
+      });
+    g.player("p1").mana = 20;
+    command(g, "p1", {
+      type: "ability",
+      slotId: "p1:front:0",
+      abilityId: "modoOfensivo",
+    });
+    const mageHp = g.player("p2").mage.hpAtual;
+    command(g, "p1", {
+      type: "attack",
+      slotId: "p1:front:0",
+      targetId: target.id,
+    });
+    assert.equal(g.player("p2").mage.hpAtual, mageHp);
+    const actualTarget = slot(g, target.id);
+    assert.equal(actualTarget.card!.hpAtual, protectedTarget ? 30 : 25);
+    if (protectedTarget) assert.equal(actualTarget.structure!.hpAtual, 25);
+    const attack = g.state.events!.filter((e) => e.kind === "attack").at(-1)!;
+    assert.equal(
+      attack.message,
+      `Ataque: Guerreiro (p1) atacou ${protectedTarget ? target.structure!.nome : target.card.nome} (p2).`,
+    );
+    assert.equal(
+      g.state.events!.filter((e) => e.kind === "damage").at(-1)!.originOwnerId,
+      "p1",
+    );
+  }
 });
 
 test("Nome Sagrado usa último atacante de tropa do turno anterior, ignora Esconder e busca uma cópia", () => {

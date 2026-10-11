@@ -36,7 +36,15 @@ test("menu lateral preserva as ações existentes e restaura navegação ao volt
     menu.dispatchEvent(new dom.window.Event("close"));
   };
   assert.equal(menu.querySelector("nav"), originalNav);
-  assert.equal(menu.querySelectorAll("[data-destination]").length, 4);
+  assert.equal(menu.querySelectorAll("[data-destination]").length, 6);
+  assert.equal(
+    menu.querySelector('[data-destination="ranking"]')!.getAttribute("href"),
+    "/ranking",
+  );
+  assert.equal(
+    menu.querySelector('[data-destination="rules"]')!.getAttribute("href"),
+    "/regras",
+  );
   assert.equal(
     menu.querySelector('[data-destination="play"]')!.textContent,
     "Jogar",

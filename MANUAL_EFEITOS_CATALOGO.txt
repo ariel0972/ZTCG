@@ -171,7 +171,7 @@ Guardar: força ataques básicos contra um guardião antes de outros alvos.
 Incapacitado: impede ataques. Não implica bloquear toda habilidade.
 Atordoado: impede ataque e habilidade.
 Congelado: impede ataque/habilidade até fim do próximo turno. Ataque básico
-  contra a tropa congelada segue para seu mago, ignorando a estrutura vinculada.
+  contra a tropa congelada atinge a própria tropa; a estrutura continua protegendo.
 Cego: mago não pode conjurar feitiços; habilidades ficam bloqueadas. Ataque
   básico tem 50% de chance de errar.
 Abalo: estrutura deixa de proteger a tropa pelo período.

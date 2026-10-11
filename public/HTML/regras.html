@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Regras do jogo · Zacornia</title>
+    <link rel="icon" href="/assets/icons/favicon.svg" />
+    <link rel="stylesheet" href="/CSS/app.css" />
+    <link rel="stylesheet" href="/CSS/community.css" />
+    <script type="module" src="/JS/rules.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">ZACORNIA <small>TRADING CARD GAME</small></a>
+      <nav aria-label="Principal">
+        <a href="/">Decks</a><a href="/HTML/index.html">Jogar</a
+        ><a href="/HTML/perfil.html">Perfil</a>
+      </nav>
+      <div id="account" class="account"></div>
+    </header>
+    <main class="community-page">
+      <p class="eyebrow">APRENDA A DUELAR</p>
+      <h1>Regras do jogo</h1>
+      <p class="muted">
+        Monte sua estratégia, proteja seu mago e domine os elementos.
+      </p>
+      <div class="rules-layout">
+        <nav class="rules-index" aria-label="Índice das regras">
+          <a href="#objetivo">Objetivo e baralho</a
+          ><a href="#preparacao">Preparação</a
+          ><a href="#turnos">Turnos e mana</a
+          ><a href="#combate">Campo e combate</a
+          ><a href="#efeitos">Feitiços e habilidades</a
+          ><a href="#status">Estados das cartas</a
+          ><a href="#reacoes">Reações elementais</a
+          ><a href="#montarias">Movimento e montarias</a
+          ><a href="#partidas">Partidas e progressão</a>
+        </nav>
+        <article class="rules-content">
+          <section id="objetivo">
+            <h2>Objetivo e baralho</h2>
+            <p>
+              Derrote o mago adversário, reduzindo sua vida a zero. Você também
+              perde se precisar comprar uma carta e seu baralho estiver vazio.
+            </p>
+            <p>
+              Para jogar, seu baralho precisa de
+              <strong>40 cartas e um mago separado</strong>, todos liberados
+              para partidas. São permitidas até 3 cópias de cada tropa ou
+              feitiço e 2 de cada estrutura ou armamento. Cartas em rascunho
+              podem ficar nos baralhos salvos, mas precisam ser revisadas e
+              liberadas antes da partida.
+            </p>
+            <p>
+              O mago determina os limites de mobilizações, ataques, feitiços
+              comuns e assinaturas. Confira os números na carta e no painel do
+              jogador.
+            </p>
+          </section>
+          <section id="preparacao">
+            <h2>Preparação</h2>
+            <ol>
+              <li>Cada jogador começa com 5 cartas na mão e 5 de mana.</li>
+              <li>
+                Mobilize suas tropas gratuitamente durante a preparação,
+                respeitando o limite do mago. Cada jogador prepara seu campo e
+                confirma separadamente.
+              </li>
+              <li>
+                Se sua mão inicial não tiver tropas, você pode reembaralhar até
+                3 vezes antes de iniciar suas ações. Cada reembaralhamento
+                oferece uma compra extra opcional ao adversário.
+              </li>
+              <li>
+                O combate começa quando ambos confirmam e as compras opcionais
+                estão resolvidas. Ataques, habilidades e efeitos de dano ficam
+                bloqueados na preparação e no primeiro turno de combate de cada
+                jogador.
+              </li>
+            </ol>
+          </section>
+          <section id="turnos">
+            <h2>Turnos e mana</h2>
+            <p>
+              Um turno é a vez de um jogador; uma rodada inclui a vez dos dois.
+              No início do seu turno, você compra uma carta e recupera a mana
+              gerada pelo mago e suas cartas em campo. A mana tem limite de
+              <strong>20</strong>; algumas passivas mudam a recuperação.
+            </p>
+            <p>
+              Mobilizar uma carta normalmente custa sua mana indicada e conta
+              para o limite de mobilizações do mago. Depois de realizar um
+              ataque, você não pode mobilizar mais tropas naquele turno. Use
+              <strong>Passar turno</strong> para encerrar sua vez.
+            </p>
+            <p>
+              Preparação e turnos duram 2 minutos. Respostas a reações duram 20
+              segundos e pausam o relógio do turno.
+            </p>
+          </section>
+          <section id="combate">
+            <h2>Campo e combate</h2>
+            <p>
+              O campo tem três colunas de tropas, espaços de armamento e o mago.
+              As direções de ataque são:
+            </p>
+            <dl>
+              <dt>Frente</dt>
+              <dd>Ataca a coluna diretamente oposta.</dd>
+              <dt>Diagonal</dt>
+              <dd>Ataca colunas visualmente adjacentes.</dd>
+              <dt>Universal</dt>
+              <dd>
+                Na coluna central, alcança as três colunas; nas laterais,
+                alcança a frente e o centro.
+              </dd>
+            </dl>
+            <p>
+              Cada tropa ataca uma vez por rodada, respeitando o limite de
+              ataques do mago. O mago pode atacar quando não há tropas próprias
+              em campo. Uma coluna inimiga vazia permite atingir o mago quando
+              as regras de alcance e proteção permitem.
+            </p>
+            <p>
+              <strong>Fraqueza</strong> dobra o dano elemental.
+              <strong>Resistência</strong> reduz à metade, arredondando para
+              baixo. Armaduras, reduções e escudos são aplicados depois. Os
+              avisos indicam a origem e o histórico guarda os detalhes do dano.
+            </p>
+            <p>
+              Uma estrutura vinculada protege sua tropa e absorve o golpe
+              inteiro, sem transferir o excedente. Abalo desativa essa proteção.
+              Uma tropa Congelada continua recebendo dano normalmente: atacar
+              essa tropa não redireciona o golpe para o mago.
+            </p>
+            <p>
+              Guardar dá prioridade ao guardião nos ataques; Congelado desativa
+              essa proteção. Interceptar redireciona ataques básicos para um
+              defensor elegível. Havendo vários, vale o primeiro da esquerda
+              para a direita; suas reduções não se somam.
+            </p>
+          </section>
+          <section id="efeitos">
+            <h2>Feitiços, passivas e habilidades</h2>
+            <p>
+              Feitiços custam mana e respeitam os limites separados de feitiços
+              comuns e assinaturas. Escolha apenas os alvos destacados. Se o
+              feitiço não exige escolher alvos, você pode conjurá-lo pelo menu
+              ou arrastá-lo para o campo.
+            </p>
+            <p>
+              Uma carta usa uma habilidade ativa por rodada, compartilhando esse
+              uso entre suas habilidades. As passivas se ativam quando suas
+              condições acontecem. Bônus de ataque básico não aumentam
+              automaticamente o dano de feitiços ou habilidades.
+            </p>
+            <p>
+              O Aprendiz de Mago pode escolher devolver um ataque básico de
+              tropa, sem custo de mana, uma vez por rodada. Jato d’água permite
+              responder a certos feitiços de Fogo. O jogador pode aceitar ou
+              recusar a resposta durante a janela de 20 segundos.
+            </p>
+            <p>
+              Consulte os detalhes de cada carta: condições específicas, custos,
+              durações e exceções fazem parte do efeito. Esconder impede
+              selecionar um alvo individual, mas efeitos de área continuam
+              atingindo a carta; Nome Sagrado pode atingir seu último atacante
+              mesmo escondido.
+            </p>
+          </section>
+          <section id="status">
+            <h2>Estados das cartas</h2>
+            <dl>
+              <dt>Congelado</dt>
+              <dd>
+                Impede atacar e usar habilidades até o fim do próximo turno. A
+                carta continua recebendo ataques e sua estrutura continua
+                protegendo-a.
+              </dd>
+              <dt>Atordoado</dt>
+              <dd>Impede ataques e habilidades durante sua duração.</dd>
+              <dt>Incapacitado</dt>
+              <dd>Impede ataques; por si só, não bloqueia habilidades.</dd>
+              <dt>Cego</dt>
+              <dd>
+                Bloqueia habilidades; o mago não pode conjurar feitiços. Ataques
+                básicos têm 50% de chance de errar.
+              </dd>
+              <dt>Envenenado</dt>
+              <dd>
+                Causa 1 de dano no fim da rodada por 3 rodadas. Reaplicar
+                aumenta a duração em 1, até 5 rodadas.
+              </dd>
+              <dt>Queimado</dt>
+              <dd>
+                Começa com 1 de dano por 2 rodadas. Reaplicar aumenta o dano até
+                3 e a duração até 5 rodadas.
+              </dd>
+              <dt>Sangrando</dt>
+              <dd>
+                Começa com 1 de dano por 3 rodadas. Reaplicar aumenta o dano até
+                5.
+              </dd>
+              <dt>Escudo</dt>
+              <dd>
+                Absorve uma quantidade de dano até acabar sua reserva ou
+                duração.
+              </dd>
+              <dt>Escudo de Proteção</dt>
+              <dd>
+                Bloqueia uma quantidade de golpes inteiros. É diferente da
+                reserva de dano do Escudo comum.
+              </dd>
+              <dt>Esconder</dt>
+              <dd>
+                Impede ataques básicos e escolhas de alvo individual, salvo
+                exceções da carta. Atacar revela a carta. Efeitos de área
+                continuam válidos.
+              </dd>
+            </dl>
+            <p>
+              Dano periódico ocorre no fim da rodada e não passa pelas reduções
+              de dano dos golpes. A duração restante aparece nos detalhes da
+              carta.
+            </p>
+          </section>
+          <section id="reacoes">
+            <h2>Reações elementais</h2>
+            <p>
+              Combinar elementos compatíveis em uma carta ou espaço do campo
+              ativa uma reação. O elemento aplicado é consumido pela reação; o
+              elemento original da carta permanece.
+            </p>
+            <div id="rules-reactions" class="reaction-grid" aria-live="polite">
+              <p>Carregando reações…</p>
+            </div>
+          </section>
+          <section id="montarias">
+            <h2>Movimento e montarias</h2>
+            <p>
+              Campo livre permite mover uma vez por turno para um espaço
+              disponível. Lama impede ocupar o espaço afetado.
+            </p>
+            <p>
+              Uma montaria permite duas tropas no mesmo espaço. O Cavalo aceita
+              o Cavaleiro. Mobilizá-lo diretamente no Cavalo custa a mana normal
+              do Cavaleiro e uma mobilização. Montar com um Cavaleiro já em
+              campo consome seu ataque e um uso do limite de ataques do mago.
+            </p>
+            <p>
+              Cavalo e Cavaleiro podem atacar separadamente e ambos geram mana.
+              O Cavalo só pode atacar se houver um Cavaleiro aliado em campo. Ao
+              mover o Cavalo, o Cavaleiro vai junto.
+            </p>
+            <p>
+              Ataques básicos atingem o Cavalo primeiro; o excedente passa ao
+              Cavaleiro e respeita suas proteções. Feitiços e habilidades
+              individuais podem escolher qualquer um dos dois; efeitos de área
+              atingem ambos. Armamentos vinculados beneficiam os dois.
+            </p>
+            <p>
+              Desmontar consome o ataque do Cavaleiro e o move para o espaço
+              imediatamente à direita, que precisa existir, estar livre e não
+              estar com Lama.
+            </p>
+          </section>
+          <section id="partidas">
+            <h2>Partidas, perfis e rankings</h2>
+            <p>
+              Você pode procurar oponente ou convidar um amigo. Convites e
+              buscas expiram após 5 minutos. Três turnos consecutivos sem ação
+              válida causam derrota por inatividade. Uma desconexão detectada
+              oferece 90 segundos para retornar.
+            </p>
+            <p>
+              Você entra no ranking ao concluir sua primeira partida. O nível
+              começa em 1 e aumenta a cada 10 partidas concluídas. O ranking por
+              vitórias usa toda a conta e desempata por taxa de vitória e ordem
+              de cadastro. O ranking por taxa exige pelo menos 10 partidas e
+              desempata por mais vitórias e ordem de cadastro.
+            </p>
+            <p>
+              Compartilhe seu perfil pelo link público e escolha quais baralhos
+              publicar. Uma revanche só começa quando ambos os jogadores
+              aceitam.
+            </p>
+            <p>
+              <a href="/ranking">Ver ranking →</a> ·
+              <a href="/HTML/index.html">Jogar →</a>
+            </p>
+          </section>
+        </article>
+      </div>
+    </main>
+    <p id="message" class="message" role="status" hidden></p>
+  </body>
+</html>

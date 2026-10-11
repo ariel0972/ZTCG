@@ -10,6 +10,32 @@ import type { Instance } from "../src/game/state";
 import { randomUUID } from "node:crypto";
 process.env.SECRET = "preview-only-012345678901234567890123456789";
 void fakeDatabase().then(async (db) => {
+  if (process.env.PREVIEW_RANKING === "1") {
+    for (let n = 0; n < 8; n++) {
+      const id = (n + 100).toString(16).padStart(24, "0");
+      db.users.push({
+        _id: id,
+        nome: [
+          "Ariel",
+          "Luiz",
+          "Flamel",
+          "Morgana",
+          "Soren",
+          "Luna",
+          "Kael",
+          "Íris",
+        ][n],
+        avatarURL: "/assets/avatar.png",
+      });
+      for (let i = 0; i < 20 + n; i++)
+        db.matches.push({
+          matchId: `ranking-preview-${n}-${i}`,
+          players: [{ userId: id }],
+          winner: i < 15 - n ? id : null,
+          finishedAt: new Date(),
+        });
+    }
+  }
   if (process.env.PREVIEW_SOCIAL === "1") {
     db.friendships.push(
       {
@@ -195,6 +221,7 @@ void fakeDatabase().then(async (db) => {
       Date.now() + (process.env.PREVIEW_REACTIONS === "1" ? 1200000 : 120000);
     // Keep the fictitious opponent connected for this isolated visual fixture.
     await store.touch(enemy.ownerId, Date.now() + 3600000);
+    await store.touch(owner, Date.now() + 3600000);
   }
   const server = createServer(createApp([], async () => mongoose, service));
   server.listen(3187, "127.0.0.1", () =>

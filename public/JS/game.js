@@ -29,8 +29,27 @@ import {
 } from "./battle-ui.js";
 import { createMatchResult } from "./match-result.js";
 import { createCardBacks } from "./card-backs.js";
-const battleEvents = createBattleEvents();
+const battleEvents = createBattleEvents(document.body, {
+  getViewerId: () => user?.id,
+});
 const $ = (id) => document.getElementById(id);
+const fullscreen = node("button", "Tela inteira", "quiet");
+fullscreen.type = "button";
+fullscreen.hidden = !document.fullscreenEnabled;
+$("surrender").before(fullscreen);
+fullscreen.onclick = async () => {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else await document.documentElement.requestFullscreen();
+  } catch {
+    message("Tela inteira indisponível neste navegador.", true);
+  }
+};
+document.addEventListener("fullscreenchange", () => {
+  fullscreen.textContent = document.fullscreenElement
+    ? "Sair da tela inteira"
+    : "Tela inteira";
+});
 const inspector = createCardInspector({
   reactions: () => state?.reactions || {},
 });
@@ -1149,6 +1168,7 @@ function hud(id, player) {
   $(id).replaceChildren(identity, resources, actions);
 }
 function render() {
+  document.body.classList.toggle("in-match", !!state && !!user);
   responsePanel.replaceChildren();
   responsePanel.hidden = !state?.pendingSpell && !state?.pendingAttack;
   if (state?.pendingAttack && user) {
@@ -1424,6 +1444,7 @@ $("new-match").onclick = async () => {
     }
   }
   state = null;
+  document.body.classList.remove("in-match");
   matchResult.close();
   inspector.hide();
   selected = null;

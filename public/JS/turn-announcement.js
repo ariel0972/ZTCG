@@ -31,11 +31,11 @@ export function createTurnAnnouncement(arena, banner) {
             { transform: "translateX(0)", opacity: 1, offset: 0.76 },
             { transform: "translateX(90vw)", opacity: 0 },
           ],
-          { duration: 2100, easing: "ease-in-out" },
+          { duration: 2800, easing: "ease-in-out" },
         );
       timer = win.setTimeout(() => {
         banner.hidden = true;
-      }, 2100);
+      }, 2800);
     },
     close() {
       win.clearTimeout(timer);

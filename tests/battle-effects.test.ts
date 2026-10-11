@@ -141,6 +141,51 @@ test("dano periódico e excedente no mago não inventam modificador elemental", 
   assert.deepEqual(g.state.events!.at(-1)!.damage, { amount: 2 });
 });
 
+test("aviso de bloqueio identifica a habilidade protetora e a origem do dano periódico", () => {
+  const { g, card } = fixture();
+  const attacker = {
+    ...structuredClone(card),
+    id: randomUUID(),
+    ownerId: "p1",
+    nome: "Guerreiro",
+  };
+  card.statuses = [
+    {
+      nome: "ReducaoAtaqueTropa",
+      valor: 2,
+      turnosRestantes: 1,
+      origin: "Modo Defensivo de Guerreiro",
+      originOwnerId: "p2",
+    },
+  ];
+  (g as any).damage(card.id, 2, attacker);
+  const blocked = g.state.events!.at(-1)!;
+  assert.equal(blocked.kind, "block");
+  assert.equal(blocked.originOwnerId, "p2");
+  assert.equal(
+    blocked.summary,
+    "Ataque Guerreiro foi bloqueado por Modo Defensivo de Guerreiro (p2).",
+  );
+  (g as any).effects(
+    "p1",
+    [{ id: "status", status: "Queimado", duracao: 2 }],
+    [card.id],
+    "Fogo",
+    attacker,
+  );
+  g.state.turn = 4;
+  g.state.current = "p2";
+  g.execute("p2", {
+    type: "endTurn",
+    actionId: randomUUID(),
+    version: g.state.version,
+  });
+  const periodic = g.state
+    .events!.filter((e) => e.message?.includes("Queimado (fim da rodada)"))
+    .at(-1)!;
+  assert.equal(periodic.originOwnerId, "p1");
+});
+
 function browserFixture() {
   const dom = new JSDOM(
     '<body><div data-slot-id="s"><div data-live-card-id="c"></div></div></body>',
@@ -233,7 +278,7 @@ test("animações cobrem reações, sobrevivem à morte do alvo e respeitam movi
     dom.window.close();
   }
 });
-test("snapshots repetidos não reproduzem efeitos; cada golpe recebe feedback mesmo com cinco avisos", async () => {
+test("snapshots repetidos não reproduzem efeitos; cada golpe recebe feedback mesmo com seis avisos", async () => {
   const path = "../public/JS/battle-events.js";
   const { createBattleEvents } = await import(path);
   const dom = browserFixture(),
@@ -259,7 +304,7 @@ test("snapshots repetidos não reproduzem efeitos; cada golpe recebe feedback me
     );
     assert.equal(
       dom.window.document.querySelectorAll(".battle-event").length,
-      5,
+      6,
     );
     view.update({ id: "b", events });
     assert.equal(
@@ -273,6 +318,99 @@ test("snapshots repetidos não reproduzem efeitos; cada golpe recebe feedback me
     );
   } finally {
     view.close();
+    if (old) Object.defineProperty(globalThis, "document", old);
+    else delete (globalThis as any).document;
+    dom.window.close();
+  }
+});
+
+test("avisos usam cor da origem, duram pelo menos 3 segundos e saem um por vez", async (t) => {
+  const path = "../public/JS/battle-events.js";
+  const { createBattleEvents } = await import(path);
+  const dom = browserFixture(),
+    old = Object.getOwnPropertyDescriptor(globalThis, "document");
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: dom.window.document,
+  });
+  t.mock.timers.enable({ apis: ["Date", "setTimeout"], now: 100000 });
+  const view = createBattleEvents(dom.window.document.body, {
+    getViewerId: () => "p1",
+  });
+  try {
+    const card = { id: "c", nome: "Alvo", imgURL: "", ownerId: "p2" };
+    view.notify({
+      kind: "attack",
+      card: { ...card, ownerId: "p1" },
+      message: "Ataque: Guerreiro (Um) atacou Cavaleiro (Dois).",
+    });
+    view.notify({
+      kind: "damage",
+      card,
+      originOwnerId: "p1",
+      summary: "Meu dano",
+      damage: { amount: 5 },
+    });
+    view.notify({ kind: "passive", card, message: "Defesa" });
+    const items = [...dom.window.document.querySelectorAll(".battle-event")];
+    assert.deepEqual(
+      items.map((e) => e.getAttribute("data-side")),
+      ["me", "me", "enemy"],
+    );
+    assert.equal(
+      items[0].textContent,
+      "Ataque: Guerreiro (Um) atacou Cavaleiro (Dois).",
+    );
+    t.mock.timers.tick(3100);
+    assert.equal(
+      dom.window.document.querySelectorAll(".battle-event--leaving").length,
+      0,
+    );
+    t.mock.timers.tick(100);
+    assert.equal(
+      dom.window.document.querySelectorAll(".battle-event--leaving").length,
+      1,
+    );
+    t.mock.timers.tick(650);
+    assert.equal(
+      dom.window.document.querySelectorAll(".battle-event").length,
+      2,
+    );
+    t.mock.timers.tick(10000);
+    assert.equal(
+      dom.window.document.querySelectorAll(".battle-event").length,
+      0,
+    );
+    for (let i = 0; i < 8; i++)
+      view.notify({ kind: "notice", card, message: `Aviso ${i}` });
+    assert.equal(
+      dom.window.document.querySelectorAll(".battle-event").length,
+      6,
+    );
+    t.mock.timers.tick(3100);
+    assert.ok(
+      dom.window.document
+        .querySelector(".battle-event")!
+        .textContent!.endsWith("Aviso 0"),
+    );
+    t.mock.timers.tick(750);
+    assert.equal(
+      dom.window.document.querySelectorAll(".battle-event").length,
+      6,
+    );
+    assert.ok(
+      dom.window.document
+        .querySelector(".battle-event:last-child")!
+        .textContent!.endsWith("Aviso 6"),
+    );
+    for (let i = 0; i < 40; i++) t.mock.timers.tick(500);
+    assert.equal(
+      dom.window.document.querySelectorAll(".battle-event").length,
+      0,
+    );
+  } finally {
+    view.close();
+    t.mock.timers.reset();
     if (old) Object.defineProperty(globalThis, "document", old);
     else delete (globalThis as any).document;
     dom.window.close();

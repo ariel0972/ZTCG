@@ -1,4 +1,6 @@
 import { profileRoutes } from "./routes/profileRoutes";
+import { rankingRoutes } from "./routes/rankingRoutes";
+import { reactionDescriptions } from "./game/reactions";
 import express, { ErrorRequestHandler } from "express";
 import path from "node:path";
 import mongoose from "mongoose";
@@ -54,6 +56,18 @@ export function createApp(
     });
   });
   app.use(express.static(path.join(__dirname, "..", "public")));
+  app.get("/rules-data", (_req, res) =>
+    res.json({ success: true, reactions: reactionDescriptions }),
+  );
+  app.get(["/ranking", "/regras"], (req, res) => {
+    res.sendFile(
+      path.join(
+        __dirname,
+        "..",
+        `public/HTML/${req.path === "/ranking" ? "ranking" : "regras"}.html`,
+      ),
+    );
+  });
   app.get("/thumosplayer/:id", (req, res) => {
     if (!/^[a-f\d]{24}$/i.test(req.params.id)) {
       res.status(404).send("Perfil inválido.");
@@ -83,6 +97,7 @@ export function createApp(
     }
   });
   app.use("/auth", userRoutes);
+  app.use("/rankings", rankingRoutes);
   app.use("/game", gameRoutes(game));
   app.use("/friends", friendRoutes(game));
   app.use(

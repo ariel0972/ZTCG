@@ -44,6 +44,8 @@ export function createSiteNavigation(header) {
     ["/HTML/perfil.html", "Perfil", "profile", "♙"],
     ["/", "Decks", "decks", "▤"],
     ["/HTML/friends.html", "Amigos", "friends", "♧"],
+    ["/ranking", "Ranking", "ranking", "♔"],
+    ["/regras", "Regras", "rules", "≡"],
     ["/HTML/index.html", "Jogar", "play", "▷"],
   ];
   for (const [href, label, kind, icon] of destinations) {
