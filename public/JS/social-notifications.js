@@ -47,7 +47,7 @@ export function createSocialNotifications({
       Array.isArray(saved.announced) ? saved.announced : [],
     ),
     read = new Set(Array.isArray(saved.read) ? saved.read : []),
-    checkedMatches = new Set();
+    checkedMatches = new Set(Array.isArray(saved.matches) ? saved.matches : []);
   let notices = [],
     closed = false,
     busy = false,
@@ -93,6 +93,7 @@ export function createSocialNotifications({
         JSON.stringify({
           announced: [...announced].slice(-200),
           read: [...read].slice(-200),
+          matches: [...checkedMatches].slice(-100),
         }),
       );
     } catch {}
@@ -268,6 +269,18 @@ export function createSocialNotifications({
         api("/friends/invites"),
       ]);
       if (closed) return;
+      // Another open tab may already have announced this same invitation.
+      try {
+        const shared = JSON.parse(storage.getItem(key) || "{}");
+        for (const id of Array.isArray(shared.announced)
+          ? shared.announced
+          : [])
+          announced.add(id);
+        for (const id of Array.isArray(shared.read) ? shared.read : [])
+          read.add(id);
+        for (const id of Array.isArray(shared.matches) ? shared.matches : [])
+          checkedMatches.add(id);
+      } catch {}
       notices = socialNotices(user.id, friends.relations, invitations.invites);
       render();
       for (const n of notices)
@@ -282,11 +295,16 @@ export function createSocialNotifications({
           i.matchId &&
           !checkedMatches.has(i.matchId),
       );
+      if (win.location.pathname === "/HTML/index.html") {
+        for (const i of accepted) checkedMatches.add(i.matchId);
+        if (accepted.length) persist();
+      }
       if (accepted.length && win.location.pathname !== "/HTML/index.html") {
         const state = await api("/game/state");
         if (closed) return;
         for (const i of accepted) {
           checkedMatches.add(i.matchId);
+          persist();
           if (
             state.match?.id === i.matchId &&
             state.match.status === "ACTIVE"

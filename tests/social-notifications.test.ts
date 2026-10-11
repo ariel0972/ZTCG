@@ -169,7 +169,7 @@ test("aceite redireciona ambos os participantes fora da tela de jogo, sem repeti
     let status = "FINISHED",
       matchId = "old",
       invitations: any[] = [];
-    const view = createSocialNotifications({
+    const options = {
       user: { id: userId },
       doc: dom.window.document,
       win: dom.window,
@@ -181,7 +181,8 @@ test("aceite redireciona ambos os participantes fora da tela de jogo, sem repeti
           : path === "/friends/invites"
             ? { invites: invitations }
             : { match: { id: matchId, status } },
-    });
+    };
+    let view = createSocialNotifications(options);
     try {
       await tick();
       await tick();
@@ -203,6 +204,15 @@ test("aceite redireciona ambos os participantes fora da tela de jogo, sem repeti
       assert.deepEqual(destinations, ["/HTML/index.html"]);
       await view.poll();
       assert.equal(destinations.length, 1);
+      view.close();
+      view = createSocialNotifications(options);
+      await tick();
+      await tick();
+      assert.equal(
+        destinations.length,
+        1,
+        "voltar a outra página não deve redirecionar de novo",
+      );
     } finally {
       view.close();
       dom.window.close();

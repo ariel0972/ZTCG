@@ -922,7 +922,7 @@ As oito reações vêm da mesma fonte reactions.ts usada durante as partidas.
 - tests/ranking.test.ts — Verifica classificação pública, estatísticas reais, elegibilidade, desempates, paginação, ausência de dados privados e páginas.
 
 ATUALIZAÇÃO — AVISOS SOCIAIS E CAMPO MOBILE (11/10/2026)
-- public/JS/social-notifications.js — Central de pedidos e convites em qualquer página autenticada; consulta a cada 5 segundos inclusive em segundo plano, deduplica por conta, permite ativar avisos no dispositivo e verifica partida ativa antes de redirecionar os dois participantes após aceite.
+- public/JS/social-notifications.js — Central de pedidos e convites em qualquer página autenticada; consulta a cada 5 segundos inclusive em segundo plano, deduplica por conta, permite ativar avisos no dispositivo e verifica partida ativa antes de redirecionar os dois participantes uma vez após aceite, permitindo navegar pelo site depois.
 - public/notification-worker.js — Worker somente de notificações: clicar no convite abre a aba de convites, sem cache ou interceptação de requisições do jogo.
 - public/CSS/notifications.css — Botão de notificações, contador de não lidas, painel e avisos pequenos; importado por app.css.
 - public/CSS/battle-mobile.css — Campo completo com cartas proporcionais, magos e pilhas nas laterais em paisagem; mão abaixo para rolagem. Mantém slots, montarias e alvos reais.
