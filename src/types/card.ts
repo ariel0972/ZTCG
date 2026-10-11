@@ -96,6 +96,10 @@ const passiveCardTargets = [
 ] as const;
 export const passiveFilterSchema = z
   .object({
+    numeroCatalogo: z
+      .string()
+      .regex(/^\d{3,6}$/)
+      .optional(),
     tipo: z.enum(cardTypes).optional(),
     elemento: z.enum(elements).optional(),
     direcao: z.enum(["Frente", "Diagonal", "Universal"]).optional(),
@@ -109,6 +113,19 @@ export const passiveFilterSchema = z
 const cardAction = { alvo: z.enum(passiveCardTargets), valor: number };
 const playerAction = { jogador: z.enum(["aliado", "inimigo"]), valor: number };
 export const passiveActionSchema = z.discriminatedUnion("id", [
+  z
+    .object({
+      id: z.literal("counterAttack"),
+      alvo: z.enum(["cartaEvento", "atacante"]),
+    })
+    .strict(),
+  z
+    .object({
+      id: z.literal("interceptAttack"),
+      colunaAtacante: z.number().int().min(0).max(2).optional(),
+    })
+    .strict(),
+  z.object({ id: z.literal("blockOwnAttack") }).strict(),
   z
     .object({
       id: z.literal("damage"),
@@ -201,6 +218,14 @@ export const declarativePassiveSchema = z
         z.discriminatedUnion("tipo", [
           z
             .object({
+              tipo: z.literal("cartaEmCampo"),
+              jogador: z.enum(["aliado", "inimigo"]),
+              filtro: passiveFilterSchema,
+              presente: z.boolean().default(true),
+            })
+            .strict(),
+          z
+            .object({
               tipo: z.literal("campoVazio"),
               jogador: z.enum(["aliado", "inimigo"]),
             })
@@ -208,7 +233,7 @@ export const declarativePassiveSchema = z
           z
             .object({
               tipo: z.literal("vidaPercentual"),
-              alvo: z.enum(["fonte", "cartaEvento"]),
+              alvo: z.enum(["fonte", "cartaEvento", "alvoAtaque"]),
               percentual: number.max(100),
               comparacao: z.enum(["menor", "menorOuIgual"]),
             })
@@ -287,6 +312,10 @@ export const cardSchema = z
     habilidadesAtivas: z.array(activeSchema).max(12).default([]),
     habilidadesPassivas: z.array(passiveSchema).max(12).default([]),
     palavrasChave: z.array(z.string().min(1).max(80)).max(20).default([]),
+    montaria: z
+      .object({ filtro: passiveFilterSchema.optional() })
+      .strict()
+      .optional(),
     fraqueza: z.array(z.enum(elements)).max(6).default([]),
     resistencia: z.array(z.enum(elements)).max(6).default([]),
     limites: z.array(limitsSchema).max(1).default([]),

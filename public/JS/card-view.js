@@ -115,6 +115,10 @@ export function passiveDescription(h) {
             spellDamageBonus: `a cada ${e.aCada} eventos ganha +${e.valor} de dano de ${e.elemento}`,
             attackAura: `aura de ataque +${e.valor} entre vizinhos`,
             attackBonus: `ataque básico +${e.valor}`,
+            counterAttack:
+              "retalia com ataque básico sem consumir o ataque normal",
+            interceptAttack: `intercepta ataques básicos${e.colunaAtacante === undefined ? "" : " vindos da coluna " + (e.colunaAtacante + 1)}`,
+            blockOwnAttack: "não pode atacar enquanto a condição valer",
             blockAttack: "impede ataques básicos que correspondam ao filtro",
             summonFromDeck:
               "mobiliza uma carta do baralho no espaço da tropa morta",
@@ -126,7 +130,9 @@ export function passiveDescription(h) {
       .map((c) =>
         c.tipo === "vidaPercentual"
           ? `vida ${c.comparacao === "menor" ? "menor que" : "menor ou igual a"} ${c.percentual}%`
-          : `campo ${c.jogador} vazio`,
+          : c.tipo === "cartaEmCampo"
+            ? `${c.presente === false ? "sem" : "com"} carta ${JSON.stringify(c.filtro)} no campo ${c.jogador}`
+            : `campo ${c.jogador} vazio`,
       )
       .join(", ");
     const filters = h.filtroEvento

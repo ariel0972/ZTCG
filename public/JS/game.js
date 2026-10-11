@@ -21,7 +21,12 @@ import {
   passiveDescription,
 } from "./card-view.js";
 import { createCardInspector } from "./card-inspection.js";
-import { cardFace, bindCardDrag, dropAction } from "./battle-ui.js";
+import {
+  cardFace,
+  bindCardDrag,
+  dropAction,
+  fieldSource,
+} from "./battle-ui.js";
 import { createMatchResult } from "./match-result.js";
 import { createCardBacks } from "./card-backs.js";
 const battleEvents = createBattleEvents();
@@ -232,7 +237,7 @@ function dragBinding(element, source) {
       selected = {
         ...from,
         type: action,
-        source: from.card.tipo === "Estrutura" ? "structure" : "card",
+        source: fieldSource(from.card, from.slot),
       };
       targets = [];
       if (
@@ -275,9 +280,17 @@ function prepareHand(card) {
   targets = [];
   render();
 }
-function selectSlot(slot, asStructure = false) {
+function selectSlot(slot, asStructure = false, asRider = false) {
   if (!myTurn() || pending) return;
   if (selected) {
+    if (selected.type === "mount") {
+      void command({
+        type: "mount",
+        slotId: selected.slot.id,
+        destinationId: slot.id,
+      });
+      return;
+    }
     if (selected.type === "play" && selected.card.tipo !== "Feitico") {
       void command({
         type: "play",
@@ -317,8 +330,9 @@ function selectSlot(slot, asStructure = false) {
     }
     if (selected.type === "play" || selected.type === "ability") {
       const action = targetAction();
-      const destination =
-        asStructure && action.alvo !== "Estrutura"
+      const destination = asRider
+        ? { ...slot, card: slot.rider, structure: null }
+        : asStructure && action.alvo !== "Estrutura"
           ? { ...slot, card: slot.structure, structure: null }
           : slot;
       if (
@@ -487,11 +501,13 @@ function renderActions() {
     menu = $("card-menu");
   panel.replaceChildren();
   const needsTarget =
-    selected && ["attack", "move", "play", "ability"].includes(selected.type);
+    selected &&
+    ["attack", "move", "play", "ability", "mount"].includes(selected.type);
   menu.hidden =
     !selected ||
     selected.type === "attack" ||
     selected.type === "move" ||
+    selected.type === "mount" ||
     (selected.type === "play" && selected.card.tipo !== "Feitico");
   $("selection-help").hidden = !needsTarget;
   if (selected) {
@@ -510,9 +526,11 @@ function renderActions() {
           ? `${selected.card.tipo === "Mago" ? "Universal" : selected.card.direcaoAtaque || selected.slot.card?.direcaoAtaque || "Frente"} · ${selected.slot.attackTargets?.[selected.source]?.length || 0} alvo(s) disponível(is). Escolha um alvo destacado para atacar.`
           : selected.type === "move"
             ? "Escolha um campo aliado vazio para reposicionar."
-            : selected.type === "play" && selected.card.tipo !== "Feitico"
-              ? "Escolha o campo onde deseja jogar a carta."
-              : targetDescription(targetAction());
+            : selected.type === "mount"
+              ? "Escolha uma montaria destacada. Montar consome o ataque desta tropa."
+              : selected.type === "play" && selected.card.tipo !== "Feitico"
+                ? "Escolha o campo onde deseja jogar a carta."
+                : targetDescription(targetAction());
   if (!selected) return;
   const inspected = selected.card || selected.slot?.card;
   if (inspected) {
@@ -558,7 +576,12 @@ function renderActions() {
       panel.append(
         actionButton(
           "Sacrificar com o Necromante",
-          () => command({ type: "sacrifice", slotId: slot.id }),
+          () =>
+            command({
+              type: "sacrifice",
+              slotId: slot.id,
+              source: fieldSource(card, slot),
+            }),
           state.openingBlocked
             ? "Sacrifício bloqueado nesta fase."
             : myPlayer().mage.usedAbility
@@ -575,7 +598,7 @@ function renderActions() {
               type: "attack",
               card,
               slot,
-              source: card.tipo === "Estrutura" ? "structure" : "card",
+              source: fieldSource(card, slot),
             };
             targets = [];
             render();
@@ -603,15 +626,14 @@ function renderActions() {
                         ].includes(s.nome),
                       )
                     ? "Um status impede o ataque."
-                    : !slot.attackTargets?.[
-                          card.tipo === "Estrutura" ? "structure" : "card"
-                        ]?.length
+                    : !slot.attackTargets?.[fieldSource(card, slot)]?.length
                       ? "Nenhum alvo disponível para esta carta."
                       : "",
         ),
       );
       if (
         card.tipo === "Tropa" &&
+        fieldSource(card, slot) === "card" &&
         (state.phase === "PREPARATION" ||
           card.palavrasChave.includes("Campo livre"))
       )
@@ -622,6 +644,28 @@ function renderActions() {
           }),
         );
     }
+    if (
+      card.tipo === "Tropa" &&
+      fieldSource(card, slot) === "card" &&
+      slot.mountTargets?.length
+    )
+      panel.append(
+        actionButton("Montar · usa o ataque", () => {
+          selected = { type: "mount", slot, card };
+          targets = [];
+          render();
+        }),
+      );
+    if (slot.rider)
+      panel.append(
+        actionButton(
+          `Desmontar ${slot.rider.nome} · usa o ataque`,
+          () => command({ type: "dismount", slotId: slot.id }),
+          slot.canDismount
+            ? ""
+            : "Exige ataque disponível e slot livre à direita, sem Lama.",
+        ),
+      );
     for (const ability of card.habilidadesAtivas)
       panel.append(
         actionButton(
@@ -632,7 +676,7 @@ function renderActions() {
                 type: "ability",
                 slotId: slot.id,
                 abilityId: ability.id,
-                source: card.tipo === "Estrutura" ? "structure" : "card",
+                source: fieldSource(card, slot),
                 targets: [],
               });
               return;
@@ -757,8 +801,7 @@ function renderActions() {
                 type: "ability",
                 slotId: selected.slot.id,
                 abilityId: ability.id,
-                source:
-                  selected.card.tipo === "Estrutura" ? "structure" : "card",
+                source: fieldSource(selected.card, selected.slot),
                 targets,
                 mode,
               }),
@@ -771,7 +814,7 @@ function renderActions() {
             type: "ability",
             slotId: selected.slot.id,
             abilityId: ability.id,
-            source: selected.card.tipo === "Estrutura" ? "structure" : "card",
+            source: fieldSource(selected.card, selected.slot),
             targets,
           }),
         ),
@@ -885,6 +928,11 @@ function slotView(slot) {
   )
     button.classList.add("selected");
   button.dataset.actionsBlocked = String(!myTurn() || pending);
+  if (selected?.type === "mount") {
+    const valid = selected.slot.mountTargets?.includes(slot.id);
+    button.classList.add(valid ? "spell-target" : "spell-unavailable");
+    if (valid) button.append(node("span", "Montar", "attack-target-label"));
+  }
   if (selected?.type === "attack" && slot.ownerId !== user.id) {
     const valid =
       selected.slot.attackTargets?.[selected.source]?.includes(slot.id) &&
@@ -936,8 +984,46 @@ function slotView(slot) {
   };
   if (card && slot.ownerId === user.id)
     dragBinding(button, { type: "field", card, slot });
-  if (!slot.structure) return button;
+  if (!slot.structure && !slot.rider) return button;
   const wrapper = node("div", "", "board-slot-wrap");
+  wrapper.classList.toggle("mounted-slot", !!slot.rider);
+  wrapper.append(button);
+  if (slot.rider) {
+    const riderButton = node("button", "", "rider-action");
+    riderButton.type = "button";
+    riderButton.append(
+      node("small", `Montado · ${slot.rider.nome}`),
+      cardFace(slot.rider, {
+        slot,
+        slots: state.slots,
+        reactions: state.reactions,
+      }),
+    );
+    inspector.bind(riderButton, slot.rider);
+    if (isChoosingSpell()) {
+      const valid = spellSlotTarget(
+        targetAction(),
+        { ...slot, card: slot.rider, structure: null },
+        user.id,
+      );
+      riderButton.classList.add(valid ? "spell-target" : "spell-unavailable");
+      riderButton.classList.toggle("selected", targets.includes(slot.rider.id));
+    }
+    riderButton.onclick = (event) => {
+      anchorAt(event, riderButton);
+      if (selected && !["field", "hand"].includes(selected.type)) {
+        selectSlot(slot, false, true);
+        return;
+      }
+      selected = { type: "field", slot, card: slot.rider };
+      targets = [];
+      render();
+    };
+    if (slot.ownerId === user.id)
+      dragBinding(riderButton, { type: "field", slot, card: slot.rider });
+    wrapper.append(riderButton);
+  }
+  if (!slot.structure) return wrapper;
   const structureButton = node(
     "button",
     `Estrutura: ${slot.structure.nome}`,
@@ -974,7 +1060,7 @@ function slotView(slot) {
   dragBinding(structureButton, { type: "field", card: slot.structure, slot });
   if (isChoosingSpell() && spellSlotTarget(targetAction(), slot, user.id))
     structureButton.classList.add("spell-target");
-  wrapper.append(button, structureButton);
+  wrapper.append(structureButton);
   return wrapper;
 }
 const boardKeys = new Map();
@@ -1069,10 +1155,10 @@ function render() {
     targets = [];
     const attack = state.pendingAttack;
     const defender = state.slots
-      .flatMap((s) => [s.card, s.structure])
+      .flatMap((s) => [s.card, s.rider, s.structure])
       .find((c) => c?.id === attack.defenderId);
     const attacker = state.slots
-      .flatMap((s) => [s.card, s.structure])
+      .flatMap((s) => [s.card, s.rider, s.structure])
       .find((c) => c?.id === attack.attackerId);
     responsePanel.append(
       node("h2", `${defender?.nome || "Carta"}: devolver ataque?`),
@@ -1145,7 +1231,9 @@ function render() {
     selected?.card &&
     ![
       ...me.hand,
-      ...state.slots.flatMap((s) => [s.card, s.structure].filter(Boolean)),
+      ...state.slots.flatMap((s) =>
+        [s.card, s.rider, s.structure].filter(Boolean),
+      ),
     ].some((c) => c.id === selected.card.id)
   ) {
     selected = null;
@@ -1155,7 +1243,9 @@ function render() {
     selected.card =
       [
         ...me.hand,
-        ...state.slots.flatMap((s) => [s.card, s.structure].filter(Boolean)),
+        ...state.slots.flatMap((s) =>
+          [s.card, s.rider, s.structure].filter(Boolean),
+        ),
       ].find((c) => c.id === selected.card.id) || selected.card;
     if (selected.slot)
       selected.slot = state.slots.find((s) => s.id === selected.slot.id);
@@ -1284,7 +1374,7 @@ document.addEventListener("pointerdown", (event) => {
     selected &&
     ["hand", "field"].includes(selected.type) &&
     !event.target.closest(
-      "#card-menu, .board-slot, .battle-hand-card, .structure-action",
+      "#card-menu, .board-slot, .battle-hand-card, .structure-action, .rider-action",
     )
   )
     resetSelection();

@@ -29,6 +29,7 @@ const active = new Schema(
 );
 const passiveFilter = new Schema(
   {
+    numeroCatalogo: String,
     tipo: { type: String, enum: cardTypes },
     elemento: { type: String, enum: elements },
     direcao: { type: String, enum: ["Frente", "Diagonal", "Universal"] },
@@ -38,9 +39,14 @@ const passiveFilter = new Schema(
 );
 const passiveCondition = new Schema(
   {
-    tipo: { type: String, enum: ["campoVazio", "vidaPercentual"] },
+    tipo: {
+      type: String,
+      enum: ["campoVazio", "vidaPercentual", "cartaEmCampo"],
+    },
+    filtro: { type: passiveFilter, default: undefined },
+    presente: Boolean,
     jogador: { type: String, enum: ["aliado", "inimigo"] },
-    alvo: { type: String, enum: ["fonte", "cartaEvento"] },
+    alvo: { type: String, enum: ["fonte", "cartaEvento", "alvoAtaque"] },
     percentual: n,
     comparacao: { type: String, enum: ["menor", "menorOuIgual"] },
   },
@@ -64,6 +70,7 @@ const passiveAction = new Schema(
     destino: String,
     filtro: { type: passiveFilter, default: undefined },
     qualquerDe: { type: [passiveFilter], default: undefined },
+    colunaAtacante: { type: Number, min: 0, max: 2 },
   },
   { _id: false, strict: "throw" },
 );
@@ -138,6 +145,13 @@ const schema = new Schema<Card>(
     habilidadesAtivas: [active],
     habilidadesPassivas: [passive],
     palavrasChave: [String],
+    montaria: {
+      type: new Schema(
+        { filtro: { type: passiveFilter, default: undefined } },
+        { _id: false, strict: "throw" },
+      ),
+      default: undefined,
+    },
     fraqueza: [String],
     resistencia: [String],
     limites: [limits],

@@ -217,3 +217,74 @@ test("arraste usa os alvos calculados pelo servidor, inclusive mago e Guardar", 
     "Estrutura possui seu próprio conjunto de alvos.",
   );
 });
+
+test("arraste mobiliza na montaria, monta em campo e distingue ataque do ocupante", async () => {
+  const modulePath = "../public/JS/battle-ui.js";
+  const { dropAction, fieldSource, mountAllowed } = await import(modulePath);
+  const horse = {
+    id: "horse",
+    tipo: "Tropa",
+    ownerId: "p1",
+    palavrasChave: ["Montaria"],
+    montaria: { filtro: { numeroCatalogo: "021" } },
+  };
+  const knight = {
+    id: "knight",
+    tipo: "Tropa",
+    ownerId: "p1",
+    numeroCatalogo: "021",
+    palavrasChave: [],
+  };
+  const dest = { id: "p1:front:0", kind: "Tropa", ownerId: "p1", card: horse };
+  const state = {
+    status: "ACTIVE",
+    phase: "BATTLE",
+    players: [{ id: "p1", combatStarted: false }],
+    slots: [dest],
+  };
+  assert.equal(mountAllowed(horse, knight), true);
+  assert.equal(
+    mountAllowed(horse, { ...knight, numeroCatalogo: "023" }),
+    false,
+  );
+  assert.equal(
+    dropAction({ type: "play", card: knight }, dest, state, "p1"),
+    "play",
+  );
+  assert.equal(
+    dropAction(
+      { type: "play", card: knight },
+      { ...dest, rider: knight },
+      state,
+      "p1",
+    ),
+    null,
+  );
+  const source = {
+    type: "field",
+    card: knight,
+    slot: {
+      id: "p1:front:2",
+      ownerId: "p1",
+      kind: "Tropa",
+      card: knight,
+      mountTargets: [dest.id],
+    },
+  };
+  assert.equal(dropAction(source, dest, state, "p1"), "mount");
+  const field = {
+    ...dest,
+    rider: knight,
+    attackTargets: { card: [], rider: ["p2:front:2"] },
+  };
+  assert.equal(fieldSource(knight, field), "rider");
+  assert.equal(
+    dropAction(
+      { type: "field", card: knight, slot: field },
+      { id: "p2:front:2", ownerId: "p2", kind: "Tropa" },
+      state,
+      "p1",
+    ),
+    "attack",
+  );
+});

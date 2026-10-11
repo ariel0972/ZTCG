@@ -1,6 +1,35 @@
 import { node } from "./auth.js";
 import { labels } from "./card-view.js";
 import { hasAutomaticTarget, spellSlotTarget } from "./battle-targets.js";
+export const fieldSource = (card, slot) =>
+  card.tipo === "Estrutura"
+    ? "structure"
+    : slot?.rider && slot.rider.id === card.id
+      ? "rider"
+      : "card";
+export function mountAllowed(mount, rider, occupied = false) {
+  if (
+    !mount ||
+    occupied ||
+    mount.tipo !== "Tropa" ||
+    rider.tipo !== "Tropa" ||
+    mount.ownerId !== rider.ownerId ||
+    !mount.palavrasChave?.includes("Montaria")
+  )
+    return false;
+  const f = mount.montaria?.filtro;
+  return (
+    !f ||
+    ((!f.numeroCatalogo || f.numeroCatalogo === rider.numeroCatalogo) &&
+      (!f.tipo || f.tipo === rider.tipo) &&
+      (!f.elemento || f.elemento === rider.elemento) &&
+      (!f.direcao || f.direcao === rider.direcaoAtaque) &&
+      (!f.status ||
+        rider.statuses?.some(
+          (s) => s.nome === f.status && s.turnosRestantes > 0,
+        )))
+  );
+}
 
 export function attackValue(card, slot, slots = []) {
   if (card.tipo === "Estrutura") return card.ataque || 0;
@@ -164,7 +193,7 @@ export function dropAction(source, slot, state, userId) {
         !slot.structure
         ? "play"
         : null;
-    if (slot.card) return null;
+    if (slot.card && !mountAllowed(slot.card, card, !!slot.rider)) return null;
     if (card.tipo === "Tropa")
       return !state.players.find((p) => p.id === userId).combatStarted &&
         (slot.kind === "Tropa" ||
@@ -177,8 +206,15 @@ export function dropAction(source, slot, state, userId) {
       : null;
   }
   if (source.slot?.ownerId !== userId) return null;
+  if (
+    own &&
+    source.slot.mountTargets?.includes(slot.id) &&
+    fieldSource(card, source.slot) === "card"
+  )
+    return "mount";
   if (own)
     return card.tipo === "Tropa" &&
+      fieldSource(card, source.slot) === "card" &&
       source.slot.kind === "Tropa" &&
       slot.kind === "Tropa" &&
       !slot.card &&
@@ -189,7 +225,7 @@ export function dropAction(source, slot, state, userId) {
       ? "move"
       : null;
   if (source.slot.attackTargets) {
-    const kind = card.tipo === "Estrutura" ? "structure" : "card";
+    const kind = fieldSource(card, source.slot);
     return source.slot.attackTargets[kind]?.includes(slot.id) ? "attack" : null;
   }
   if (

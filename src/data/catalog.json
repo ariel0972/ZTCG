@@ -1415,7 +1415,7 @@
     "nome": "Golém",
     "tipo": "Tropa",
     "custoMana": 6,
-    "descricao": "Ataca uma vez por rodada. Regenerar: por 4 de mana, recupera 3 de vida própria, uma vez por rodada.",
+    "descricao": "Ataca uma vez por rodada. No ataque básico, causa +1 de dano contra o alvo com menos da metade da vida máxima. Regenerar: por 4 de mana, recupera 3 de vida própria, uma vez por rodada.",
     "imgURL": "/assets/Cards/Golem.png",
     "publicado": true,
     "versao": 1,
@@ -1427,6 +1427,27 @@
     "subtipo": "Invocação",
     "resistencia": ["Fogo"],
     "fraqueza": [],
+    "habilidadesPassivas": [
+      {
+        "gatilho": "continuous",
+        "escopo": "proprio",
+        "condicoes": [
+          {
+            "tipo": "vidaPercentual",
+            "alvo": "alvoAtaque",
+            "percentual": 50,
+            "comparacao": "menor"
+          }
+        ],
+        "efeitos": [
+          {
+            "id": "attackBonus",
+            "valor": 1
+          }
+        ],
+        "descricao": "+1 somente neste ataque básico se o alvo efetivo estiver abaixo de metade da vida máxima."
+      }
+    ],
     "habilidadesAtivas": [
       {
         "id": "regenerar",
@@ -1478,43 +1499,128 @@
     "numeroCatalogo": "063",
     "nome": "Cachorro",
     "tipo": "Tropa",
-    "custoMana": 4,
-    "descricao": "",
+    "custoMana": 3,
+    "descricao": "Ataca uma vez por rodada. Quando um inimigo ataca seu mago com ataque básico, retalia contra o atacante, mesmo fora de alcance, sem gastar seu ataque normal. Atordoado, Incapacitado e Congelado impedem a retaliação.",
     "imgURL": "/assets/Cards/Cachorro.png",
     "publicado": true,
     "versao": 1,
-    "hp": 1,
-    "ataque": 2,
-    "manaGerada": 1,
-    "direcaoAtaque": "Frente"
+    "hp": 10,
+    "ataque": 3,
+    "manaGerada": 2,
+    "direcaoAtaque": "Frente",
+    "elemento": "Neutro",
+    "subtipo": "Animal",
+    "fraqueza": ["Fogo"],
+    "resistencia": [],
+    "habilidadesPassivas": [
+      {
+        "gatilho": "onAttack",
+        "escopo": "inimigo",
+        "filtroAlvo": {
+          "tipo": "Mago",
+          "relacao": "aliado"
+        },
+        "efeitos": [
+          {
+            "id": "counterAttack",
+            "alvo": "cartaEvento"
+          }
+        ],
+        "descricao": "Após cada ataque básico contra seu mago, retalia com seu ataque básico, sem consumir ataque nem limite, mesmo se o mago morrer no golpe. Segue resistência, escudos e proteção por estrutura."
+      }
+    ]
   },
   {
     "numeroCatalogo": "074",
     "nome": "Cavalo",
     "tipo": "Tropa",
-    "custoMana": 4,
-    "descricao": "",
+    "custoMana": 5,
+    "descricao": "Só pode atacar se houver um Cavaleiro aliado em campo. Pode receber um Cavaleiro como montaria e mover uma vez por turno para um slot livre, levando-o junto. Ambos geram mana e atacam separadamente. Ataques atingem o Cavalo primeiro; excedente passa ao Cavaleiro com suas proteções. Feitiços podem escolher qualquer um; áreas atingem ambos.",
     "imgURL": "/assets/Cards/Cavalo.png",
     "publicado": true,
     "versao": 1,
-    "hp": 1,
-    "ataque": 2,
-    "manaGerada": 1,
-    "direcaoAtaque": "Frente"
+    "hp": 9,
+    "ataque": 4,
+    "manaGerada": 3,
+    "direcaoAtaque": "Frente",
+    "elemento": "Neutro",
+    "subtipo": "Animal",
+    "fraqueza": ["Fogo", "Agua"],
+    "resistencia": [],
+    "palavrasChave": ["Campo livre", "Montaria"],
+    "montaria": {
+      "filtro": {
+        "numeroCatalogo": "021"
+      }
+    },
+    "habilidadesPassivas": [
+      {
+        "gatilho": "continuous",
+        "escopo": "proprio",
+        "condicoes": [
+          {
+            "tipo": "cartaEmCampo",
+            "jogador": "aliado",
+            "filtro": {
+              "numeroCatalogo": "021"
+            },
+            "presente": false
+          }
+        ],
+        "efeitos": [
+          {
+            "id": "blockOwnAttack"
+          }
+        ],
+        "descricao": "Sem Cavaleiro aliado vivo em campo, não pode usar ataque básico."
+      }
+    ]
   },
   {
     "numeroCatalogo": "075",
     "nome": "Escudeiro",
     "tipo": "Tropa",
     "custoMana": 4,
-    "descricao": "",
+    "descricao": "Ataca uma vez por rodada. Cavaleiros nos slots vizinhos recebem +2 de ataque básico por Escudeiro adjacente. Intercepta ataques básicos de tropas vindos da coluna central contra aliados; o defensor elegível mais à esquerda recebe o golpe.",
     "imgURL": "/assets/Cards/Escudeiro.png",
     "publicado": true,
     "versao": 1,
-    "hp": 1,
+    "hp": 9,
     "ataque": 2,
-    "manaGerada": 1,
-    "direcaoAtaque": "Frente"
+    "manaGerada": 2,
+    "direcaoAtaque": "Frente",
+    "habilidadesPassivas": [
+      {
+        "gatilho": "continuous",
+        "escopo": "proprio",
+        "efeitos": [
+          {
+            "id": "attackAura",
+            "valor": 2,
+            "filtro": {
+              "numeroCatalogo": "021"
+            },
+            "fonteRecebe": false
+          }
+        ],
+        "descricao": "Cavaleiros nos slots vizinhos recebem +2 de ataque básico por Escudeiro adjacente."
+      },
+      {
+        "gatilho": "onTargeted",
+        "escopo": "aliado",
+        "efeitos": [
+          {
+            "id": "interceptAttack",
+            "colunaAtacante": 1
+          }
+        ],
+        "descricao": "Intercepta ataques básicos de tropas na coluna central contra aliados. Mantém proteção por estrutura; havendo outros defensores elegíveis, usa o mais à esquerda."
+      }
+    ],
+    "elemento": "Neutro",
+    "subtipo": "Humano",
+    "resistencia": ["Terra", "Agua"],
+    "fraqueza": ["Fogo", "Ar"]
   },
   {
     "numeroCatalogo": "077",

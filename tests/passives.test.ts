@@ -6,10 +6,69 @@ import { cardSchema, Card } from "../src/types/card";
 import { Game } from "../src/game/engine";
 import type { Instance } from "../src/game/state";
 import { playableErrors } from "../src/game/capabilities";
-import { adjacentAttackBonus, spellDamageBonus } from "../src/game/passives";
+import {
+  adjacentAttackBonus,
+  spellDamageBonus,
+  targetAttackBonus,
+} from "../src/game/passives";
 import CardModel from "../src/db/models/Card";
 import { cleanCard } from "../src/services/catalog";
 const catalog = raw.map((c) => cardSchema.parse(c));
+test("Golém calcula +1 pelo alvo efetivo abaixo de metade, sem bônus permanente", () => {
+  for (const tipo of ["Tropa", "Mago", "Estrutura"] as const) {
+    const g = make();
+    const golem = instance("025", "p1");
+    const target = instance(tipo === "Mago" ? "108" : "020", "p2", {
+      tipo,
+      hp: 20,
+    });
+    slot(g, "p1", 0).card = golem;
+    target.hpAtual = 10;
+    assert.equal(targetAttackBonus(golem, target, g.state.slots), 0);
+    target.hpAtual = 9;
+    assert.equal(targetAttackBonus(golem, target, g.state.slots), 1);
+    assert.equal(adjacentAttackBonus(golem, g.state.slots), 0);
+    assert.equal(golem.ataque, 4);
+  }
+  const g = make();
+  slot(g, "p1", 0).card = instance("025", "p1");
+  slot(g, "p2", 2).card = instance("020", "p2", {
+    hp: 20,
+    resistencia: [],
+    fraqueza: [],
+  });
+  slot(g, "p2", 2).card!.hpAtual = 8;
+  act(g, { type: "attack", slotId: "p1:front:0", targetId: "p2:front:2" });
+  assert.equal(slot(g, "p2", 2).card!.hpAtual, 3);
+  assert.equal(slot(g, "p1", 0).card!.ataque, 4);
+  assert.ok(
+    g.state.log.some((line) => /Golém ganhou \+1 neste ataque/.test(line)),
+  );
+});
+test("Escudeiros concedem aura acumulável só ao Cavaleiro adjacente", () => {
+  const g = make();
+  slot(g, "p1", 0).card = instance("075", "p1");
+  slot(g, "p1", 1).card = instance("021", "p1");
+  slot(g, "p1", 2).card = instance("075", "p1");
+  assert.equal(adjacentAttackBonus(slot(g, "p1", 1).card!, g.state.slots), 4);
+  assert.equal(adjacentAttackBonus(slot(g, "p1", 0).card!, g.state.slots), 0);
+  slot(g, "p1", 1).card = instance("020", "p1");
+  assert.equal(adjacentAttackBonus(slot(g, "p1", 1).card!, g.state.slots), 0);
+  const restored = Game.restore(JSON.parse(JSON.stringify(g.exportState())));
+  assert.deepEqual(restored.state.slots, g.state.slots);
+  assert.deepEqual(
+    playableErrors(
+      cardSchema.parse(catalog.find((c) => c.numeroCatalogo === "025")),
+    ),
+    [],
+  );
+  assert.deepEqual(
+    playableErrors(
+      cardSchema.parse(catalog.find((c) => c.numeroCatalogo === "075")),
+    ),
+    [],
+  );
+});
 function instance(
   id: string,
   ownerId: string,

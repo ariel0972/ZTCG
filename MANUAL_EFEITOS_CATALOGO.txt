@@ -240,17 +240,27 @@ continuous: aura/condição contínua, sem modificar o ataque base permanentemen
 escopo: proprio (evento da fonte), aliado, inimigo ou qualquer jogador.
 excluirFonte: true evita ativar pelo evento da própria fonte.
 descricao: texto da passiva; não executa.
-filtroEvento: tipo, elemento, direcao e/ou status da carta do evento.
+filtroEvento: numeroCatalogo, tipo, elemento, direcao e/ou status da carta do evento.
   Os campos juntos são E lógico. Pelo menos um filtro precisa ser definido.
 filtroAlvo: tipo, elemento e relacao aliado/inimigo do alvo do evento.
   Permitido somente em onAttack/onKill/onHeal.
 condicoes: até 12, todas devem valer:
+  {"tipo":"cartaEmCampo","jogador":"aliado","filtro":{"numeroCatalogo":"021"},
+   "presente":false}: não existe Cavaleiro aliado vivo em campo, montado ou não.
+  presente: true (padrão) exige presença. jogador aceita aliado/inimigo. O filtro
+  aceita numeroCatalogo, tipo, elemento, direcao e status, combinados com E.
   {"tipo":"campoVazio","jogador":"inimigo"}: nenhuma tropa daquele lado.
   {"tipo":"vidaPercentual","alvo":"fonte","percentual":50,
    "comparacao":"menor"}: menos de 50% da vida máxima da própria fonte.
-  alvo pode ser fonte ou cartaEvento; percentual 0..100; comparacao menor
+  alvo pode ser fonte, cartaEvento ou alvoAtaque; percentual 0..100; comparacao menor
   ou menorOuIgual. cartaEvento é a carta do evento, não um alvo adversário
   imaginário. Em continuous normalmente é a própria fonte.
+  alvoAtaque só pode ser usado em continuous com efeitos attackBonus. Avalia
+  a vida do defensor efetivo antes do ataque básico, inclusive uma estrutura
+  protetora. Não concede ataque permanente nem aumenta dano de habilidades.
+  A vida máxima inclui o bônus de vida de armamentos que beneficiam a tropa.
+  Filtros de carta aceitam numeroCatalogo, por exemplo {"numeroCatalogo":"021"},
+  para restringir uma aura aos Cavaleiros sem depender de seu nome visível.
 
 Alvos de ações: fonte, magoAliado, magoInimigo, cartaEvento, atacante, alvoAtaque.
 atacante só faz sentido em onAttacked/onDamageTaken. alvoAtaque só é permitido
@@ -270,7 +280,9 @@ spellDamageBonus: elemento, valor positivo, contador (identificador seguro),
   aCada positivo. Em Mago, onSpellCast com filtro do elemento. Incrementa
   contador; bônus permanente aumenta a cada N ocorrências. Não é consumido.
 manaRecovery: valor; só Mago, continuous, substitui recuperação própria.
-attackBonus: valor positivo; só Tropa, continuous. Condição ligada à fonte.
+attackBonus: valor positivo; só Tropa, continuous. Condição ligada à fonte ou
+  ao alvo efetivo do ataque. O bônus do alvo é calculado separadamente, pois
+  depende de quem receberá o golpe; não altera o ataque básico da carta.
 attackAura: valor positivo; só Tropa, continuous; filtro opcional dos vizinhos;
   fonteRecebe padrão true; porVizinho padrão true. Somam auras distintas.
   Uma Dançarina central com Fogo dos dois lados recebe +4; cada vizinha +2.
@@ -279,13 +291,27 @@ blockAttack: somente onTargeted com escopo proprio; filtro opcional do atacante.
   Água OU Frente: use qualquerDe, não um único filtro contendo os dois.
 reflectAttack: somente onTargeted/escopo proprio; filtro opcional. Resposta
   opcional em 20 segundos, pausa relógio, sem mana, uma vez por rodada.
+counterAttack: só Tropa. onAttack com alvo cartaEvento retalia contra quem atacou;
+  onAttacked com alvo atacante retalia contra quem atacou a fonte. Use filtroAlvo
+  {"tipo":"Mago","relacao":"aliado"} em onAttack/escopo inimigo para defender
+  o mago. Usa ataque básico, elemento, bônus, resistência, escudos e estrutura.
+  Ignora alcance e ataque já usado; não consome mana, ataque nem limite do mago.
+  Atordoado, Incapacitado e Congelado bloqueiam; Cego pode errar normalmente.
+  Sem limite por rodada: cada ataque ativa. Pode ocorrer após golpe fatal no mago.
+interceptAttack: só Tropa; onTargeted com escopo proprio ou aliado. colunaAtacante
+  opcional: 0 esquerda, 1 centro, 2 direita do atacante. Sem coluna, qualquer uma.
+  Recebe ataques básicos de tropas destinados aos aliados, preservando estrutura.
+  Entre defensores elegíveis, usa o mais à esquerda; reduções não se somam.
+blockOwnAttack: só Tropa; continuous/escopo proprio. Bloqueia o ataque da fonte
+  enquanto condicoes valerem. Não bloqueia habilidades. Sem condições, bloqueia
+  sempre. Combine com cartaEmCampo/presente:false para exigir um aliado específico.
 summonFromDeck: carta = numeroCatalogo ou mesmaCarta, destino slotEvento.
 move: destino slotEvento. Ambos só em onDeath de tropa aliada, fonte Tropa.
   Exigem vaga válida; não substituem uma carta viva nem ocupam Lama.
 
-continuous aceita apenas attackAura, attackBonus e manaRecovery.
-onTargeted aceita apenas blockAttack e reflectAttack.
-Outros gatilhos aceitam as ações de evento; não aceitam essas cinco ações
+continuous aceita apenas attackAura, attackBonus, manaRecovery e blockOwnAttack.
+onTargeted aceita apenas blockAttack, reflectAttack e interceptAttack.
+Outros gatilhos aceitam as ações de evento; não aceitam essas sete ações
 contínuas/restrições. Um ciclo de passivas é limitado pelo motor e não pode
 ser usado para criar cura/dano infinito.
 
@@ -378,7 +404,7 @@ strongFlow / Global: compra 3; ao usar OUTRA carta Zarcos depois, naquela
 As condições de Fluxo Forte/Lágrima expiram no fim da rodada, não são retroativas.
 Bola de Fogo 001 + Furacão 004 na mesma rodada, qualquer ordem: +6 de dano
   adicionais a todos os inimigos, mantendo efeitos anteriores, uma vez por rodada.
-Jato d'água 002 cancela feitiço Fogo direcionado a tropa/mago, inclusive
+Jato da água 002 cancela feitiço Fogo direcionado a tropa/mago, inclusive
   múltiplos alvos, fora do turno. Nunca cancela assinatura. Janela 20 segundos
   pausa turno; custa 3 e respeita limite comum. A resposta só cancela, sem dano.
   O cancelado gasta mana/uso, vai ao cemitério e conta para passiva do mago Fogo.
@@ -432,10 +458,9 @@ liberados para partidas. Os exemplos abaixo usam false para você revisar suas
 novas cartas antes de publicar. Cartas sem registro no banco usam catalog.json.
 
 Regenerar do Golém foi implementado como habilidade genérica de cura própria.
-A passiva de bônus contra inimigo abaixo de metade da vida não foi acrescentada
-por esta alteração de habilidades; attackBonus continuous atual avalia a fonte.
-Para criar essa passiva específica futuramente, é preciso ampliar a condição
-para o alvo do ataque e definir se protege/mede a tropa ou sua estrutura.
+A passiva de bônus contra inimigo abaixo de metade da vida usa vidaPercentual
+com alvoAtaque. Mede o defensor efetivo (tropa, mago ou estrutura) antes do golpe;
+metade exata não concede bônus. Uma estrutura protegendo a tropa é esse defensor.
 
 EXEMPLOS COMPLETOS
 
@@ -445,7 +470,7 @@ EXEMPLO_JSON_INICIO 025 — Golém
   "nome": "Golém",
   "tipo": "Tropa",
   "custoMana": 6,
-  "descricao": "Ataca uma vez por rodada. Regenerar: por 4 de mana, recupera 3 de vida própria, uma vez por rodada.",
+  "descricao": "Ataca uma vez por rodada. No ataque básico, causa +1 contra alvo abaixo de metade da vida máxima. Regenerar: por 4 de mana, recupera 3 de vida própria, uma vez por rodada.",
   "imgURL": "/assets/Cards/Golem.png",
   "publicado": false,
   "versao": 1,
@@ -455,6 +480,7 @@ EXEMPLO_JSON_INICIO 025 — Golém
   "direcaoAtaque": "Frente",
   "elemento": "Neutro",
   "subtipo": "Invocação",
+  "habilidadesPassivas": [{"gatilho":"continuous","escopo":"proprio","condicoes":[{"tipo":"vidaPercentual","alvo":"alvoAtaque","percentual":50,"comparacao":"menor"}],"efeitos":[{"id":"attackBonus","valor":1}]}],
   "resistencia": [
     "Fogo"
   ],
@@ -1279,5 +1305,212 @@ EXEMPLO_JSON_INICIO 990105 — Busca elemental de exemplo
   "descricao": "Escolha um feitiço de Fogo, Água, Terra ou Ar do baralho, ponha na mão e embaralhe.",
   "publicado": false,
   "versao": 1
+}
+EXEMPLO_JSON_FIM
+
+
+12. MONTARIA E EXEMPLOS DE PASSIVAS (10/10/2026)
+
+Montaria é uma palavra-chave de Tropa. Adicione "Montaria" a palavrasChave.
+O campo opcional montaria contém apenas filtro (opcional). Sem filtro, aceita
+qualquer tropa aliada; filtro: {"numeroCatalogo":"021"} aceita só Cavaleiro.
+Pode filtrar tipo, elemento, direcao ou status, com E entre os campos. Exemplo:
+montaria: {"filtro":{"elemento":"Fogo","tipo":"Tropa"}} aceita tropas de Fogo.
+Não use filtro vazio: omita filtro ou use montaria: {}. Não exige um nome fixo.
+Só Tropa pode ser Montaria. montaria exige a palavra-chave Montaria. Não aninha
+montarias: máximo de duas tropas por slot. O ocupante não carrega outra tropa.
+
+Mobilizar da mão na montaria custa a mana normal e uma mobilização. Na preparação,
+a isenção normal de mana de tropas é preservada. Uma tropa já em campo pode Montar:
+consome seu ataque disponível e um ataque do limite do mago, sem pagar mana.
+Montar em campo é bloqueado na preparação e no primeiro turno após preparação,
+como os ataques. Não pode montar estando incapacitado ou após usar o ataque.
+O filtro pertence à montaria. Não é necessário configurar o Cavaleiro para montar.
+
+Desmontar usa o ataque e o limite da tropa ocupante, que vai para o slot frontal
+imediatamente à direita. Bloqueia se estiver ocupado, com Lama ou fora do campo.
+Campo livre permite mover uma vez por turno para uma vaga válida e leva o ocupante.
+O Cavalo se move sem Cavaleiro; sua passiva de restrição bloqueia só o ataque.
+Não há movimento separado do ocupante montado: primeiro desmonte.
+
+Ambos atacam, usam habilidades, recebem status e geram mana separadamente.
+Um armamento associado ao slot beneficia ambos, com bônus de ataque e vida.
+Estrutura do slot continua protegendo normalmente. Ataque básico atinge a montaria
+primeiro, e o excesso de dano passa ao ocupante como novo golpe, com suas próprias
+resistências, escudos e reduções. Feitiços e habilidades individuais podem escolher
+qualquer um. Efeito de área atinge ambos; o ocupante recebe também o excedente da
+montaria. Se ela morrer, o ocupante continua no slot, preservando identidade/status.
+Se ambos morrerem, ambos vão ao cemitério e disparam seus eventos normalmente.
+
+Na interface, clique ou arraste a tropa ocupante para atacar com ela. Montar e
+Desmontar aparecem no menu quando permitidos. Montarias válidas ficam destacadas;
+o Cavaleiro da mão também pode ser arrastado diretamente para o Cavalo.
+
+Como reutilizar as quatro passivas:
+- Golém: continuous + vidaPercentual/alvoAtaque/menor + attackBonus. Mude percentual
+  e valor. Inclui defensor mago/estrutura; não altera dano de habilidade nem feitiço.
+- Cachorro: onAttack/inimigo + filtroAlvo de mago aliado + counterAttack/cartaEvento.
+  Para retaliar ataques contra a própria tropa: onAttacked/proprio +
+  counterAttack/atacante. Não combine counterAttack com continuous ou onTargeted.
+- Escudeiro: attackAura/filtro/numeroCatalogo:021/fonteRecebe:false beneficia só
+  Cavaleiros nos slots imediatamente vizinhos. Auras de Escudeiros se acumulam.
+  A segunda passiva onTargeted/aliado/interceptAttack/colunaAtacante:1 intercepta
+  ataques da coluna central. Remova colunaAtacante para defender de qualquer coluna.
+- Cavalo: Montaria + filtro:021 + Campo livre. continuous/blockOwnAttack com
+  cartaEmCampo/aliado/filtro:021/presente:false exige qualquer Cavaleiro vivo aliado.
+  Troque o catálogo 021 ou use elemento/tipo/status para novas combinações.
+
+Os blocos abaixo são exemplos completos de catálogo. Use Validar e ajuste
+publicado antes de salvar. As habilidades ativas das imagens de Cachorro,
+Escudeiro e Cavalo não são implementadas por estes exemplos: este pedido trata
+das passivas. A habilidade Regenerar do Golém já está configurada no exemplo 025.
+
+EXEMPLO_JSON_INICIO 063 — Cachorro
+{
+  "numeroCatalogo": "063",
+  "nome": "Cachorro",
+  "tipo": "Tropa",
+  "custoMana": 3,
+  "descricao": "Ataca uma vez por rodada. Quando um inimigo ataca seu mago com ataque básico, retalia contra o atacante, mesmo fora de alcance, sem gastar seu ataque normal. Atordoado, Incapacitado e Congelado impedem a retaliação.",
+  "imgURL": "/assets/Cards/Cachorro.png",
+  "publicado": false,
+  "versao": 1,
+  "hp": 10,
+  "ataque": 3,
+  "manaGerada": 2,
+  "direcaoAtaque": "Frente",
+  "elemento": "Neutro",
+  "subtipo": "Animal",
+  "fraqueza": [
+    "Fogo"
+  ],
+  "resistencia": [],
+  "habilidadesPassivas": [
+    {
+      "gatilho": "onAttack",
+      "escopo": "inimigo",
+      "filtroAlvo": {
+        "tipo": "Mago",
+        "relacao": "aliado"
+      },
+      "efeitos": [
+        {
+          "id": "counterAttack",
+          "alvo": "cartaEvento"
+        }
+      ],
+      "descricao": "Após cada ataque básico contra seu mago, retalia com seu ataque básico, sem consumir ataque nem limite, mesmo se o mago morrer no golpe. Segue resistência, escudos e proteção por estrutura."
+    }
+  ]
+}
+EXEMPLO_JSON_FIM
+
+EXEMPLO_JSON_INICIO 074 — Cavalo
+{
+  "numeroCatalogo": "074",
+  "nome": "Cavalo",
+  "tipo": "Tropa",
+  "custoMana": 5,
+  "descricao": "Só pode atacar se houver um Cavaleiro aliado em campo. Pode receber um Cavaleiro como montaria e mover uma vez por turno para um slot livre, levando-o junto. Ambos geram mana e atacam separadamente. Ataques atingem o Cavalo primeiro; excedente passa ao Cavaleiro com suas proteções. Feitiços podem escolher qualquer um; áreas atingem ambos.",
+  "imgURL": "/assets/Cards/Cavalo.png",
+  "publicado": false,
+  "versao": 1,
+  "hp": 9,
+  "ataque": 4,
+  "manaGerada": 3,
+  "direcaoAtaque": "Frente",
+  "elemento": "Neutro",
+  "subtipo": "Animal",
+  "fraqueza": [
+    "Fogo",
+    "Agua"
+  ],
+  "resistencia": [],
+  "palavrasChave": [
+    "Campo livre",
+    "Montaria"
+  ],
+  "montaria": {
+    "filtro": {
+      "numeroCatalogo": "021"
+    }
+  },
+  "habilidadesPassivas": [
+    {
+      "gatilho": "continuous",
+      "escopo": "proprio",
+      "condicoes": [
+        {
+          "tipo": "cartaEmCampo",
+          "jogador": "aliado",
+          "filtro": {
+            "numeroCatalogo": "021"
+          },
+          "presente": false
+        }
+      ],
+      "efeitos": [
+        {
+          "id": "blockOwnAttack"
+        }
+      ],
+      "descricao": "Sem Cavaleiro aliado vivo em campo, não pode usar ataque básico."
+    }
+  ]
+}
+EXEMPLO_JSON_FIM
+
+EXEMPLO_JSON_INICIO 075 — Escudeiro
+{
+  "numeroCatalogo": "075",
+  "nome": "Escudeiro",
+  "tipo": "Tropa",
+  "custoMana": 4,
+  "descricao": "Ataca uma vez por rodada. Cavaleiros nos slots vizinhos recebem +2 de ataque básico por Escudeiro adjacente. Intercepta ataques básicos de tropas vindos da coluna central contra aliados; o defensor elegível mais à esquerda recebe o golpe.",
+  "imgURL": "/assets/Cards/Escudeiro.png",
+  "publicado": false,
+  "versao": 1,
+  "hp": 9,
+  "ataque": 2,
+  "manaGerada": 2,
+  "direcaoAtaque": "Frente",
+  "habilidadesPassivas": [
+    {
+      "gatilho": "continuous",
+      "escopo": "proprio",
+      "efeitos": [
+        {
+          "id": "attackAura",
+          "valor": 2,
+          "filtro": {
+            "numeroCatalogo": "021"
+          },
+          "fonteRecebe": false
+        }
+      ],
+      "descricao": "Cavaleiros nos slots vizinhos recebem +2 de ataque básico por Escudeiro adjacente."
+    },
+    {
+      "gatilho": "onTargeted",
+      "escopo": "aliado",
+      "efeitos": [
+        {
+          "id": "interceptAttack",
+          "colunaAtacante": 1
+        }
+      ],
+      "descricao": "Intercepta ataques básicos de tropas na coluna central contra aliados. Mantém proteção por estrutura; havendo outros defensores elegíveis, usa o mais à esquerda."
+    }
+  ],
+  "elemento": "Neutro",
+  "subtipo": "Humano",
+  "resistencia": [
+    "Terra",
+    "Agua"
+  ],
+  "fraqueza": [
+    "Fogo",
+    "Ar"
+  ]
 }
 EXEMPLO_JSON_FIM

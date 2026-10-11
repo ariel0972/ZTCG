@@ -19,6 +19,7 @@ export function createBattleEvents(host = document.body) {
     reaction: "Ataque devolvido",
     damage: "Dano recebido",
     notice: "Aviso",
+    mount: "Montaria",
   };
   function show(event) {
     const card = event.card;

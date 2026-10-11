@@ -4,6 +4,7 @@ import type {
   PassiveAction,
 } from "../types/card";
 import type { Instance, Slot } from "./state";
+import { troopPositions, slotCards } from "./state";
 import { normalizePassive, legacyFireCounter } from "./legacy-passives";
 import { canonicalStatus, hasStatus } from "./status";
 
@@ -19,6 +20,9 @@ export interface PassiveEvent {
   slotId?: string;
 }
 export const passiveActionIds = [
+  "counterAttack",
+  "interceptAttack",
+  "blockOwnAttack",
   "damage",
   "heal",
   "growMaxHp",
@@ -58,6 +62,12 @@ export function describePassiveActions(actions: PassiveAction[]) {
   return actions
     .map((a) => {
       switch (a.id) {
+        case "counterAttack":
+          return "Retaliou com seu ataque básico";
+        case "interceptAttack":
+          return "Interceptou um ataque básico";
+        case "blockOwnAttack":
+          return "Não pode atacar sem a condição exigida";
         case "damage":
           return `Causou ${a.valor} de dano`;
         case "heal":
@@ -103,6 +113,8 @@ export function matchesPassiveFilter(
 ) {
   if (!filter) return true;
   return (
+    (!filter.numeroCatalogo ||
+      card?.numeroCatalogo === filter.numeroCatalogo) &&
     (!filter.tipo || card?.tipo === filter.tipo) &&
     (!filter.elemento ||
       (event?.element ?? card?.elemento) === filter.elemento) &&
@@ -141,11 +153,48 @@ export function passiveMatches(
       return false;
   }
   return (rule.condicoes ?? []).every((condition) => {
+    if (condition.tipo === "cartaEmCampo") {
+      const found = slots.some(
+        (s) =>
+          (s.ownerId === source.ownerId) === (condition.jogador === "aliado") &&
+          slotCards(s).some(
+            (c) =>
+              (c.hp === undefined || c.hpAtual > 0) &&
+              matchesPassiveFilter(c, condition.filtro),
+          ),
+      );
+      return found === condition.presente;
+    }
     if (condition.tipo === "vidaPercentual") {
-      const card = condition.alvo === "fonte" ? source : event.card;
+      const card =
+        condition.alvo === "fonte"
+          ? source
+          : condition.alvo === "alvoAtaque"
+            ? event.targetCard
+            : event.card;
       if (!card || !card.hp || card.hpAtual <= 0) return false;
+      const position = slots.find((s) =>
+        slotCards(s).some((c) => c.id === card.id),
+      );
+      const arms =
+        card.tipo === "Mago"
+          ? ["back-left", "back-right"]
+          : card.tipo === "Tropa" && position?.column === 0
+            ? ["front-left"]
+            : card.tipo === "Tropa" && position?.column === 2
+              ? ["front-right"]
+              : [];
+      const maxHp =
+        card.hp +
+        slots
+          .filter(
+            (s) =>
+              s.ownerId === card.ownerId &&
+              arms.some((a) => s.id.endsWith(`:${a}`)),
+          )
+          .reduce((sum, s) => sum + (s.card?.bonusHp ?? 0), 0);
       const left = card.hpAtual * 100,
-        right = card.hp * condition.percentual;
+        right = maxHp * condition.percentual;
       return condition.comparacao === "menor" ? left < right : left <= right;
     }
     const allied = condition.jogador === "aliado";
@@ -156,6 +205,85 @@ export function passiveMatches(
         s.card,
     );
   });
+}
+export function blockedOwnAttack(card: Instance, slots: Slot[]) {
+  return card.habilidadesPassivas
+    .map(normalizePassive)
+    .some(
+      (rule) =>
+        rule.gatilho === "continuous" &&
+        rule.efeitos.some((e) => e.id === "blockOwnAttack") &&
+        passiveMatches(
+          rule,
+          card,
+          { ownerId: card.ownerId, cardId: card.id, card },
+          slots,
+        ),
+    );
+}
+export function canMount(
+  mount: Instance | null,
+  rider: Instance,
+  occupied = false,
+) {
+  return (
+    !!mount &&
+    !occupied &&
+    mount.hpAtual > 0 &&
+    rider.hpAtual > 0 &&
+    mount.ownerId === rider.ownerId &&
+    mount.tipo === "Tropa" &&
+    rider.tipo === "Tropa" &&
+    mount.id !== rider.id &&
+    mount.palavrasChave.includes("Montaria") &&
+    matchesPassiveFilter(rider, mount.montaria?.filtro)
+  );
+}
+export function attackInterceptor(
+  attacker: Instance,
+  target: Slot,
+  slots: Slot[],
+) {
+  if (attacker.tipo !== "Tropa") return undefined;
+  const position = slots.find(
+    (s) => s.card?.id === attacker.id || s.rider?.id === attacker.id,
+  );
+  for (const s of slots
+    .filter((s) => s.ownerId === target.ownerId && s.kind === "Tropa")
+    .sort((a, b) => a.column - b.column)) {
+    for (const source of [s.card, s.rider]) {
+      if (!source || source.hpAtual <= 0) continue;
+      if (hasStatus(source.statuses, ["Interceptar"]))
+        return { slot: s, card: source };
+      for (const rule of source.habilidadesPassivas.map(normalizePassive)) {
+        if (
+          rule.gatilho !== "onTargeted" ||
+          !passiveMatches(
+            rule,
+            source,
+            {
+              ownerId: target.ownerId,
+              cardId: target.card?.id,
+              card: target.card ?? undefined,
+              attackerId: attacker.id,
+            },
+            slots,
+          )
+        )
+          continue;
+        if (
+          rule.efeitos.some(
+            (e) =>
+              e.id === "interceptAttack" &&
+              (e.colunaAtacante === undefined ||
+                e.colunaAtacante === position?.column),
+          )
+        )
+          return { slot: s, card: source };
+      }
+    }
+  }
+  return undefined;
 }
 export function restrictedBasicAttack(
   defender: Instance,
@@ -187,6 +315,7 @@ export function restrictedBasicAttack(
   });
 }
 export function adjacentAttackBonus(card: Instance, slots: Slot[]) {
+  slots = troopPositions(slots);
   const target = slots.find(
     (s) => s.card?.id === card.id && s.kind === "Tropa",
   );
@@ -245,6 +374,43 @@ export function adjacentAttackBonus(card: Instance, slots: Slot[]) {
   }
   return bonus;
 }
+export function targetAttackBonus(
+  card: Instance,
+  target: Instance,
+  slots: Slot[],
+) {
+  return card.habilidadesPassivas
+    .map(normalizePassive)
+    .reduce((bonus, rule) => {
+      if (
+        rule.gatilho !== "continuous" ||
+        !rule.condicoes?.some(
+          (c) => c.tipo === "vidaPercentual" && c.alvo === "alvoAtaque",
+        ) ||
+        !passiveMatches(
+          rule,
+          card,
+          {
+            ownerId: card.ownerId,
+            cardId: card.id,
+            card,
+            targetCard: target,
+            targetId: target.id,
+          },
+          slots,
+        )
+      )
+        return bonus;
+      return (
+        bonus +
+        rule.efeitos.reduce(
+          (sum, action) =>
+            sum + (action.id === "attackBonus" ? action.valor : 0),
+          0,
+        )
+      );
+    }, 0);
+}
 export function spellDamageBonus(
   card: Instance,
   element?: Instance["elemento"],
@@ -272,6 +438,7 @@ export function continuousPassiveActive(
   rule: DeclarativePassive,
   slots: Slot[],
 ) {
+  slots = troopPositions(slots);
   if (
     source.hpAtual <= 0 ||
     !passiveMatches(
@@ -303,6 +470,70 @@ export function continuousPassiveActive(
 }
 export const passiveTemplates: { nome: string; passiva: DeclarativePassive }[] =
   [
+    {
+      nome: "Retaliar cada ataque básico contra o mago aliado",
+      passiva: {
+        gatilho: "onAttack",
+        escopo: "inimigo",
+        filtroAlvo: { tipo: "Mago", relacao: "aliado" },
+        efeitos: [{ id: "counterAttack", alvo: "cartaEvento" }],
+      },
+    },
+    {
+      nome: "Interceptar ataques básicos vindos da coluna central",
+      passiva: {
+        gatilho: "onTargeted",
+        escopo: "aliado",
+        efeitos: [{ id: "interceptAttack", colunaAtacante: 1 }],
+      },
+    },
+    {
+      nome: "Não atacar sem uma carta específica aliada em campo",
+      passiva: {
+        gatilho: "continuous",
+        escopo: "proprio",
+        condicoes: [
+          {
+            tipo: "cartaEmCampo",
+            jogador: "aliado",
+            filtro: { numeroCatalogo: "021" },
+            presente: false,
+          },
+        ],
+        efeitos: [{ id: "blockOwnAttack" }],
+      },
+    },
+    {
+      nome: "Ataque básico contra alvo abaixo de metade da vida",
+      passiva: {
+        gatilho: "continuous",
+        escopo: "proprio",
+        condicoes: [
+          {
+            tipo: "vidaPercentual",
+            alvo: "alvoAtaque",
+            percentual: 50,
+            comparacao: "menor",
+          },
+        ],
+        efeitos: [{ id: "attackBonus", valor: 1 }],
+      },
+    },
+    {
+      nome: "Aura para uma carta específica nos slots vizinhos",
+      passiva: {
+        gatilho: "continuous",
+        escopo: "proprio",
+        efeitos: [
+          {
+            id: "attackAura",
+            valor: 2,
+            filtro: { numeroCatalogo: "021" },
+            fonteRecebe: false,
+          },
+        ],
+      },
+    },
     {
       nome: "Ao reviver uma tropa aliada: ganhar ataque acumulável",
       passiva: {

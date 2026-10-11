@@ -1,7 +1,12 @@
 import { playableErrors } from "./capabilities";
 import type { Instance, Slot, Player, State, DeckDefinition } from "./state";
+import { slotCards } from "./state";
 import {
   adjacentAttackBonus,
+  targetAttackBonus,
+  blockedOwnAttack,
+  canMount,
+  attackInterceptor,
   restrictedBasicAttack,
   passiveMatches,
   matchesPassiveFilter,
@@ -59,7 +64,7 @@ export class Game {
     game.state = structuredClone(saved.state);
     for (const slot of game.state.slots) {
       if (slot.appliedElement === "Neutro") delete slot.appliedElement;
-      for (const card of [slot.card, slot.structure])
+      for (const card of slotCards(slot))
         if (card?.appliedElement === "Neutro") delete card.appliedElement;
     }
     // BSON/JSON preserve values, but not shared references between mage and slot.
@@ -223,14 +228,12 @@ export class Game {
   }
   private findCard(id: string) {
     return (
-      this.state.slots
-        .flatMap((s) => [s.card, s.structure])
-        .find((c) => c?.id === id) ?? null
+      this.state.slots.flatMap(slotCards).find((c) => c?.id === id) ?? null
     );
   }
   private targetSlot(id: string) {
     return this.state.slots.find(
-      (s) => s.id === id || s.card?.id === id || s.structure?.id === id,
+      (s) => s.id === id || slotCards(s).some((c) => c.id === id),
     );
   }
   private has(card: Instance, word: string) {
@@ -332,7 +335,7 @@ export class Game {
         recovery +
         this.state.slots
           .filter((s) => s.ownerId === player.id)
-          .flatMap((s) => [s.card, s.structure])
+          .flatMap(slotCards)
           .reduce(
             (sum, c) =>
               sum + (c && c.tipo !== "Mago" ? (c.manaGerada ?? 0) : 0),
@@ -434,6 +437,7 @@ export class Game {
       hasStatus(slot.card.statuses, ["Congelado"]);
     const protectedByStructure =
       slot.structure &&
+      slot.structure.hpAtual > 0 &&
       slot.card?.tipo === "Tropa" &&
       id !== slot.structure.id &&
       !bypassFrozen &&
@@ -446,7 +450,9 @@ export class Game {
           ? slot.structure!
           : bypassFrozen
             ? this.player(slot.ownerId).mage
-            : (slot.card ?? this.player(slot.ownerId).mage);
+            : ((id === slot.rider?.id ? slot.rider : slot.card) ??
+              this.player(slot.ownerId).mage);
+    if (target.hpAtual <= 0) return;
     const origin =
       cause ??
       (attacker
@@ -502,10 +508,15 @@ export class Game {
     const excess =
       ((attacker && this.has(attacker, "Sobrepujar")) ||
         this.has(target, "Explosão")) &&
-      target.tipo === "Tropa"
+      target.tipo === "Tropa" &&
+      !(target.id === slot.card?.id && slot.rider)
         ? Math.max(0, remaining - target.hpAtual)
         : 0;
     const hpBefore = target.hpAtual;
+    const riderExcess =
+      target.id === slot.card?.id && slot.rider
+        ? Math.max(0, remaining - hpBefore)
+        : 0;
     target.hpAtual -= remaining;
     this.reportDamage(
       target,
@@ -524,6 +535,16 @@ export class Game {
         card: target,
         attackerId: killer?.id,
       });
+    if (riderExcess && slot.rider && slot.rider.hpAtual > 0)
+      this.damage(
+        slot.rider.id,
+        riderExcess,
+        attacker,
+        true,
+        element,
+        source,
+        `Excedente de ${target.nome} (${origin})`,
+      );
     if (excess) {
       const mage = this.player(target.ownerId).mage;
       const before = mage.hpAtual;
@@ -555,7 +576,7 @@ export class Game {
   ) {
     if (card.hp === undefined)
       this.fail("Este alvo não possui vida para curar.");
-    const slot = this.state.slots.find((s) => s.card?.id === card.id);
+    const slot = this.targetSlot(card.id);
     const bonus = slot
       ? this.weapons(slot).reduce((n, w) => n + (w.bonusHp ?? 0), 0)
       : 0;
@@ -645,14 +666,19 @@ export class Game {
             slotId: slot.id,
           });
         }
-        if (slot.card?.tipo === "Tropa" && slot.card.hpAtual <= 0) {
-          const dead = slot.card;
+        for (const dead of [slot.card, slot.rider].filter(
+          (c): c is Instance => !!c && c.tipo === "Tropa" && c.hpAtual <= 0,
+        )) {
           const killedBy = dead.killedBy;
           this.event("death", dead);
-          slot.card = null;
+          if (slot.rider?.id === dead.id) slot.rider = null;
+          else {
+            slot.card = slot.rider ?? null;
+            slot.rider = null;
+          }
           player.graveyard.push(dead);
           changed = true;
-          for (const weapon of this.weapons(slot)) {
+          for (const weapon of slot.card ? [] : this.weapons(slot)) {
             if (this.has(weapon, "Herança")) continue;
             const weaponSlot = this.targetSlot(weapon.id)!;
             player.graveyard.push(weapon);
@@ -710,9 +736,7 @@ export class Game {
             : undefined),
       };
       // Freeze participants, rules and eligibility before any effect changes zones.
-      const listeners = this.state.slots.flatMap((s) =>
-        [s.card, s.structure].filter((c): c is Instance => c !== null),
-      );
+      const listeners = this.state.slots.flatMap(slotCards);
       if (
         event.card &&
         ["onDeath", "onStructureDestroyed"].includes(trigger) &&
@@ -761,6 +785,48 @@ export class Game {
     event: PassiveEvent,
   ): boolean {
     const owner = this.player(source.ownerId);
+    if (action.id === "counterAttack") {
+      const targetId =
+        action.alvo === "atacante" ? event.attackerId : event.cardId;
+      const target = targetId && this.targetSlot(targetId);
+      const attacker = targetId && this.findCard(targetId);
+      if (
+        !target ||
+        !attacker ||
+        attacker.hpAtual <= 0 ||
+        source.hpAtual <= 0 ||
+        hasStatus(source.statuses, [
+          "Atordoado",
+          "Incapacitado",
+          "Congelado",
+        ]) ||
+        this.state.phase === "PREPARATION" ||
+        blockedOwnAttack(source, this.state.slots)
+      )
+        return false;
+      const defender = this.basicAttackDefender(target);
+      if (restrictedBasicAttack(defender, source, this.state.slots))
+        return false;
+      this.log(
+        `${source.nome} retaliou contra ${attacker.nome}, sem consumir seu ataque normal.`,
+      );
+      this.event("attack", source, "Retaliação");
+      source.palavrasChave = source.palavrasChave.filter(
+        (k) => k !== "Esconder",
+      );
+      source.statuses = source.statuses.filter((s) => s.nome !== "Esconder");
+      if (hasStatus(source.statuses, ["Cego"]) && this.rng() < 0.5) {
+        this.log(`${source.nome} errou a retaliação por cegueira.`);
+        return true;
+      }
+      this.completeAttack(
+        source,
+        target,
+        this.basicAttackDamage(source, defender),
+        source.elemento,
+      );
+      return true;
+    }
     if (
       action.id === "mana" ||
       action.id === "draw" ||
@@ -906,8 +972,12 @@ export class Game {
       if (ids.length) this.fail("Esta ação não aceita seleção de alvos.");
       if (type === "TodasTropasInimigas")
         return this.state.slots
-          .filter((s) => s.ownerId === enemy.id && s.card?.tipo === "Tropa")
-          .map((s) => s.id);
+          .filter((s) => s.ownerId === enemy.id)
+          .flatMap((s) =>
+            slotCards(s)
+              .filter((c) => c.tipo === "Tropa")
+              .map((c) => c.id),
+          );
       return type === "TodosInimigos"
         ? this.state.slots
             .filter(
@@ -915,7 +985,11 @@ export class Game {
                 s.ownerId === enemy.id &&
                 (s.card?.tipo === "Tropa" || s.kind === "Mago"),
             )
-            .map((s) => s.id)
+            .flatMap((s) =>
+              [s.card, s.rider]
+                .filter((c): c is Instance => !!c)
+                .map((c) => c.id),
+            )
         : [];
     }
     if (!ids.length) this.fail("Selecione pelo menos um alvo.");
@@ -952,7 +1026,7 @@ export class Game {
       }
       if (!slot || (!slot.card && !slot.structure))
         this.fail("Alvo vazio ou inexistente.");
-      const card = id === slot.structure?.id ? slot.structure : slot.card;
+      const card = this.findCard(id) ?? slot.card;
       if (type === "UnicoAliado" && slot.ownerId !== owner)
         this.fail("Selecione um aliado.");
       if (
@@ -978,10 +1052,95 @@ export class Game {
     const before = this.weapons(from).reduce((n, w) => n + (w.bonusHp ?? 0), 0);
     const after = this.weapons(to).reduce((n, w) => n + (w.bonusHp ?? 0), 0);
     if (from.card) from.card.hpAtual += after - before;
+    if (from.rider) from.rider.hpAtual += after - before;
     if (to.card) to.card.hpAtual += before - after;
+    if (to.rider) to.rider.hpAtual += before - after;
     [from.card, to.card] = [to.card, from.card];
     [from.structure, to.structure] = [to.structure, from.structure];
+    [from.rider, to.rider] = [to.rider, from.rider];
     if (to.card) to.card.moved = true;
+  }
+  private mountActionError(
+    user: string,
+    slot: Slot,
+    card: Instance | null | undefined,
+  ) {
+    if (this.state.phase !== "BATTLE" || this.openingBlocked())
+      return "Montar e desmontar são bloqueados na preparação e no primeiro turno.";
+    return this.attackSourceError(user, slot, card ?? null);
+  }
+  private spendMountAttack(user: string, card: Instance) {
+    card.attacked = true;
+    this.player(user).counters.attacks++;
+    this.player(user).combatStarted = true;
+  }
+  private mount(user: string, fromId: string, toId: string) {
+    const from = this.ownSlot(fromId, user),
+      to = this.ownSlot(toId, user),
+      rider = from.card;
+    const error = this.mountActionError(user, from, rider);
+    if (error) this.fail(error);
+    if (
+      !rider ||
+      from === to ||
+      from.rider ||
+      from.kind !== "Tropa" ||
+      to.kind !== "Tropa" ||
+      to.terrain ||
+      !canMount(to.card, rider, !!to.rider)
+    )
+      this.fail("Selecione uma montaria aliada válida e sem cavaleiro.");
+    if (from.structure && to.structure)
+      this.fail("Não é possível combinar duas estruturas no mesmo slot.");
+    const oldBonus = this.weapons(from).reduce(
+        (n, w) => n + (w.bonusHp ?? 0),
+        0,
+      ),
+      newBonus = this.weapons(to).reduce((n, w) => n + (w.bonusHp ?? 0), 0);
+    rider.hpAtual += newBonus - oldBonus;
+    from.card = null;
+    to.rider = rider;
+    if (from.structure) {
+      to.structure = from.structure;
+      from.structure = null;
+    }
+    this.spendMountAttack(user, rider);
+    this.log(
+      `${rider.nome} montou em ${to.card!.nome}, consumindo seu ataque e um uso do limite de ataques.`,
+    );
+    this.event("mount", rider, `Montou em ${to.card!.nome}.`);
+  }
+  private dismountDestination(slot: Slot) {
+    return this.state.slots.find(
+      (s) =>
+        s.ownerId === slot.ownerId &&
+        s.kind === "Tropa" &&
+        s.column === slot.column + 1 &&
+        !s.card &&
+        !s.rider &&
+        !s.terrain,
+    );
+  }
+  private dismount(user: string, id: string) {
+    const from = this.ownSlot(id, user),
+      rider = from.rider;
+    const error = this.mountActionError(user, from, rider);
+    if (error) this.fail(error);
+    const to = this.dismountDestination(from);
+    if (!rider || !to)
+      this.fail(
+        "Desmontar exige um slot livre imediatamente à direita, sem Lama.",
+      );
+    const before = this.weapons(from).reduce((n, w) => n + (w.bonusHp ?? 0), 0),
+      after = this.weapons(to).reduce((n, w) => n + (w.bonusHp ?? 0), 0);
+    rider.hpAtual += after - before;
+    from.rider = null;
+    to.card = rider;
+    this.spendMountAttack(user, rider);
+    this.log(
+      `${rider.nome} desmontou para a direita, consumindo seu ataque e um uso do limite de ataques.`,
+    );
+    this.event("mount", rider, "Desmontou para o slot à direita.");
   }
   private effects(
     ownerId: string,
@@ -1099,17 +1258,20 @@ export class Game {
       if (card.tipo === "Mago")
         this.fail("Remoção definitiva não pode remover o mago.");
       if (slot.structure?.id === card.id) slot.structure = null;
+      else if (slot.rider?.id === card.id) slot.rider = null;
       else {
         if (card.tipo === "Armamento")
           for (const beneficiary of this.weaponBeneficiaries(slot))
-            if (beneficiary.card) beneficiary.card.hpAtual -= card.bonusHp ?? 0;
-        if (card.tipo === "Tropa")
+            for (const troop of [beneficiary.card, beneficiary.rider])
+              if (troop) troop.hpAtual -= card.bonusHp ?? 0;
+        if (card.tipo === "Tropa" && !slot.rider)
           for (const weapon of this.weapons(slot)) {
             if (this.has(weapon, "Herança")) continue;
             this.player(card.ownerId).graveyard.push(weapon);
             this.targetSlot(weapon.id)!.card = null;
           }
-        slot.card = null;
+        slot.card = slot.rider ?? null;
+        slot.rider = null;
       }
     } else {
       const p = this.player(ownerId),
@@ -1133,7 +1295,7 @@ export class Game {
       const card =
         id === slot.structure?.id
           ? slot.structure
-          : (slot.structure ?? slot.card);
+          : (slot.structure ?? this.findCard(id) ?? slot.card);
       const existing =
         slot.terrain?.nome === "Lama"
           ? "Lama"
@@ -1267,7 +1429,7 @@ export class Game {
         card.tiposAlvo &&
         ids.some((id) => {
           const s = this.targetSlot(id);
-          const target = id === s?.structure?.id ? s.structure : s?.card;
+          const target = this.findCard(id) ?? s?.card;
           return !target || !card.tiposAlvo!.includes(target.tipo);
         })
       )
@@ -1292,7 +1454,7 @@ export class Game {
         !card.assinatura &&
         ids.some((id) => {
           const s = this.targetSlot(id);
-          const target = id === s?.structure?.id ? s.structure : s?.card;
+          const target = this.findCard(id) ?? s?.card;
           return target?.tipo === "Tropa" || target?.tipo === "Mago";
         }) &&
         this.canRespondWithWater(this.opponent(user).id)
@@ -1330,7 +1492,12 @@ export class Game {
             slot.kind === "Armamento" &&
             this.has(card, "Flanquear")
           )) ||
-        slot.card
+        (slot.card &&
+          !(
+            card.tipo === "Tropa" &&
+            slot.kind === "Tropa" &&
+            canMount(slot.card, card, !!slot.rider)
+          ))
       )
         this.fail("Slot ocupado ou de outro tipo.");
       if (
@@ -1347,6 +1514,7 @@ export class Game {
       player.hand.splice(index, 1);
       this.event("summon", card);
       if (card.tipo === "Estrutura") slot.structure = card;
+      else if (card.tipo === "Tropa" && slot.card) slot.rider = card;
       else slot.card = card;
       if (card.tipo === "Tropa") {
         card.hpAtual += this.weapons(slot).reduce(
@@ -1366,7 +1534,8 @@ export class Game {
       }
       if (card.tipo === "Armamento") {
         for (const beneficiary of this.weaponBeneficiaries(slot))
-          if (beneficiary.card) beneficiary.card.hpAtual += card.bonusHp ?? 0;
+          for (const troop of [beneficiary.card, beneficiary.rider])
+            if (troop) troop.hpAtual += card.bonusHp ?? 0;
         this.trigger("onEquip", { ownerId: user, cardId: card.id });
       }
     }
@@ -1437,7 +1606,9 @@ export class Game {
           s.ownerId === this.opponent(user).id &&
           (s.card?.tipo === "Tropa" || (mage && s.kind === "Mago")),
       )
-      .map((s) => s.id);
+      .flatMap((s) =>
+        [s.card, s.rider].filter((c): c is Instance => !!c).map((c) => c.id),
+      );
   }
   private spellSelection(card: Instance, user: string, ids: string[]) {
     if (!card.alvoAutomatico) return ids;
@@ -1450,7 +1621,9 @@ export class Game {
       target?.tipo !== "Tropa" ||
       target.hpAtual <= 0 ||
       target.ownerId === user ||
-      !this.state.slots.some((s) => s.card?.id === target.id)
+      !this.state.slots.some(
+        (s) => s.card?.id === target.id || s.rider?.id === target.id,
+      )
     )
       this.fail(
         "A última tropa que atacou uma tropa sua no turno anterior não está disponível.",
@@ -1470,12 +1643,16 @@ export class Game {
     return this.state.slots.some(
       (s) =>
         s.ownerId === user &&
-        s.card?.tipo === "Tropa" &&
-        (s.card.numeroCatalogo === "025" ||
-          (s.card.elemento === "Terra" &&
-            /golem/i.test(
-              s.card.nome.normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
-            ))),
+        slotCards(s).some(
+          (c) =>
+            c.tipo === "Tropa" &&
+            c.hpAtual > 0 &&
+            (c.numeroCatalogo === "025" ||
+              (c.elemento === "Terra" &&
+                /golem/i.test(
+                  c.nome.normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
+                ))),
+        ),
     );
   }
   private spellTarget(card: Card, user: string) {
@@ -1562,7 +1739,7 @@ export class Game {
     ) => {
       for (const id of targets) {
         const s = this.targetSlot(id),
-          target = id === s?.structure?.id ? s.structure : s?.card;
+          target = this.findCard(id) ?? s?.card;
         if (target) {
           applyStatus(target.statuses, name, duration, value, this.state.turn);
           this.trigger("onStatusApplied", {
@@ -1601,9 +1778,13 @@ export class Game {
           slot.structure.hpAtual = 0;
           this.resolve();
         }
-        const troop = slot.card;
+        const troop = this.findCard(ids[0]) ?? slot.card;
         if (troop) {
-          slot.card = null;
+          if (slot.rider?.id === troop.id) slot.rider = null;
+          else {
+            slot.card = slot.rider ?? null;
+            slot.rider = null;
+          }
           this.resetCard(troop);
           enemy.hand.push(troop);
         }
@@ -1779,6 +1960,8 @@ export class Game {
     const p = this.player(user);
     if (!card || !["Tropa", "Mago", "Estrutura"].includes(card.tipo))
       return "Selecione uma tropa, mago ou estrutura.";
+    if (blockedOwnAttack(card, this.state.slots))
+      return "A passiva desta carta exige uma carta aliada em campo para atacar.";
     if (
       card.tipo === "Mago" &&
       this.state.slots.some(
@@ -1911,7 +2094,12 @@ export class Game {
       );
     const p = this.player(user),
       slot = this.ownSlot(cmd.slotId, user),
-      card = cmd.source === "structure" ? slot.structure : slot.card;
+      card =
+        cmd.source === "structure"
+          ? slot.structure
+          : cmd.source === "rider"
+            ? (slot.rider ?? null)
+            : slot.card;
     const sourceError = this.attackSourceError(user, slot, card);
     if (sourceError) this.fail(sourceError);
     if (!card) this.fail("Carta ausente.");
@@ -1923,17 +2111,15 @@ export class Game {
     const targetError = this.attackTargetError(slot, card, target);
     if (targetError) this.fail(targetError);
     if (card.tipo === "Tropa") {
-      const interceptor = this.front(enemy.id)
-        .filter(
-          (s) =>
-            s.card && s.card.hpAtual > 0 && this.has(s.card, "Interceptar"),
-        )
-        .sort((a, b) => a.column - b.column)[0];
-      if (interceptor && interceptor !== target) {
+      const interceptor = attackInterceptor(card, target, this.state.slots);
+      if (interceptor && interceptor.card.id !== target.card?.id) {
         this.log(
-          `${interceptor.card!.nome} interceptou o ataque de ${card.nome} destinado a ${target.card?.nome ?? enemy.mage.nome}.`,
+          `${interceptor.card.nome} interceptou o ataque de ${card.nome} destinado a ${target.card?.nome ?? enemy.mage.nome}.`,
         );
-        target = interceptor;
+        target =
+          interceptor.slot.rider?.id === interceptor.card.id
+            ? { ...interceptor.slot, card: interceptor.card, rider: null }
+            : interceptor.slot;
       }
       if (target.card?.tipo === "Tropa")
         enemy.lastTroopAttacker = { cardId: card.id, turn: this.state.turn };
@@ -1955,20 +2141,26 @@ export class Game {
             cardId: target.card.id,
             attackerId: card.id,
           });
+        const missedDefender = this.basicAttackDefender(target);
+        this.trigger("onAttack", {
+          ownerId: user,
+          cardId: card.id,
+          card,
+          targetId: missedDefender.id,
+          targetCard: missedDefender,
+          slotId: target.id,
+        });
         this.log(`${card.nome} errou por cegueira.`);
         return;
       }
     }
-    const damage =
-      (card.ataque ?? 0) +
-      card.statuses
-        .filter((s) => s.nome === "BonusAtaque" && s.turnosRestantes > 0)
-        .reduce((sum, s) => sum + (s.valor ?? 0), 0) +
-      adjacentAttackBonus(card, this.state.slots) +
-      (card.tipo === "Estrutura"
-        ? 0
-        : this.weapons(slot).reduce((sum, c) => sum + (c.bonusAtaque ?? 0), 0));
     const defender = this.basicAttackDefender(target);
+    const bonusOnTarget = targetAttackBonus(card, defender, this.state.slots);
+    if (bonusOnTarget)
+      this.log(
+        `${card.nome} ganhou +${bonusOnTarget} neste ataque contra ${defender.nome} pela vida do alvo.`,
+      );
+    const damage = this.basicAttackDamage(card, defender);
     if (this.canReflectAttack(defender, card)) {
       this.state.pendingAttack = {
         attackerOwnerId: user,
@@ -1983,12 +2175,27 @@ export class Game {
     }
     this.completeAttack(card, target, damage, card.elemento);
   }
+  private basicAttackDamage(card: Instance, defender: Instance) {
+    const slot = this.targetSlot(card.id)!;
+    return (
+      (card.ataque ?? 0) +
+      card.statuses
+        .filter((s) => s.nome === "BonusAtaque" && s.turnosRestantes > 0)
+        .reduce((sum, s) => sum + (s.valor ?? 0), 0) +
+      adjacentAttackBonus(card, this.state.slots) +
+      targetAttackBonus(card, defender, this.state.slots) +
+      (card.tipo === "Estrutura"
+        ? 0
+        : this.weapons(slot).reduce((sum, c) => sum + (c.bonusAtaque ?? 0), 0))
+    );
+  }
   private basicAttackDefender(target: Slot): Instance {
     const frozen =
       target.card?.tipo === "Tropa" &&
       hasStatus(target.card.statuses, ["Congelado"]);
     if (
       target.structure &&
+      target.structure.hpAtual > 0 &&
       target.card?.tipo === "Tropa" &&
       !frozen &&
       !hasStatus(target.structure.statuses, ["Abalo"])
@@ -2033,6 +2240,7 @@ export class Game {
     const user = card.ownerId,
       enemy = this.opponent(user);
     const attackedCard = target.card;
+    const effectiveDefender = this.basicAttackDefender(target);
     if (reflect && reactionCard) {
       reactionCard.reflectedAttackRound = this.state.round;
       this.damage(
@@ -2050,7 +2258,7 @@ export class Game {
         `Devolveu o ataque de ${card.nome}.`,
       );
       this.log(`${reactionCard.nome} devolveu o ataque de ${card.nome}.`);
-    } else this.damage(target.id, damage, card, false, element);
+    } else this.damage(effectiveDefender.id, damage, card, false, element);
     if (attackedCard)
       this.trigger("onAttacked", {
         ownerId: attackedCard.ownerId,
@@ -2061,8 +2269,8 @@ export class Game {
       ownerId: user,
       cardId: card.id,
       card,
-      targetId: attackedCard?.id ?? target.structure?.id ?? enemy.mage.id,
-      targetCard: attackedCard ?? target.structure ?? enemy.mage,
+      targetId: effectiveDefender.id,
+      targetCard: effectiveDefender,
       slotId: target.id,
     });
     this.log(`${card.nome} atacou a coluna ${target.column + 1}.`);
@@ -2071,7 +2279,13 @@ export class Game {
     const pending = this.state.pendingAttack;
     if (!pending || this.state.status !== "ACTIVE") return;
     const card = this.findCard(pending.attackerId);
-    const target = this.state.slots.find((s) => s.id === pending.targetSlotId);
+    const position = this.state.slots.find(
+      (s) => s.id === pending.targetSlotId,
+    );
+    const target =
+      position?.rider?.id === pending.defenderId
+        ? { ...position, card: position.rider, rider: null }
+        : position;
     if (
       !card ||
       !target ||
@@ -2102,7 +2316,12 @@ export class Game {
   private ability(user: string, cmd: Extract<Command, { type: "ability" }>) {
     const p = this.player(user),
       slot = this.ownSlot(cmd.slotId, user),
-      card = cmd.source === "structure" ? slot.structure : slot.card;
+      card =
+        cmd.source === "structure"
+          ? slot.structure
+          : cmd.source === "rider"
+            ? (slot.rider ?? null)
+            : slot.card;
     if (!card || card.usedAbility)
       this.fail("Carta ausente ou habilidade já utilizada.");
     if (hasStatus(card.statuses, ["Atordoado", "Congelado", "Cego"]))
@@ -2295,7 +2514,7 @@ export class Game {
     p.counters = { summons: 0, attacks: 0, spells: 0, unique: 0 };
     for (const c of this.state.slots
       .filter((s) => s.ownerId === p.id)
-      .flatMap((s) => [s.card, s.structure]))
+      .flatMap(slotCards))
       if (c) {
         c.attacked = false;
         c.usedAbility = false;
@@ -2305,7 +2524,7 @@ export class Game {
     this.trigger("onTurnStart", { ownerId: p.id });
     if (this.state.status === "ACTIVE") this.draw(p, 1);
   }
-  private sacrifice(user: string, slotId: string) {
+  private sacrifice(user: string, slotId: string, source?: "card" | "rider") {
     const p = this.player(user),
       slot = this.ownSlot(slotId, user);
     if (p.mage.numeroCatalogo !== "108")
@@ -2319,9 +2538,9 @@ export class Game {
       hasStatus(p.mage.statuses, ["Congelado", "Atordoado", "Cego"])
     )
       this.fail("O mago não pode usar a habilidade de sacrifício agora.");
-    if (slot.card?.tipo !== "Tropa")
+    const dead = source === "rider" ? slot.rider : slot.card;
+    if (dead?.tipo !== "Tropa")
       this.fail("Escolha uma tropa sua para sacrificar.");
-    const dead = slot.card;
     dead.hpAtual = 0;
     p.mage.usedAbility = true;
     this.trigger("onSacrifice", {
@@ -2380,10 +2599,11 @@ export class Game {
         if (slot.terrain && --slot.terrain.rodadasRestantes <= 0)
           delete slot.terrain;
     for (const card of this.state.slots
-      .flatMap((s) => [s.card, s.structure])
+      .flatMap(slotCards)
       .filter((c): c is Instance => c !== null)) {
       if (roundEnded) {
         tickRound(card.statuses, (status, value) => {
+          if (card.hpAtual <= 0) return;
           const before = card.hpAtual;
           card.hpAtual -= value;
           this.reportDamage(
@@ -2392,6 +2612,21 @@ export class Game {
             `${status.nome} (fim da rodada)`,
             before,
           );
+          const position = this.targetSlot(card.id);
+          if (
+            position?.card?.id === card.id &&
+            position.rider &&
+            value > before
+          )
+            this.damage(
+              position.rider.id,
+              value - before,
+              undefined,
+              true,
+              undefined,
+              undefined,
+              `Excedente de ${status.nome} em ${card.nome}`,
+            );
         });
       }
       for (const status of card.statuses)
@@ -2446,6 +2681,12 @@ export class Game {
     this.state = structuredClone(previous);
     try {
       switch (cmd.type) {
+        case "mount":
+          this.mount(user, cmd.slotId, cmd.destinationId);
+          break;
+        case "dismount":
+          this.dismount(user, cmd.slotId);
+          break;
         case "respondAttack":
           this.respondAttack(user, cmd.reflect);
           break;
@@ -2496,7 +2737,7 @@ export class Game {
           this.mulligan(user);
           break;
         case "sacrifice":
-          this.sacrifice(user, cmd.slotId);
+          this.sacrifice(user, cmd.slotId, cmd.source);
           break;
         case "preparationBonus":
           this.preparationBonus(user, cmd.accept);
@@ -2519,7 +2760,7 @@ export class Game {
       ) {
         const after = new Map(
           this.state.slots
-            .flatMap((s) => [s.card, s.structure])
+            .flatMap(slotCards)
             .concat(
               this.state.players.flatMap((p) => [
                 ...p.hand,
@@ -2534,7 +2775,7 @@ export class Game {
         );
         if (
           previous.slots
-            .flatMap((s) => [s.card, s.structure])
+            .flatMap(slotCards)
             .some((c) => c && (after.get(c.id)?.hpAtual ?? 0) < c.hpAtual)
         )
           this.fail("Nenhuma ação pode causar dano durante a preparação.");
@@ -2576,6 +2817,18 @@ export class Game {
       reason: this.state.reason,
       slots: this.state.slots.map((slot) => ({
         ...slot,
+        rider: slot.rider
+          ? {
+              ...slot.rider,
+              bonusAtaquePassivo:
+                adjacentAttackBonus(slot.rider, this.state.slots) +
+                slot.rider.statuses
+                  .filter(
+                    (s) => s.nome === "BonusAtaque" && s.turnosRestantes > 0,
+                  )
+                  .reduce((n, s) => n + (s.valor ?? 0), 0),
+            }
+          : null,
         card: slot.card
           ? {
               ...slot.card,
@@ -2593,11 +2846,32 @@ export class Game {
               attackTargets: {
                 card: this.attackTargets(user, slot, slot.card),
                 structure: this.attackTargets(user, slot, slot.structure),
+                rider: this.attackTargets(user, slot, slot.rider ?? null),
               },
               attackBlockReasons: {
                 card: this.attackBlockReasons(user, slot.card),
                 structure: this.attackBlockReasons(user, slot.structure),
+                rider: this.attackBlockReasons(user, slot.rider ?? null),
               },
+              mountTargets:
+                !slot.rider &&
+                slot.card?.tipo === "Tropa" &&
+                !this.mountActionError(user, slot, slot.card)
+                  ? this.state.slots
+                      .filter(
+                        (s) =>
+                          s !== slot &&
+                          s.kind === "Tropa" &&
+                          !s.terrain &&
+                          !(slot.structure && s.structure) &&
+                          canMount(s.card, slot.card!, !!s.rider),
+                      )
+                      .map((s) => s.id)
+                  : [],
+              canDismount:
+                !!slot.rider &&
+                !this.mountActionError(user, slot, slot.rider) &&
+                !!this.dismountDestination(slot),
             }
           : {}),
       })),
@@ -2638,17 +2912,21 @@ export class Game {
   }
   private notifyContinuousPassives(previous: State) {
     for (const slot of this.state.slots) {
-      const source = slot.card;
-      if (!source) continue;
-      const before = previous.slots.find((s) => s.card?.id === source.id)?.card;
-      for (const rule of source.habilidadesPassivas.map(normalizePassive)) {
-        if (
-          rule.gatilho !== "continuous" ||
-          !continuousPassiveActive(source, rule, this.state.slots)
-        )
-          continue;
-        if (!before || !continuousPassiveActive(before, rule, previous.slots))
-          this.event("passive", source, describePassiveActions(rule.efeitos));
+      for (const source of [slot.card, slot.rider].filter(
+        (c): c is Instance => !!c,
+      )) {
+        const before = previous.slots
+          .flatMap(slotCards)
+          .find((c) => c.id === source.id);
+        for (const rule of source.habilidadesPassivas.map(normalizePassive)) {
+          if (
+            rule.gatilho !== "continuous" ||
+            !continuousPassiveActive(source, rule, this.state.slots)
+          )
+            continue;
+          if (!before || !continuousPassiveActive(before, rule, previous.slots))
+            this.event("passive", source, describePassiveActions(rule.efeitos));
+        }
       }
     }
   }

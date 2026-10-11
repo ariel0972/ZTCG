@@ -3,6 +3,15 @@ const id = z.string().min(1).max(80);
 const base = { actionId: z.uuid(), version: z.number().int().min(0) };
 export const commandSchema = z.discriminatedUnion("type", [
   z
+    .object({
+      ...base,
+      type: z.literal("mount"),
+      slotId: id,
+      destinationId: id,
+    })
+    .strict(),
+  z.object({ ...base, type: z.literal("dismount"), slotId: id }).strict(),
+  z
     .object({ ...base, type: z.literal("respondAttack"), reflect: z.boolean() })
     .strict(),
   z
@@ -23,7 +32,7 @@ export const commandSchema = z.discriminatedUnion("type", [
       type: z.literal("attack"),
       slotId: id,
       targetId: id,
-      source: z.enum(["card", "structure"]).optional(),
+      source: z.enum(["card", "structure", "rider"]).optional(),
     })
     .strict(),
   z
@@ -32,7 +41,7 @@ export const commandSchema = z.discriminatedUnion("type", [
       type: z.literal("ability"),
       slotId: id,
       abilityId: id,
-      source: z.enum(["card", "structure"]).optional(),
+      source: z.enum(["card", "structure", "rider"]).optional(),
       targets: z.array(id).max(3).default([]),
       mode: z.enum(["cura", "escudo"]).optional(),
     })
@@ -50,6 +59,13 @@ export const commandSchema = z.discriminatedUnion("type", [
       accept: z.boolean(),
     })
     .strict(),
-  z.object({ ...base, type: z.literal("sacrifice"), slotId: id }).strict(),
+  z
+    .object({
+      ...base,
+      type: z.literal("sacrifice"),
+      slotId: id,
+      source: z.enum(["card", "rider"]).optional(),
+    })
+    .strict(),
 ]);
 export type Command = z.infer<typeof commandSchema>;

@@ -59,6 +59,7 @@ const keywordIds = [
   "Campo livre",
   "Herança",
   "Flanquear",
+  "Montaria",
 ];
 const statusIds = [
   "BonusAtaque",
@@ -90,6 +91,18 @@ const statusIds = [
 ];
 export function playableErrors(card: Card): string[] {
   const errors: string[] = [];
+  if (
+    (card.montaria || card.palavrasChave.includes("Montaria")) &&
+    card.tipo !== "Tropa"
+  )
+    errors.push("Montaria exige Tropa.");
+  if (card.montaria && !card.palavrasChave.includes("Montaria"))
+    errors.push("Filtro de montaria exige palavra-chave Montaria.");
+  if (
+    card.montaria?.filtro?.status &&
+    !statusIds.includes(card.montaria.filtro.status)
+  )
+    errors.push("Filtro de montaria usa status não implementado.");
   if (
     (card.alvoAutomatico || card.ignoraEsconder || card.tiposAlvo) &&
     card.tipo !== "Feitico"
@@ -248,12 +261,33 @@ export function playableErrors(card: Card): string[] {
         !(passiveEventTriggers as readonly string[]).includes(h.gatilho)
       )
         errors.push("Gatilho de passiva não implementado.");
-      if (ongoing && h.escopo !== "proprio")
+      if (
+        ongoing &&
+        h.escopo !== "proprio" &&
+        !(
+          h.gatilho === "onTargeted" &&
+          h.escopo === "aliado" &&
+          h.efeitos.every((e) => e.id === "interceptAttack")
+        )
+      )
         errors.push("Aura e restrição exigem escopo proprio.");
+      if (
+        h.condicoes?.some(
+          (c) => c.tipo === "vidaPercentual" && c.alvo === "alvoAtaque",
+        ) &&
+        !(
+          h.gatilho === "continuous" &&
+          h.efeitos.every((e) => e.id === "attackBonus")
+        )
+      )
+        errors.push("Vida do alvo exige bônus contínuo de ataque básico.");
       if (h.filtroAlvo && !["onKill", "onAttack", "onHeal"].includes(h.gatilho))
         errors.push("Filtro de alvo exige evento de abate, ataque ou cura.");
       for (const filter of [
         h.filtroEvento,
+        ...(h.condicoes?.flatMap((c) =>
+          c.tipo === "cartaEmCampo" ? [c.filtro] : [],
+        ) ?? []),
         ...h.efeitos.flatMap((a) =>
           "filtro" in a
             ? [a.filtro, ...("qualquerDe" in a ? (a.qualquerDe ?? []) : [])]
@@ -265,9 +299,9 @@ export function playableErrors(card: Card): string[] {
       for (const effect of h.efeitos) {
         const allowed =
           h.gatilho === "continuous"
-            ? ["attackAura", "attackBonus", "manaRecovery"]
+            ? ["attackAura", "attackBonus", "manaRecovery", "blockOwnAttack"]
             : h.gatilho === "onTargeted"
-              ? ["blockAttack", "reflectAttack"]
+              ? ["blockAttack", "reflectAttack", "interceptAttack"]
               : (passiveIds as readonly string[]).filter(
                   (id) =>
                     ![
@@ -276,6 +310,8 @@ export function playableErrors(card: Card): string[] {
                       "blockAttack",
                       "manaRecovery",
                       "reflectAttack",
+                      "blockOwnAttack",
+                      "interceptAttack",
                     ].includes(id),
                 );
         if (!allowed.includes(effect.id))
@@ -286,6 +322,32 @@ export function playableErrors(card: Card): string[] {
               h.gatilho +
               ".",
           );
+        if (
+          ["counterAttack", "interceptAttack", "blockOwnAttack"].includes(
+            effect.id,
+          ) &&
+          card.tipo !== "Tropa"
+        )
+          errors.push(
+            "Retaliação, interceptação e restrição própria exigem Tropa.",
+          );
+        if (
+          effect.id === "counterAttack" &&
+          !["onAttack", "onAttacked"].includes(h.gatilho)
+        )
+          errors.push("Retaliação exige onAttack ou onAttacked.");
+        if (
+          effect.id === "counterAttack" &&
+          h.gatilho === "onAttack" &&
+          effect.alvo !== "cartaEvento"
+        )
+          errors.push("Retaliação em onAttack exige cartaEvento.");
+        if (
+          effect.id === "counterAttack" &&
+          h.gatilho === "onAttacked" &&
+          effect.alvo !== "atacante"
+        )
+          errors.push("Retaliação em onAttacked exige atacante.");
         if (effect.id === "status" && !statusIds.includes(effect.status))
           errors.push("Status de passiva não implementado.");
         if (

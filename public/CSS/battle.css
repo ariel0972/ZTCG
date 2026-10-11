@@ -552,6 +552,43 @@
 .match-page .board-slot-wrap > .board-slot {
   width: 100%;
 }
+.match-page .rider-action {
+  width: 100%;
+  padding: 3px;
+  margin-top: 5px;
+  background: #263944;
+  border: 1px solid #d6b879;
+  border-radius: 10px;
+  color: #f0dfb0;
+}
+.rider-action > small {
+  display: block;
+  font-size: 10px;
+  margin-bottom: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rider-action .live-card {
+  height: 92px;
+}
+.rider-action .live-art {
+  height: 40px;
+}
+.rider-action .live-heading {
+  font-size: 10px;
+}
+.rider-action.spell-target {
+  outline: 3px solid #8de5ff;
+}
+.rider-action.spell-unavailable {
+  opacity: 0.55;
+}
+.match-page .board-slot-wrap.mounted-slot {
+  height: auto;
+  min-height: 0;
+  flex-shrink: 0;
+}
 .structure-action {
   position: absolute;
   bottom: -8px;

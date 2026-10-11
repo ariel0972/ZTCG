@@ -1,4 +1,17 @@
 ZTCG — GUIA DO PROJETO, ARQUITETURA E PRÓXIMOS PASSOS
+Extensão de montaria — 10/10/2026:
+- tests/mounted-passives.test.ts — Montaria, ataque, mana, overflow, armamentos,
+  alvos individuais/área, morte, retaliação, interceptação e persistência.
+- scripts/update-mounted-passives.ts — Atualiza as quatro passivas com dry run,
+  backup e comparação de versão; preserva atributos, habilidades e publicação.
+Montaria aceita filtro genérico; Slot.rider persiste a segunda tropa. Campo livre
+move ambas. Retaliação usa counterAttack; interceptAttack prioriza o defensor à
+esquerda. blockOwnAttack e cartaEmCampo controlam restrições sem caso por carta.
+Os modelos do editor e a seção 12 do manual explicam todos os novos parâmetros.
+Extensão de passivas — 10/10/2026: filtro por numeroCatalogo para auras;
+vidaPercentual/alvoAtaque avalia o defensor efetivo antes do ataque básico.
+Golém recebe bônus condicional de +1; Escudeiro dá aura de +2 aos Cavaleiros
+adjacentes, acumulável e sem beneficiar a própria fonte.
 Atualização de combate — 10/10/2026:
 - MANUAL_EFEITOS_CATALOGO.txt — Referência de todos os campos, alvos, efeitos,
   habilidades, passivas, restrições e exemplos JSON completos para o catálogo.

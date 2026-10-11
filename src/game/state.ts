@@ -23,10 +23,17 @@ export interface Slot {
   kind: "Tropa" | "Mago" | "Armamento";
   column: number;
   card: Instance | null;
+  rider?: Instance | null;
   structure: Instance | null;
   terrain?: { nome: "Lama"; rodadasRestantes: number };
   appliedElement?: string;
 }
+export const slotCards = (slot: Slot): Instance[] =>
+  [slot.card, slot.rider, slot.structure].filter((c): c is Instance => !!c);
+export const troopPositions = (slots: Slot[]): Slot[] =>
+  slots.flatMap((s) =>
+    s.rider ? [s, { ...s, card: s.rider, rider: null, structure: null }] : [s],
+  );
 export interface Player {
   castCards?: string[];
   lastTroopAttacker?: { cardId: string; turn: number };

@@ -152,6 +152,18 @@ void fakeDatabase().then(async (db) => {
         .player(owner)
         .deck.filter((c) => !["053", "054"].includes(c.numeroCatalogo));
     }
+    if (process.env.PREVIEW_MOUNTS === "1") {
+      const own = (column: number) =>
+        game.state.slots.find((s) => s.id === `${owner}:front:${column}`)!;
+      own(0).card = instance("074", owner);
+      own(1).card = null;
+      own(2).card = instance("021", owner);
+      enemy.hpAtual = 30;
+      enemy.hp = 30;
+      game.player(owner).hand = ["063", "075", "025", "001"].map((id) =>
+        instance(id, owner),
+      );
+    }
     room.game = game.exportState();
     room.deadline = Date.now() + 120000;
     // Keep the fictitious opponent connected for this isolated visual fixture.
