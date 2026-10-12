@@ -1,5 +1,6 @@
 import { node } from "./auth.js";
 import { describe } from "./card-view.js";
+import { renderCardDetails } from "./card-details.js";
 
 // A inspeção é independente das ações: também funciona na vez do adversário.
 export function createCardInspector({ reactions = () => ({}) } = {}) {
@@ -53,27 +54,33 @@ export function createCardInspector({ reactions = () => ({}) } = {}) {
       image.src = "/assets/avatar.png";
     };
     const details = node("div", "", "inspection-details");
-    details.append(
-      node("h2", card.nome),
-      node("p", describe(card), "inspection-description"),
-    );
-    if (card.hpAtual !== undefined && card.hp !== undefined)
+    if (host === content) {
+      const information = node("div");
+      renderCardDetails(information, card, { reactions: reactions() });
+      details.append(node("h2", card.nome), information);
+    } else {
       details.append(
-        node("p", `Vida atual: ${card.hpAtual}`, "inspection-live"),
+        node("h2", card.nome),
+        node("p", describe(card), "inspection-description"),
       );
-    if (card.attacked)
-      details.append(node("p", "Ataque já utilizado neste turno."));
-    if (card.usedAbility)
-      details.append(node("p", "Habilidade já utilizada nesta rodada."));
-    if (card.statuses?.length) {
-      details.append(node("h3", "Efeitos ativos"));
-      for (const status of card.statuses)
+      if (card.hpAtual !== undefined && card.hp !== undefined)
         details.append(
-          node(
-            "p",
-            `${status.nome}${status.valor === undefined ? "" : ` · intensidade ${status.valor}`} · ${status.turnosRestantes} ${status.unidade === "turno" ? "turno(s)" : "rodada(s)"}`,
-          ),
+          node("p", `Vida atual: ${card.hpAtual}`, "inspection-live"),
         );
+      if (card.attacked)
+        details.append(node("p", "Ataque já utilizado neste turno."));
+      if (card.usedAbility)
+        details.append(node("p", "Habilidade já utilizada nesta rodada."));
+      if (card.statuses?.length) {
+        details.append(node("h3", "Efeitos ativos"));
+        for (const status of card.statuses)
+          details.append(
+            node(
+              "p",
+              `${status.nome}${status.valor === undefined ? "" : ` · intensidade ${status.valor}`} · ${status.turnosRestantes} ${status.unidade === "turno" ? "turno(s)" : "rodada(s)"}`,
+            ),
+          );
+      }
     }
     host.replaceChildren(image, details);
     if (host === content) {
@@ -87,13 +94,14 @@ export function createCardInspector({ reactions = () => ({}) } = {}) {
       image.replaceWith(imageButton);
       imageButton.append(image);
     }
-    for (const name of [
-      ...(card.statuses || []).map((s) => s.nome),
-      card.appliedElement,
-    ]) {
-      const info = reactions()[name === "Congelado" ? "Congelar" : name];
-      if (info) details.append(node("p", `${name}: ${info.description}`));
-    }
+    if (host !== content)
+      for (const name of [
+        ...(card.statuses || []).map((s) => s.nome),
+        card.appliedElement,
+      ]) {
+        const info = reactions()[name === "Congelado" ? "Congelar" : name];
+        if (info) details.append(node("p", `${name}: ${info.description}`));
+      }
   }
   function hide() {
     clearTimeout(timer);

@@ -1,5 +1,6 @@
 import { api, token, navbar, message, node } from "./auth.js";
-import { cardTile, describe, labels } from "./card-view.js";
+import { cardTile, labels } from "./card-view.js";
+import { renderCardDetails } from "./card-details.js";
 import { createCardInspector } from "./card-inspection.js";
 const inspector = createCardInspector();
 import { createDeckNavigation } from "./deck-navigation.js";
@@ -253,11 +254,7 @@ function add(card) {
 function details(card) {
   detailCard = card;
   $("detail-name").textContent = card.nome;
-  $("detail-text").textContent =
-    describe(card) +
-    (!card.publicado
-      ? "\n\nEsta carta pode ser usada em rascunhos, mas ainda não está liberada para partidas."
-      : "");
+  renderCardDetails($("detail-text"), card);
   $("detail-image").src = card.imgURL || "/assets/avatar.png";
   $("detail-image").alt = card.nome;
   $("detail-image").tabIndex = 0;

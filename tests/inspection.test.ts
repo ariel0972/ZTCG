@@ -67,6 +67,23 @@ test("inspeção das cartas: hover, teclado, toque e remoção do nó", async ()
     assert.equal(preview.hidden, true);
     button.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "i" }));
     assert.equal(dialog.open, true);
+    assert.ok(dialog.querySelector(".card-stat-icon--life"));
+    assert.match(dialog.textContent!, /6 \/ 8 PV/);
+    const informationToggle = dialog.querySelector(
+      ".card-information-toggle",
+    ) as HTMLButtonElement;
+    informationToggle.click();
+    assert.ok(
+      [...dialog.querySelectorAll("details")].every(
+        (section: any) => !section.open,
+      ),
+    );
+    informationToggle.click();
+    assert.ok(
+      [...dialog.querySelectorAll("details")].every(
+        (section: any) => section.open,
+      ),
+    );
     const artwork = dom.window.document.querySelector(".card-artwork") as any;
     artwork.showModal = () => {
       artwork.open = true;
@@ -146,5 +163,66 @@ test("inspeção das cartas: hover, teclado, toque e remoção do nó", async ()
       if (descriptor) Object.defineProperty(globalThis, key, descriptor);
       else delete (globalThis as any)[key];
     }
+  }
+});
+
+test("detalhes estruturados preservam atributos, habilidades e texto seguro em todos os tipos de carta", async () => {
+  const modulePath = "../public/JS/card-details.js";
+  const { renderCardDetails } = await import(modulePath);
+  const dom = new JSDOM('<div id="info"></div>'),
+    host = dom.window.document.getElementById("info")!;
+  try {
+    renderCardDetails(host, {
+      tipo: "Tropa",
+      elemento: "Agua",
+      custoMana: 0,
+      hp: 12,
+      ataque: 3,
+      resistencia: ["Fogo", "Agua"],
+      fraqueza: ["Terra"],
+      habilidadesAtivas: [
+        {
+          nome: "<img src=x onerror=alert(1)>",
+          custoMana: 3,
+          descricao: "Causa 3 de dano.",
+        },
+      ],
+      habilidadesPassivas: [{ descricao: "Cura 2 ao eliminar uma tropa." }],
+      descricao: "Ataque uma vez por rodada.",
+    });
+    assert.match(host.textContent!, /0 mana/);
+    assert.match(host.textContent!, /Fogo, Água · dano ÷2/);
+    assert.match(host.textContent!, /Terra · dano ×2/);
+    assert.equal(host.querySelectorAll(".card-active-ability").length, 1);
+    assert.equal(host.querySelector("img"), null);
+    assert.match(
+      host.querySelector(".card-ability-heading")!.textContent!,
+      /<img src=x/,
+    );
+    const sections = [...host.querySelectorAll("details")];
+    assert.equal(sections[1].open, true);
+    assert.equal(sections[2].open, false);
+    renderCardDetails(host, {
+      tipo: "Armamento",
+      custoMana: 2,
+      bonusAtaque: 2,
+      bonusHp: 0,
+    });
+    assert.match(host.textContent!, /\+2 de ataque/);
+    assert.match(host.textContent!, /\+0 PV/);
+    assert.equal(host.querySelector(".card-active-ability"), null);
+    renderCardDetails(host, {
+      tipo: "Feitico",
+      custoMana: 2,
+      descricao: "Compre uma carta.",
+      assinatura: true,
+      publicado: false,
+    });
+    assert.equal(host.querySelector(".card-stat-icon--life"), null);
+    assert.match(host.textContent!, /Assinatura/);
+    assert.match(host.textContent!, /Rascunho/);
+    assert.match(host.textContent!, /Compre uma carta/);
+  } finally {
+    dom.window.close();
   }
 });

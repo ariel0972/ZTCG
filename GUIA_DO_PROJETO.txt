@@ -933,3 +933,12 @@ O som e a entrega podem ser limitados pelo navegador, suspensão de abas ou
 configurações do dispositivo. Não há Web Push: o site precisa continuar aberto.
 Não há mudanças em regras de interceptação. O aviso do ataque mostra também o
 alvo escolhido e identifica a passiva/habilidade que fez outro defensor recebê-lo.
+
+ATUALIZAÇÃO — MODAIS DAS CARTAS (12/10/2026)
+- public/JS/card-details.js — Apresentação compartilhada de atributos com ícones SVG, habilidades ativas destacadas, passivas e estado em campo; seções nativas de abrir/fechar e controle geral, mantendo texto do catálogo seguro.
+- public/CSS/card-details.css — Estilos responsivos dos ícones, valores, seções recolhíveis e blocos de habilidades; importado por app.css.
+Os modais do construtor e da inspeção em partida/perfis usam o mesmo modelo.
+Atributos e habilidades começam abertos; descrição/passivas ficam recolhidas.
+Os ícones preservam nomes acessíveis e dicas: custo, vida, ataque, defesa/resistência
+e fraqueza. Resistência mostra dano ÷2; fraqueza mostra dano ×2. Nenhuma regra mudou.
+Imagem, controles de cópias, adicionar/remover e ampliação continuam disponíveis.

@@ -1,0 +1,178 @@
+.card-information {
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: normal;
+}
+.card-information-type {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.card-info-pill {
+  border: 1px solid #61798566;
+  border-radius: 20px;
+  padding: 3px 9px;
+  color: #b9d4e2;
+  font-size: 11px;
+}
+.card-information-toggle {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+.card-info-section {
+  border: 1px solid #61798555;
+  border-radius: 10px;
+  margin: 8px 0;
+  background: #15232a;
+  overflow: hidden;
+}
+.card-info-section > summary {
+  padding: 12px;
+  cursor: pointer;
+  font-weight: 700;
+  color: #e5ecef;
+}
+.card-info-section > summary:focus-visible,
+.card-information-toggle:focus-visible {
+  outline: 2px solid #a6daed;
+  outline-offset: -3px;
+}
+.card-info-section-body {
+  padding: 0 12px 12px;
+}
+.card-info-section-body p {
+  margin: 8px 0;
+  font-size: 13px;
+}
+.card-stat-list {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+.card-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+}
+.card-stat-row dd {
+  margin: 0;
+}
+.card-stat-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.card-stat-icon {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  color: #e4c782;
+}
+.card-stat-icon--mana,
+.card-stat-icon--recovery {
+  color: #80ccea;
+}
+.card-stat-icon--life {
+  color: #ee8892;
+}
+.card-stat-icon--defense {
+  color: #9dbed2;
+}
+.card-stat-icon--weakness {
+  color: #efa779;
+}
+.card-info-section--active {
+  border-color: #cfaf6e88;
+  background: #252b29;
+}
+.card-info-section--active > summary {
+  color: #edcf8b;
+}
+.card-active-ability {
+  border: 1px solid #c6a76955;
+  border-left: 3px solid #d8b871;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 10px;
+  background: #17252b;
+}
+.card-ability-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.card-ability-heading h3,
+.inspection-details .card-ability-heading h3 {
+  font-size: 14px;
+  margin: 0;
+  color: #f4dda8;
+}
+.card-ability-cost {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #a4dced;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.card-ability-cost .card-stat-icon {
+  width: 18px;
+  height: 18px;
+  flex-basis: 18px;
+}
+.card-ability-hint {
+  color: #b7cbd2;
+  font-size: 11px !important;
+}
+.card-passive-description + .card-passive-description {
+  border-top: 1px solid #61798544;
+  padding-top: 10px;
+}
+.card-rules-text {
+  white-space: pre-line;
+}
+.card-draft-note {
+  color: #edcf8b;
+}
+#card-detail .dialog-heading {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--panel);
+  padding-bottom: 8px;
+}
+.card-inspection > button {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--panel);
+}
+@media (max-width: 480px) {
+  #card-detail {
+    padding: 14px;
+  }
+  .card-info-section > summary {
+    padding: 11px;
+  }
+  .card-info-section-body {
+    padding: 0 10px 10px;
+  }
+  .card-active-ability {
+    padding: 10px;
+  }
+}
