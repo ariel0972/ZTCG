@@ -149,19 +149,6 @@
 .card-draft-note {
   color: #edcf8b;
 }
-#card-detail .dialog-heading {
-  position: sticky;
-  top: 0;
-  z-index: 3;
-  background: var(--panel);
-  padding-bottom: 8px;
-}
-.card-inspection > button {
-  position: sticky;
-  top: 0;
-  z-index: 3;
-  background: var(--panel);
-}
 @media (max-width: 480px) {
   #card-detail {
     padding: 14px;

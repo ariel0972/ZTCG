@@ -440,6 +440,14 @@ dialog::backdrop {
   font-size: 21px;
   margin: 0;
 }
+#card-detail .dialog-heading {
+  position: sticky;
+  top: -20px;
+  z-index: 3;
+  background: var(--panel);
+  padding: 20px 0 8px;
+  margin-top: -20px;
+}
 #card-detail .detail-body {
   display: flex;
   flex-direction: column;
@@ -796,6 +804,10 @@ dialog::backdrop {
 .card-inspection > button {
   display: block;
   margin-left: auto;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--panel);
 }
 .inspection-content {
   display: grid;
