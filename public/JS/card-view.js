@@ -19,9 +19,12 @@ export function abilityNeedsTarget(ability) {
     ].includes(ability.id)
   )
     return false;
-  return !["Global", "TodosInimigos", "TodasTropasInimigas"].includes(
-    ability.alvo,
-  );
+  return ![
+    "Global",
+    "TodosInimigos",
+    "TodasTropasInimigas",
+    "TodosAliados",
+  ].includes(ability.alvo);
 }
 export function abilityDescription(ability) {
   if (ability.descricao) return ability.descricao;
@@ -55,6 +58,9 @@ function effectDescription(effect) {
     {
       damage: `Causa ${effect.valor || 0} de dano.`,
       heal: `Cura ${effect.valor || 0} de vida.`,
+      spendAttack:
+        "Consome o ataque da tropa e um uso do limite de ataques do mago.",
+      guardTarget: `Protege o aliado escolhido por ${effect.duracao} rodada(s), recebendo os ataques básicos e reduzindo ${effect.valor} de cada golpe recebido pela tropa defensora.`,
       draw: `Compra ${effect.valor || 0} carta(s).`,
       mana: `Recupera ${effect.valor || 0} de mana.`,
       status: `Aplica ${effect.status || "um status"}${effect.valor === undefined ? "" : ` com intensidade ${effect.valor}`}${effect.duracao === undefined ? "" : ` por ${effect.duracao} ${effect.unidade === "turno" ? "turno(s)" : "rodada(s)"}`}${effect.requerStatus ? ` enquanto houver ${effect.requerStatus}` : ""}.`,

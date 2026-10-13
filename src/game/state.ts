@@ -93,6 +93,7 @@ export interface State {
     defenderId: string;
     damage: number;
     element?: Card["elemento"];
+    interception?: { cardId: string; valor: number; origin: string };
   };
   ongoingSpells?: {
     id: string;
@@ -101,6 +102,7 @@ export interface State {
     rounds: number;
     damage: number;
     element?: Card["elemento"];
+    card?: Pick<Card, "numeroCatalogo" | "nome" | "imgURL">;
   }[];
   pendingSpell?: {
     casterId: string;

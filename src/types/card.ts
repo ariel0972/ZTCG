@@ -19,6 +19,7 @@ export const targets = [
   "UnicoAliado",
   "TodosInimigos",
   "TodasTropasInimigas",
+  "TodosAliados",
   "Global",
   "Estrutura",
   "Deck",
@@ -83,6 +84,18 @@ export const activeSchema = z
     descricao: z.string().max(2000).optional(),
     alvo: z.enum(targets).optional(),
     alvoAutomatico: z.enum(["Proprio", "Frontal"]).optional(),
+    maxAlvos: z.number().int().min(1).max(20).optional(),
+    filtroAlvo: z
+      .object({
+        numeroCatalogo: z
+          .string()
+          .regex(/^\d{3,6}$/)
+          .optional(),
+        tipo: z.enum(cardTypes).optional(),
+        elemento: z.enum(elements).optional(),
+      })
+      .strict()
+      .optional(),
     efeitos: z.array(effectSchema).max(12).optional(),
   })
   .strict();

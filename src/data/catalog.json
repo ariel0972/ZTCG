@@ -466,7 +466,7 @@
     "nome": "Chuva de Flechas",
     "tipo": "Feitico",
     "custoMana": 2,
-    "descricao": "Causa 3 de dano a todos os inimigos no fim de cada rodada, durante 2 rodadas. Apenas uma Chuva de Flechas pode permanecer em campo. Mago de Fogo: dano 5; de Água: congela tropas inimigas; de Ar: aplica Sangrando; de Terra: aplica Cego. Neutro não aplica token elemental.",
+    "descricao": "Causa 3 de dano a todos os inimigos no fim de cada rodada, durante 2 rodadas. Cada jogador pode manter uma Chuva de Flechas ativa, mesmo com a do adversário em campo. Mago de Fogo: dano 5; de Água: congela tropas inimigas; de Ar: aplica Sangrando; de Terra: aplica Cego. Neutro não aplica token elemental.",
     "imgURL": "/assets/Cards/Chuva de Flechas.png",
     "publicado": true,
     "versao": 2,
@@ -1588,6 +1588,28 @@
     "hp": 9,
     "ataque": 2,
     "manaGerada": 2,
+    "habilidadesAtivas": [
+      {
+        "id": "ajudante",
+        "nome": "Ajudante",
+        "custoMana": 3,
+        "alvo": "UnicoAliado",
+        "filtroAlvo": { "numeroCatalogo": "021", "tipo": "Tropa" },
+        "efeitos": [{ "id": "heal", "valor": 4 }],
+        "descricao": "Cura 4 de vida de um Cavaleiro aliado escolhido, inclusive montado e sem exigir adjacência. Não ultrapassa a vida máxima."
+      },
+      {
+        "id": "emGuarda",
+        "nome": "Em Guarda",
+        "custoMana": 5,
+        "alvo": "UnicoAliado",
+        "filtroAlvo": { "numeroCatalogo": "021", "tipo": "Tropa" },
+        "efeitos": [
+          { "id": "guardTarget", "valor": 2, "duracao": 2, "unidade": "turno" }
+        ],
+        "descricao": "Protege um Cavaleiro aliado até o fim do próximo turno adversário. Intercepta ataques básicos e reduz 2 de cada golpe recebido pelo Escudeiro; sua estrutura absorve primeiro. Se o Cavaleiro estiver montado, protege somente o dano excedente do Cavalo. Reaplicar renova e troca o protegido."
+      }
+    ],
     "direcaoAtaque": "Frente",
     "habilidadesPassivas": [
       {
@@ -1880,6 +1902,25 @@
     "hp": 10,
     "ataque": 2,
     "manaGerada": 4,
+    "habilidadesAtivas": [
+      {
+        "id": "rodopio",
+        "nome": "Rodopio",
+        "custoMana": 4,
+        "alvo": "MultiplosInimigos",
+        "maxAlvos": 2,
+        "efeitos": [{ "id": "damage", "valor": 3 }],
+        "descricao": "Escolha 1 ou 2 inimigos diferentes, incluindo tropas, mago ou estruturas. Cada um recebe 3 de dano de Fogo, respeitando as proteções normais."
+      },
+      {
+        "id": "elevarMoral",
+        "nome": "Elevar Moral",
+        "custoMana": 5,
+        "alvo": "TodosAliados",
+        "efeitos": [{ "id": "spendAttack" }, { "id": "heal", "valor": 3 }],
+        "descricao": "Cura 3 de vida de todos os aliados: ela própria, tropas, mago e estruturas. Não ultrapassa a vida máxima. Exige um ataque disponível da Dançarina e do limite do mago; consome ambos."
+      }
+    ],
     "direcaoAtaque": "Universal",
     "subtipo": "Humano",
     "habilidadesPassivas": [

@@ -243,8 +243,8 @@ export function attackInterceptor(
   attacker: Instance,
   target: Slot,
   slots: Slot[],
+  boundOnly = false,
 ) {
-  if (attacker.tipo !== "Tropa") return undefined;
   const position = slots.find(
     (s) => s.card?.id === attacker.id || s.rider?.id === attacker.id,
   );
@@ -253,8 +253,16 @@ export function attackInterceptor(
     .sort((a, b) => a.column - b.column)) {
     for (const source of [s.card, s.rider]) {
       if (!source || source.hpAtual <= 0) continue;
-      if (hasStatus(source.statuses, ["Interceptar"]))
-        return { slot: s, card: source };
+      const protection = source.statuses.find(
+        (status) =>
+          status.nome === "Interceptar" &&
+          status.turnosRestantes > 0 &&
+          (status.protegidoId
+            ? status.protegidoId === target.card?.id
+            : !boundOnly && attacker.tipo === "Tropa"),
+      );
+      if (protection) return { slot: s, card: source, protection };
+      if (boundOnly || attacker.tipo !== "Tropa") continue;
       for (const rule of source.habilidadesPassivas.map(normalizePassive)) {
         if (
           rule.gatilho !== "onTargeted" ||

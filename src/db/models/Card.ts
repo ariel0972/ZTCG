@@ -23,6 +23,18 @@ const active = new Schema(
     custoMana: { ...n, required: true },
     alvo: { type: String, enum: targets },
     alvoAutomatico: { type: String, enum: ["Proprio", "Frontal"] },
+    maxAlvos: { type: Number, min: 1, max: 20 },
+    filtroAlvo: {
+      type: new Schema(
+        {
+          numeroCatalogo: String,
+          tipo: { type: String, enum: cardTypes },
+          elemento: { type: String, enum: elements },
+        },
+        { _id: false, strict: "throw" },
+      ),
+      default: undefined,
+    },
     efeitos: [effect],
   },
   { _id: false, strict: "throw" },

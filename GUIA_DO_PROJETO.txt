@@ -991,3 +991,65 @@ dispositivos sem hover roda sozinha. prefers-reduced-motion desativa o movimento
 As cores e animações ficam em profile.css; profile.js seleciona a faixa pelo nível.
 PREVIEW_TITLES=1 acrescenta à prévia isolada um perfil Tumociente de nível 7
 para conferir a badge sem mudar qualquer conta real.
+
+ATUALIZAÇÃO — FEITIÇOS ATIVOS E HABILIDADES (13/10/2026)
+- public/JS/ongoing-spells.js — Cartas de feitiços ativos por dono, contador de rodadas e modal com dano/duração atualizado ao expirar; suporta partidas antigas sem metadados de arte.
+- tests/field-abilities.test.ts — Rodopio, Elevar Moral, Ajudante e Em Guarda, consumo de ataque, filtros, estrutura, montaria e duração.
+- tests/ongoing-spells-ui.test.ts — Separação por jogador, contadores, atualização/término do modal e compatibilidade com arte antiga.
+- scripts/update-field-abilities.ts — Atualiza habilidades de 075/111 e descrição de 005 no banco, com backup, versão otimista e preservação de atributos/passivas.
+Chuva de Flechas, Furacão e Furacão de Areia permitem um efeito ativo de cada
+tipo por jogador. O efeito do adversário não bloqueia seu uso. Duplicatas
+próprias ficam bloqueadas até expirar. Cego, mana e demais restrições permanecem.
+Todos os efeitos ativos são processados antes de decidir vitória por morte do
+mago no fim da rodada: se ambos morrerem, a partida empata. Mortes de tropas
+e suas passivas continuam sendo resolvidas durante os efeitos.
+ongoingSpells guarda ownerId, rounds, damage, element e metadados públicos da
+carta. Dano persistido é o valor do efeito antes das proteções de cada alvo.
+O contador representa os próximos acionamentos de fim de rodada. Efeitos do
+adversário ficam à esquerda e os próprios à direita. No celular acompanham
+as zonas laterais dos magos, sem criar uma linha extra abaixo do campo nem
+sobrepor baralho/cemitério. Vários efeitos usam rolagem lateral nessa área.
+Os modais têm altura limitada à tela e rolagem interna; na horizontal a arte
+e os detalhes ficam lado a lado. battle-mobile.css organiza as zonas durante
+a partida; app.css e battle.css adaptam os modais de carta e efeito ativo.
+
+NOVAS OPÇÕES DO CATÁLOGO
+TodosAliados: alvo automático de habilidades/feitiços. Não recebe targets
+manuais. Inclui tropas, montados, mago e estruturas aliadas vivas; não inclui
+armamentos. Combine com heal, por exemplo. A cura respeita a vida máxima.
+maxAlvos na habilidade: inteiro 1–20, somente com MultiplosInimigos. Limita
+cartas distintas selecionadas; exige pelo menos uma. Incompatível com alvo
+automático, UnicoAliado e UnicoInimigo.
+filtroAlvo na habilidade: objeto não vazio com numeroCatalogo, tipo e/ou elemento.
+Critérios combinam com E. Combine com alvo individual ou múltiplo em campo,
+ou com TodosAliados/TodasTropasInimigas para filtrar o conjunto automático.
+Não usa status/direção dos filtros de passiva. Cliente destaca os alvos e o
+motor valida novamente. Não é permitido usar um slot e o ID da mesma carta
+como dois alvos diferentes.
+Exemplo de Ajudante:
+{"id":"ajudante","nome":"Ajudante","custoMana":3,"alvo":"UnicoAliado","filtroAlvo":{"numeroCatalogo":"021","tipo":"Tropa"},"efeitos":[{"id":"heal","valor":4}]}
+spendAttack: efeito sem valor/duração/status/elemento, somente em habilidade de
+tropa. Exige ataque disponível na tropa e no limite do mago; consome ambos e
+marca combate iniciado, como montar. Use antes dos efeitos que ele custeia.
+Exemplo de Elevar Moral:
+{"id":"elevarMoral","nome":"Elevar Moral","custoMana":5,"alvo":"TodosAliados","efeitos":[{"id":"spendAttack"},{"id":"heal","valor":3}]}
+guardTarget: habilidade de tropa com UnicoAliado selecionado. Exige valor
+(redução) e duracao positiva. Protege uma tropa aliada com Interceptar vinculado
+ao ID dela. Não redireciona feitiços/habilidades. unidade aceita rodada (padrão)
+ou turno. duracao:2/unidade:turno cobre até o fim do próximo turno adversário.
+Reaplicar renova a duração e troca o protegido. Estrutura do defensor absorve
+antes; redução vale só quando o golpe chega no defensor pela proteção vinculada.
+Demais reduções/escudos seguem as regras normais. Cavaleiro montado: Cavalo
+recebe primeiro e Em Guarda intercepta apenas o excedente ao Cavaleiro.
+Efeitos de área continuam atingindo ambos. Outros interceptores mantêm a
+prioridade da esquerda para a direita.
+Exemplo de Em Guarda:
+{"id":"emGuarda","nome":"Em Guarda","custoMana":5,"alvo":"UnicoAliado","filtroAlvo":{"numeroCatalogo":"021","tipo":"Tropa"},"efeitos":[{"id":"guardTarget","valor":2,"duracao":2,"unidade":"turno"}]}
+Rodopio usa MultiplosInimigos, maxAlvos:2 e damage:3 de Fogo em cada alvo.
+Pode atingir tropa, mago ou estrutura; proteção e modificadores elementais
+são normais. A aura da Dançarina não aumenta o dano da habilidade.
+As passivas das duas cartas permanecem. Cada carta compartilha o uso de uma
+habilidade por rodada entre suas habilidades.
+Sincronização: tsx scripts/update-field-abilities.ts mostra o plano; --apply
+grava backup em backups/ e modifica só os campos listados. Aplicar depois
+de publicar o motor/schema novo. O script é idempotente.

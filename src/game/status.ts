@@ -7,6 +7,7 @@ export interface Status {
   unidade?: "rodada" | "turno";
   expiraNoTurno?: number;
   requerStatus?: string;
+  protegidoId?: string;
 }
 const aliases: Record<string, string> = {
   Atordoamento: "Atordoado",
@@ -71,6 +72,7 @@ export function applyStatus(
     nome === "Escudo"
       ? statuses.filter((s) => s.nome === nome).at(-1)!
       : statuses.find((s) => s.nome === nome)!;
+  if (nome === "Interceptar") delete applied.protegidoId;
   if (
     unit &&
     !["Envenenado", "Queimado", "Sangrando", "Congelado"].includes(nome)

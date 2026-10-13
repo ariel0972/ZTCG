@@ -29,6 +29,7 @@ import {
 } from "./battle-ui.js";
 import { createMatchResult } from "./match-result.js";
 import { createCardBacks } from "./card-backs.js";
+import { createOngoingSpells } from "./ongoing-spells.js";
 const battleEvents = createBattleEvents(document.body, {
   getViewerId: () => user?.id,
 });
@@ -66,10 +67,12 @@ const acknowledgedResults = new Set();
 const matchConnection = node("p", "Conectando…", "match-connection");
 $("match-title").after(matchConnection);
 const responsePanel = node("section", "", "spell-response");
-const ongoingPanel = node("section", "", "ongoing-spells");
+const ongoingSpells = createOngoingSpells(
+  $("own-ongoing-spells"),
+  $("enemy-ongoing-spells"),
+);
 responsePanel.setAttribute("aria-live", "polite");
 $("match-title").after(responsePanel);
-responsePanel.after(ongoingPanel);
 const reactionsDialog = node("dialog", "", "reaction-guide");
 reactionsDialog.setAttribute("aria-label", "Reações elementais");
 const reactionsClose = node("button", "Fechar", "quiet");
@@ -730,39 +733,41 @@ function renderActions() {
               );
             render();
           },
-          state.openingBlocked
-            ? "Bloqueado na preparação e no primeiro turno de cada jogador."
-            : (ability.id === "deslocar" ||
-                  ability.alvoAutomatico === "Frontal") &&
-                !state.slots.some(
-                  (s) =>
-                    s.ownerId !== user.id &&
-                    s.kind === "Tropa" &&
-                    s.column === 2 - slot.column &&
-                    s.card?.tipo === "Tropa",
-                )
-              ? "Não há tropa inimiga diretamente à frente."
-              : ability.id === "refazerCaminhos" &&
-                  !myPlayer().graveyard.some((c) => c.tipo === "Feitico")
-                ? "Não há feitiços no seu cemitério."
-                : myPlayer().mana < ability.custoMana
-                  ? "Mana insuficiente."
-                  : card.usedAbility
-                    ? "Uma habilidade por carta por rodada."
-                    : state.openingBlocked
-                      ? "Habilidades bloqueadas para o primeiro jogador neste turno."
-                      : card.statuses?.some((s) =>
-                            [
-                              "Congelado",
-                              "Congelamento",
-                              "Atordoado",
-                              "Atordoamento",
-                              "Cego",
-                              "Cegueira",
-                            ].includes(s.nome),
-                          )
-                        ? "Um efeito ativo impede habilidades."
-                        : "",
+          slot.abilityBlockReasons?.[fieldSource(card, slot)]?.[ability.id]
+            ? slot.abilityBlockReasons[fieldSource(card, slot)][ability.id]
+            : state.openingBlocked
+              ? "Bloqueado na preparação e no primeiro turno de cada jogador."
+              : (ability.id === "deslocar" ||
+                    ability.alvoAutomatico === "Frontal") &&
+                  !state.slots.some(
+                    (s) =>
+                      s.ownerId !== user.id &&
+                      s.kind === "Tropa" &&
+                      s.column === 2 - slot.column &&
+                      s.card?.tipo === "Tropa",
+                  )
+                ? "Não há tropa inimiga diretamente à frente."
+                : ability.id === "refazerCaminhos" &&
+                    !myPlayer().graveyard.some((c) => c.tipo === "Feitico")
+                  ? "Não há feitiços no seu cemitério."
+                  : myPlayer().mana < ability.custoMana
+                    ? "Mana insuficiente."
+                    : card.usedAbility
+                      ? "Uma habilidade por carta por rodada."
+                      : state.openingBlocked
+                        ? "Habilidades bloqueadas para o primeiro jogador neste turno."
+                        : card.statuses?.some((s) =>
+                              [
+                                "Congelado",
+                                "Congelamento",
+                                "Atordoado",
+                                "Atordoamento",
+                                "Cego",
+                                "Cegueira",
+                              ].includes(s.nome),
+                            )
+                          ? "Um efeito ativo impede habilidades."
+                          : "",
         ),
       );
   } else if (selected.type === "field") {
@@ -1229,21 +1234,7 @@ function render() {
   $("match").hidden = false;
   const me = myPlayer(),
     enemy = state.players.find((p) => p.id !== user.id);
-  ongoingPanel.replaceChildren();
-  ongoingPanel.hidden = !state.ongoingSpells?.length;
-  for (const spell of state.ongoingSpells ?? []) {
-    const name = {
-      tornado: "Furacão",
-      arrowRain: "Chuva de Flechas",
-      sandstorm: "Furacão de Areia",
-    }[spell.kind];
-    ongoingPanel.append(
-      node(
-        "p",
-        `${name} · ${spell.ownerId === user.id ? "Seu efeito" : "Efeito do oponente"} · ${spell.damage} de dano no fim da rodada · ${spell.rounds} rodada(s) restante(s)`,
-      ),
-    );
-  }
+  ongoingSpells.update(state, user.id);
   if (state.status === "FINISHED") {
     selected = null;
     targets = [];

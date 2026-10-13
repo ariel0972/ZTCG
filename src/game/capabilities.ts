@@ -24,6 +24,8 @@ export const effectIds = [
   "zarcosTear",
   "strongFlow",
   "searchNamed",
+  "spendAttack",
+  "guardTarget",
 ] as const;
 export const abilityIds = [
   "protecaoAquatica",
@@ -143,7 +145,7 @@ export function playableErrors(card: Card): string[] {
         errors.push("carta/seNaoUsada exigem searchNamed.");
       if (
         e.unidade &&
-        (e.id !== "status" ||
+        (!["status", "guardTarget"].includes(e.id) ||
           ["Envenenado", "Queimado", "Sangrando", "Congelado"].includes(
             canonicalStatus(e.status ?? ""),
           ))
@@ -176,6 +178,7 @@ export function playableErrors(card: Card): string[] {
         e.id !== "forget" &&
         e.id !== "field" &&
         e.id !== "searchNamed" &&
+        e.id !== "spendAttack" &&
         e.valor === undefined
       )
         errors.push(`Defina valor para ${e.id}.`);
@@ -186,6 +189,7 @@ export function playableErrors(card: Card): string[] {
           "UnicoAliado",
           "TodosInimigos",
           "TodasTropasInimigas",
+          "TodosAliados",
           "Estrutura",
           "MultiplosInimigos",
           "CampoAliado",
@@ -218,6 +222,10 @@ export function playableErrors(card: Card): string[] {
     }
   };
   checkEffects(card.efeitos, card.alvo);
+  if (card.efeitos.some((e) => ["spendAttack", "guardTarget"].includes(e.id)))
+    errors.push(
+      "Consumo de ataque e proteção vinculada são efeitos de habilidades de tropas.",
+    );
   if (
     card.efeitos.some((e) => e.id === "field") &&
     (!card.elemento || card.elemento === "Neutro")
@@ -230,6 +238,45 @@ export function playableErrors(card: Card): string[] {
   if (card.tipo === "Feitico" && !card.efeitos.length)
     errors.push("Feitiço sem efeitos.");
   for (const h of card.habilidadesAtivas) {
+    if (h.maxAlvos && h.alvo !== "MultiplosInimigos")
+      errors.push("maxAlvos de habilidade exige MultiplosInimigos.");
+    if (
+      h.filtroAlvo &&
+      (!Object.values(h.filtroAlvo).some(Boolean) ||
+        !h.alvo ||
+        ![
+          "UnicoAliado",
+          "UnicoInimigo",
+          "MultiplosInimigos",
+          "TodosAliados",
+          "TodasTropasInimigas",
+        ].includes(h.alvo))
+    )
+      errors.push("Filtro de habilidade vazio ou alvo incompatível.");
+    for (const e of h.efeitos ?? []) {
+      if (
+        ["spendAttack", "guardTarget"].includes(e.id) &&
+        card.tipo !== "Tropa"
+      )
+        errors.push("Consumir ataque/proteger aliado exige tropa de origem.");
+      if (
+        e.id === "spendAttack" &&
+        (e.valor !== undefined || e.duracao || e.status || e.elemento)
+      )
+        errors.push(
+          "spendAttack não recebe valor, duração, status ou elemento.",
+        );
+      if (
+        e.id === "guardTarget" &&
+        (h.alvo !== "UnicoAliado" ||
+          h.alvoAutomatico ||
+          !e.duracao ||
+          e.valor === undefined)
+      )
+        errors.push(
+          "guardTarget exige UnicoAliado selecionado, valor e duração positiva.",
+        );
+    }
     if (
       h.alvoAutomatico &&
       (!h.efeitos?.length ||

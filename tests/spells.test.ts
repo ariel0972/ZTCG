@@ -265,6 +265,64 @@ test("Lágrima/Fluxo ativam somente com outro Zarcos posterior, uma vez por cóp
   assert.ok(g.player("p1").graveyard.some((c) => c.id === tear.id));
   assert.ok(g.player("p1").zarcosTriggered?.includes(flow.id));
 });
+
+test("feitiços de rodada coexistem por jogador, bloqueiam só duplicata própria e preservam a arte", () => {
+  const g = make();
+  cast(g, "005");
+  assert.throws(() => cast(g, "005"), /ativo/);
+  g.state.current = "p2";
+  cast(g, "005", [], "p2");
+  assert.equal(g.state.ongoingSpells?.length, 2);
+  assert.ok(
+    g.state.ongoingSpells?.every((s) =>
+      s.card?.imgURL?.includes("Chuva de Flechas"),
+    ),
+  );
+  const restored = Game.restore(g.exportState());
+  restored.state.current = "p1";
+  const before = restored.state.players.map((p) => p.mage.hpAtual);
+  endRound(restored);
+  assert.deepEqual(
+    restored.state.players.map((p) => p.mage.hpAtual),
+    before.map((h) => h - 3),
+  );
+  assert.deepEqual(
+    restored.state.ongoingSpells?.map((s) => s.rounds),
+    [1, 1],
+  );
+  endRound(restored);
+  assert.equal(restored.state.ongoingSpells?.length, 0);
+  for (const id of ["004", "009"]) {
+    const game = make();
+    const a = troop(game);
+    cast(game, id, id === "004" ? [a.id] : []);
+    const next = troop(game);
+    assert.throws(() => cast(game, id, id === "004" ? [next.id] : []), /ativo/);
+    game.state.current = "p2";
+    // Isolate coexistence; the independent Cego casting restriction is tested above.
+    game.player("p2").mage.statuses = [];
+    const own = troop(game, "p1");
+    cast(game, id, id === "004" ? [own.id] : [], "p2");
+    assert.equal(game.state.ongoingSpells?.length, 2);
+  }
+});
+
+test("efeitos de lados opostos que derrotam ambos os magos no mesmo fim de rodada empatam", () => {
+  for (const reverse of [false, true]) {
+    const g = make();
+    cast(g, "005");
+    g.state.current = "p2";
+    cast(g, "005", [], "p2");
+    if (reverse) g.state.ongoingSpells!.reverse();
+    for (const p of g.state.players) p.mage.hpAtual = 3;
+    g.state.current = "p1";
+    endRound(g);
+    assert.equal(g.state.status, "FINISHED");
+    assert.equal(g.state.winner, null);
+    assert.match(g.state.reason!, /dois magos/);
+    assert.ok(g.state.players.every((p) => p.mage.hpAtual <= 0));
+  }
+});
 test("Jato fora de turno cancela multi-alvo sem dano, consome tudo e conta passivas", () => {
   const g = make("Fogo");
   g.player("p1").mage.habilidadesPassivas = catalog.find(

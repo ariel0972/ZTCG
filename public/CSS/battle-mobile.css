@@ -179,23 +179,66 @@
     font-size: 8px;
     padding: 1px 2px;
   }
-  .match-page.in-match .zone-piles {
+  .match-page.in-match .battle-side {
     position: absolute;
-    padding: 0 !important;
-    gap: 6px;
-    flex-direction: column;
-    margin: 0;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    width: clamp(88px, 26vw, 108px);
+    gap: 4px;
   }
-  .match-page.in-match .enemy-zone-piles {
+  .match-page.in-match .enemy-side {
     left: 3px;
     top: 4px;
   }
-  .match-page.in-match .own-zone-piles {
+  .match-page.in-match .own-side {
     right: 3px;
     bottom: 35px;
   }
+  .match-page.in-match .ongoing-spell-rail {
+    order: 1;
+    flex-direction: row;
+    width: 36px;
+    max-width: 36px;
+    flex-shrink: 0;
+    max-height: none;
+    gap: 5px;
+    padding: 4px 2px;
+  }
+  .match-page.in-match .ongoing-spell-rail:empty {
+    display: none;
+  }
+  .match-page.in-match .ongoing-spell-card {
+    width: 32px;
+    padding: 2px;
+  }
+  .match-page.in-match .ongoing-spell-card img {
+    height: 44px;
+  }
+  .match-page.in-match .ongoing-spell-card small {
+    display: none;
+  }
+  .match-page.in-match .ongoing-spell-counter {
+    min-width: 18px;
+    font-size: 11px;
+    padding: 2px 4px;
+  }
+  .match-page.in-match .zone-piles {
+    position: static;
+    order: 0;
+    padding: 0 !important;
+    gap: 4px;
+    flex-direction: row;
+    justify-content: center;
+    width: auto;
+    min-width: 0;
+    flex: 1;
+    margin: 0;
+  }
   .match-page.in-match .zone-pile {
-    width: 34px;
+    width: 30px;
+    min-width: 0;
   }
   .match-page.in-match .zone-pile img {
     height: 39px;
@@ -425,6 +468,25 @@
     height: 18px;
     min-height: 18px;
   }
+  .match-page.in-match .battle-side {
+    position: static;
+    flex-direction: column;
+    width: 72px;
+    align-self: center;
+    gap: 3px;
+  }
+  .match-page.in-match .ongoing-spell-rail {
+    width: 100%;
+    max-width: 100%;
+  }
+  .match-page.in-match .enemy-side {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .match-page.in-match .own-side {
+    grid-column: 3;
+    grid-row: 2;
+  }
   .match-page.in-match .zone-piles {
     position: static;
     justify-self: center;
@@ -473,6 +535,7 @@
     gap: 3px;
   }
   .match-page.in-match .rear-row,
+  .match-page.in-match .battle-side,
   .match-page.in-match .zone-piles {
     width: 60px;
   }

@@ -46,6 +46,7 @@ import {
 export type { Status } from "./status";
 export class Game {
   public state: State;
+  private deferMageDefeat = false;
   private processed = new Map<string, number>();
   private passiveDepth = 0;
   private passiveSteps = 0;
@@ -427,9 +428,45 @@ export class Game {
     source?: Instance,
     cause?: string,
     originOwnerId?: string,
-  ) {
+    interception?: { cardId: string; valor: number; origin: string },
+  ): void {
     const slot = this.targetSlot(id);
     if (!slot) this.fail("Alvo não encontrado.");
+    const protectedCard = this.findCard(id) ?? slot.card;
+    if (attacker && protectedCard && !interception) {
+      const defender = attackInterceptor(
+        attacker,
+        { ...slot, card: protectedCard, rider: null },
+        this.state.slots,
+        true,
+      );
+      if (
+        defender?.protection?.protegidoId === protectedCard.id &&
+        defender.card.id !== protectedCard.id
+      ) {
+        const origin = defender.protection.origin ?? "Em Guarda";
+        this.event(
+          "passive",
+          defender.card,
+          `${defender.card.nome} interceptou ${slot.rider?.id === id ? "o dano excedente" : "o ataque básico"} destinado a ${protectedCard.nome} pela habilidade ${origin}.`,
+        );
+        return this.damage(
+          defender.card.id,
+          value,
+          attacker,
+          false,
+          element,
+          source,
+          cause,
+          originOwnerId,
+          {
+            cardId: defender.card.id,
+            valor: defender.protection.valor ?? 0,
+            origin,
+          },
+        );
+      }
+    }
     // A estrutura absorve o golpe inteiro, inclusive o excedente.
     // Sem tropa vinculada, ela não protege o mago.
     const protectedByStructure =
@@ -484,6 +521,10 @@ export class Game {
       !this.has(target, "Vapor");
     if (weakness) remaining *= 2;
     if (resistance) remaining = Math.floor(remaining / 2);
+    if (interception?.cardId === target.id) {
+      blockers.push(interception.origin);
+      remaining = Math.max(0, remaining - interception.valor);
+    }
     if (this.has(target, "armaduraPoderosa")) {
       blockers.push(`Armadura Poderosa de ${target.nome}`);
       remaining = Math.max(0, remaining - 2);
@@ -755,7 +796,7 @@ export class Game {
     }
     if (guard >= 100) this.fail("Ciclo de efeitos excedeu o limite.");
     const dead = this.state.players.filter((p) => p.mage.hpAtual <= 0);
-    if (dead.length)
+    if (dead.length && !this.deferMageDefeat)
       this.finish(
         dead.length === 2 ? null : this.opponent(dead[0].id).id,
         dead.length === 2
@@ -1017,9 +1058,19 @@ export class Game {
     if (
       type === "Global" ||
       type === "TodosInimigos" ||
-      type === "TodasTropasInimigas"
+      type === "TodasTropasInimigas" ||
+      type === "TodosAliados"
     ) {
       if (ids.length) this.fail("Esta ação não aceita seleção de alvos.");
+      if (type === "TodosAliados")
+        return this.state.slots
+          .filter((s) => s.ownerId === owner)
+          .flatMap(slotCards)
+          .filter(
+            (c) =>
+              ["Tropa", "Mago", "Estrutura"].includes(c.tipo) && c.hpAtual > 0,
+          )
+          .map((c) => c.id);
       if (type === "TodasTropasInimigas")
         return this.state.slots
           .filter((s) => s.ownerId === enemy.id)
@@ -1203,6 +1254,38 @@ export class Game {
     const player = this.player(ownerId);
     for (const effect of effects) {
       switch (effect.id) {
+        case "spendAttack":
+          if (!source) this.fail("Consumir ataque exige a carta de origem.");
+          const position = this.targetSlot(source.id)!;
+          const blocked = this.attackSourceError(ownerId, position, source);
+          if (blocked) this.fail(blocked);
+          this.spendMountAttack(ownerId, source);
+          break;
+        case "guardTarget": {
+          if (!source || source.tipo !== "Tropa" || ids.length !== 1)
+            this.fail(
+              "Proteção exige uma tropa de origem e um aliado selecionado.",
+            );
+          const protectedCard = this.findCard(ids[0]);
+          if (
+            !protectedCard ||
+            protectedCard.ownerId !== ownerId ||
+            protectedCard.tipo !== "Tropa"
+          )
+            this.fail("Escolha uma tropa aliada para proteger.");
+          const status = applyStatus(
+            source.statuses,
+            "Interceptar",
+            effect.duracao!,
+            effect.valor,
+            this.state.turn,
+            effect.unidade ?? "rodada",
+          );
+          status.protegidoId = protectedCard.id;
+          status.origin = cause ?? source.nome;
+          status.originOwnerId = ownerId;
+          break;
+        }
         case "damage":
           for (const id of ids)
             this.damage(
@@ -1697,6 +1780,14 @@ export class Game {
     return [target.id];
   }
   private spellBlockReason(card: Instance, user: string) {
+    if (
+      card.efeitos?.some((e) =>
+        this.state.ongoingSpells?.some(
+          (s) => s.ownerId === user && s.kind === e.id && s.rounds > 0,
+        ),
+      )
+    )
+      return `Você já tem ${card.nome} ativo em campo.`;
     if (!card.alvoAutomatico) return "";
     try {
       this.spellSelection(card, user, []);
@@ -1789,6 +1880,12 @@ export class Game {
       damage: number,
     ) => {
       this.state.ongoingSpells ??= [];
+      if (
+        this.state.ongoingSpells.some(
+          (s) => s.kind === kind && s.ownerId === user && s.rounds > 0,
+        )
+      )
+        this.fail(`Você já tem ${card.nome} ativo em campo.`);
       this.state.ongoingSpells.push({
         id: card.id,
         ownerId: user,
@@ -1796,6 +1893,11 @@ export class Game {
         rounds: 2,
         damage,
         element: card.elemento,
+        card: {
+          numeroCatalogo: card.numeroCatalogo,
+          nome: card.nome,
+          imgURL: card.imgURL,
+        },
       });
     };
     const status = (
@@ -1865,8 +1967,6 @@ export class Game {
         break;
       }
       case "arrowRain":
-        if (this.state.ongoingSpells?.some((s) => s.kind === "arrowRain"))
-          this.fail("Já existe Chuva de Flechas em campo.");
         ongoing("arrowRain", mageElement === "Fogo" ? 5 : 3);
         if (mageElement === "Agua")
           status(this.enemyTargets(user), "Congelado", 2);
@@ -1950,39 +2050,45 @@ export class Game {
     return true;
   }
   private tickOngoingSpells() {
-    for (const spell of this.state.ongoingSpells ?? []) {
-      if (this.state.status !== "ACTIVE") break;
-      const targets =
-        spell.kind === "tornado"
-          ? [this.opponent(spell.ownerId).mage.id]
-          : this.enemyTargets(spell.ownerId, true);
-      if (spell.element) this.react(spell.ownerId, targets, spell.element);
-      const name =
-        spell.kind === "tornado"
-          ? "Furacão"
-          : spell.kind === "arrowRain"
-            ? "Chuva de Flechas"
-            : "Furacão de Areia";
-      for (const id of targets)
-        this.damage(
-          id,
-          spell.damage,
-          undefined,
-          false,
-          spell.element,
-          undefined,
-          `${name} (${this.player(spell.ownerId).nome}, fim da rodada)`,
-          spell.ownerId,
-        );
-      spell.rounds--;
-      this.log(
-        `${spell.kind === "tornado" ? "Furacão" : spell.kind === "arrowRain" ? "Chuva de Flechas" : "Furacão de Areia"} causou dano no fim da rodada.`,
+    if (!this.state.ongoingSpells?.length) return;
+    this.deferMageDefeat = true;
+    try {
+      for (const spell of this.state.ongoingSpells ?? []) {
+        if (this.state.status !== "ACTIVE") break;
+        const targets =
+          spell.kind === "tornado"
+            ? [this.opponent(spell.ownerId).mage.id]
+            : this.enemyTargets(spell.ownerId, true);
+        if (spell.element) this.react(spell.ownerId, targets, spell.element);
+        const name =
+          spell.card?.nome ??
+          (spell.kind === "tornado"
+            ? "Furacão"
+            : spell.kind === "arrowRain"
+              ? "Chuva de Flechas"
+              : "Furacão de Areia");
+        for (const id of targets)
+          this.damage(
+            id,
+            spell.damage,
+            undefined,
+            false,
+            spell.element,
+            undefined,
+            `${name} (${this.player(spell.ownerId).nome}, fim da rodada)`,
+            spell.ownerId,
+          );
+        spell.rounds--;
+        this.log(`${name} causou dano no fim da rodada.`);
+        this.resolve();
+      }
+      this.state.ongoingSpells = this.state.ongoingSpells?.filter(
+        (s) => s.rounds > 0,
       );
-      this.resolve();
+    } finally {
+      this.deferMageDefeat = false;
     }
-    this.state.ongoingSpells = this.state.ongoingSpells?.filter(
-      (s) => s.rounds > 0,
-    );
+    this.resolve();
   }
   resolvePendingSpell() {
     const pending = this.state.pendingSpell;
@@ -2185,12 +2291,18 @@ export class Game {
     const targetError = this.attackTargetError(slot, card, target);
     if (targetError) this.fail(targetError);
     let interception = "";
-    if (card.tipo === "Tropa") {
+    let interceptionProtection:
+      { cardId: string; valor: number; origin: string } | undefined;
+    {
       const interceptor = attackInterceptor(card, target, this.state.slots);
       if (interceptor && interceptor.card.id !== target.card?.id) {
-        const protection = interceptor.card.statuses.find(
-          (s) => s.nome === "Interceptar",
-        )?.origin;
+        const protection = interceptor.protection?.origin;
+        if (interceptor.protection?.protegidoId)
+          interceptionProtection = {
+            cardId: interceptor.card.id,
+            valor: interceptor.protection.valor ?? 0,
+            origin: protection ?? "Em Guarda",
+          };
         interception = ` Alvo escolhido: ${target.card?.nome ?? enemy.mage.nome} (${enemy.nome}). ${interceptor.card.nome} (${enemy.nome}) interceptou ${protection ? `pela habilidade ${protection}` : "pela sua passiva"}.`;
         this.log(
           `${interceptor.card.nome} interceptou o ataque de ${card.nome} destinado a ${target.card?.nome ?? enemy.mage.nome}.`,
@@ -2200,7 +2312,7 @@ export class Game {
             ? { ...interceptor.slot, card: interceptor.card, rider: null }
             : interceptor.slot;
       }
-      if (target.card?.tipo === "Tropa")
+      if (card.tipo === "Tropa" && target.card?.tipo === "Tropa")
         enemy.lastTroopAttacker = { cardId: card.id, turn: this.state.turn };
     }
     const announcedDefender = this.basicAttackDefender(target);
@@ -2253,11 +2365,20 @@ export class Game {
         defenderId: defender.id,
         damage,
         element: card.elemento,
+        interception: interceptionProtection,
       };
       this.log(`${defender.nome} pode devolver o ataque de ${card.nome}.`);
       return;
     }
-    this.completeAttack(card, target, damage, card.elemento);
+    this.completeAttack(
+      card,
+      target,
+      damage,
+      card.elemento,
+      false,
+      undefined,
+      interceptionProtection,
+    );
   }
   private basicAttackDamage(card: Instance, defender: Instance) {
     const slot = this.targetSlot(card.id)!;
@@ -2314,6 +2435,7 @@ export class Game {
     element?: Card["elemento"],
     reflect = false,
     reactionCard?: Instance,
+    interception?: { cardId: string; valor: number; origin: string },
   ) {
     const user = card.ownerId,
       enemy = this.opponent(user);
@@ -2336,7 +2458,18 @@ export class Game {
         `Devolveu o ataque de ${card.nome}.`,
       );
       this.log(`${reactionCard.nome} devolveu o ataque de ${card.nome}.`);
-    } else this.damage(effectiveDefender.id, damage, card, false, element);
+    } else
+      this.damage(
+        effectiveDefender.id,
+        damage,
+        card,
+        false,
+        element,
+        undefined,
+        undefined,
+        undefined,
+        interception,
+      );
     if (attackedCard)
       this.trigger("onAttacked", {
         ownerId: attackedCard.ownerId,
@@ -2381,6 +2514,7 @@ export class Game {
       pending.element,
       reflect,
       defender,
+      pending.interception,
     );
     this.resolve();
     this.state.version++;
@@ -2430,7 +2564,35 @@ export class Game {
           selected = [front.card.id];
         }
       }
-      const targets = this.validateTargets(user, ability.alvo, selected);
+      let targets = this.validateTargets(
+        user,
+        ability.alvo,
+        selected,
+        ability.maxAlvos ?? 1,
+      ).map((id) =>
+        [
+          "CampoAliado",
+          "CampoInimigo",
+          "Deck",
+          "DeckOponente",
+          "Mao",
+          "Cemiterio",
+        ].includes(ability.alvo ?? "")
+          ? id
+          : (this.findCard(id)?.id ?? this.targetSlot(id)?.card?.id ?? id),
+      );
+      if (new Set(targets).size !== targets.length)
+        this.fail("Selecione alvos diferentes.");
+      if (ability.filtroAlvo) {
+        const matches = (id: string) =>
+          matchesPassiveFilter(this.findCard(id)!, ability.filtroAlvo);
+        if (
+          ["TodosAliados", "TodasTropasInimigas"].includes(ability.alvo ?? "")
+        )
+          targets = targets.filter(matches);
+        else if (targets.some((id) => !matches(id)))
+          this.fail("O alvo não corresponde ao filtro desta habilidade.");
+      }
       this.spend(p, ability.custoMana);
       this.effects(
         user,
@@ -2586,6 +2748,20 @@ export class Game {
     card.usedAbility = true;
     this.event("ability", card, ability.nome);
     this.log(`${card.nome} usou ${ability.nome}.`);
+  }
+  private abilityAttackBlockReasons(
+    user: string,
+    slot: Slot,
+    card: Instance | null | undefined,
+  ) {
+    return Object.fromEntries(
+      (card?.habilidadesAtivas ?? [])
+        .filter((h) => h.efeitos?.some((e) => e.id === "spendAttack"))
+        .map((h) => [
+          h.id,
+          this.attackSourceError(user, slot, card ?? null) ?? "",
+        ]),
+    );
   }
   private beginTurn() {
     const p = this.player(this.state.current);
@@ -2931,6 +3107,10 @@ export class Game {
                 card: this.attackTargets(user, slot, slot.card),
                 structure: this.attackTargets(user, slot, slot.structure),
                 rider: this.attackTargets(user, slot, slot.rider ?? null),
+              },
+              abilityBlockReasons: {
+                card: this.abilityAttackBlockReasons(user, slot, slot.card),
+                rider: this.abilityAttackBlockReasons(user, slot, slot.rider),
               },
               attackBlockReasons: {
                 card: this.attackBlockReasons(user, slot.card),

@@ -2,6 +2,7 @@ export const automaticTargets = [
   "Global",
   "TodosInimigos",
   "TodasTropasInimigas",
+  "TodosAliados",
 ];
 export const hasAutomaticTarget = (action) =>
   !!action?.alvoAutomatico || automaticTargets.includes(action?.alvo);
@@ -17,7 +18,7 @@ export function spellSlotTarget(action, slot, userId) {
   if (["CampoAliado", "CampoInimigo"].includes(type))
     return slot.kind === "Tropa" && (type === "CampoAliado" ? own : !own);
   if (
-    (type === "UnicoAliado" && !own) ||
+    (["UnicoAliado", "TodosAliados"].includes(type) && !own) ||
     ([
       "UnicoInimigo",
       "MultiplosInimigos",
@@ -57,6 +58,13 @@ export function spellSlotTarget(action, slot, userId) {
     return false;
   if (action.tiposAlvo && !action.tiposAlvo.includes(target.tipo)) return false;
   if (
+    action.filtroAlvo &&
+    Object.entries(action.filtroAlvo).some(
+      ([key, value]) => target[key] !== value,
+    )
+  )
+    return false;
+  if (
     effects.some((e) => ["tornado", "meteors"].includes(e.id)) &&
     target.tipo !== "Tropa"
   )
@@ -95,6 +103,8 @@ export function zoneCardAllowed(action, card) {
   return true;
 }
 export function targetDescription(action) {
+  if (action?.filtroAlvo?.numeroCatalogo)
+    return `Escolha a tropa aliada de catálogo ${action.filtroAlvo.numeroCatalogo} destacada, inclusive montada.`;
   if (action?.alvoAutomatico === "UltimoAtacanteTropa")
     return "Atinge automaticamente a última tropa que atacou uma tropa sua no turno anterior, mesmo com Esconder.";
   if (action?.efeitos?.some((e) => ["tornado", "meteors"].includes(e.id)))
@@ -103,6 +113,8 @@ export function targetDescription(action) {
     UnicoAliado: "Escolha uma carta aliada destacada, incluindo seu mago.",
     UnicoInimigo: "Escolha uma carta inimiga destacada, incluindo o mago.",
     MultiplosInimigos: "Escolha os inimigos destacados e confirme.",
+    TodosAliados:
+      "Atinge todos os aliados destacados, incluindo a própria carta, o mago e estruturas.",
     TodosInimigos:
       "Atinge os inimigos destacados; não exige seleção individual.",
     TodasTropasInimigas:

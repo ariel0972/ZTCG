@@ -94,49 +94,65 @@
                 </div>
               </div>
             </div>
-            <div
-              id="enemy-field-zones"
-              class="zone-piles enemy-zone-piles"
-              aria-label="Zonas do adversário"
-            >
-              <button
-                id="enemy-deck-zone"
-                class="zone-pile"
-                aria-label="Baralho do adversário"
+            <div class="battle-side enemy-side">
+              <div
+                id="enemy-field-zones"
+                class="zone-piles enemy-zone-piles"
+                aria-label="Zonas do adversário"
               >
-                <img src="/assets/card-backs/common.png" alt="" /><span
-                  class="zone-pile-caption"
-                  >Baralho <b id="enemy-deck-pile-count">0</b></span
+                <button
+                  id="enemy-deck-zone"
+                  class="zone-pile"
+                  aria-label="Baralho do adversário"
                 >
-              </button>
-              <button
-                id="enemy-graveyard"
-                class="zone-pile"
-                aria-label="Cemitério do adversário"
-              >
-                <img src="/assets/card-backs/common.png" alt="" /><span
-                  class="zone-pile-caption"
-                  >Cemitério <b id="enemy-graveyard-pile-count">0</b></span
+                  <img src="/assets/card-backs/common.png" alt="" /><span
+                    class="zone-pile-caption"
+                    >Baralho <b id="enemy-deck-pile-count">0</b></span
+                  >
+                </button>
+                <button
+                  id="enemy-graveyard"
+                  class="zone-pile"
+                  aria-label="Cemitério do adversário"
                 >
-              </button>
+                  <img src="/assets/card-backs/common.png" alt="" /><span
+                    class="zone-pile-caption"
+                    >Cemitério <b id="enemy-graveyard-pile-count">0</b></span
+                  >
+                </button>
+              </div>
+              <div
+                id="enemy-ongoing-spells"
+                class="ongoing-spell-rail"
+                aria-label="Feitiços ativos do adversário"
+                hidden
+              ></div>
             </div>
-            <div
-              id="field-zones"
-              class="zone-piles own-zone-piles"
-              aria-label="Zonas do seu baralho"
-            >
-              <button id="deck-zone" class="zone-pile" aria-label="Baralho">
-                <img src="/assets/card-backs/common.png" alt="" /><span
-                  class="zone-pile-caption"
-                  >Baralho <b id="deck-pile-count">0</b></span
-                >
-              </button>
-              <button id="graveyard" class="zone-pile" aria-label="Cemitério">
-                <img src="/assets/card-backs/common.png" alt="" /><span
-                  class="zone-pile-caption"
-                  >Cemitério <b id="graveyard-pile-count">0</b></span
-                >
-              </button>
+            <div class="battle-side own-side">
+              <div
+                id="own-ongoing-spells"
+                class="ongoing-spell-rail"
+                aria-label="Seus feitiços ativos"
+                hidden
+              ></div>
+              <div
+                id="field-zones"
+                class="zone-piles own-zone-piles"
+                aria-label="Zonas do seu baralho"
+              >
+                <button id="deck-zone" class="zone-pile" aria-label="Baralho">
+                  <img src="/assets/card-backs/common.png" alt="" /><span
+                    class="zone-pile-caption"
+                    >Baralho <b id="deck-pile-count">0</b></span
+                  >
+                </button>
+                <button id="graveyard" class="zone-pile" aria-label="Cemitério">
+                  <img src="/assets/card-backs/common.png" alt="" /><span
+                    class="zone-pile-caption"
+                    >Cemitério <b id="graveyard-pile-count">0</b></span
+                  >
+                </button>
+              </div>
             </div>
           </div>
           <div id="my-hud" class="player-hud my-hud"></div>

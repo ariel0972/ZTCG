@@ -800,6 +800,8 @@ dialog::backdrop {
 .card-inspection {
   width: min(780px, calc(100vw - 24px));
   max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .card-inspection > button {
   display: block;
@@ -1037,7 +1039,33 @@ dialog::backdrop {
 }
 @media (max-width: 640px) {
   .inspection-image img {
-    max-height: 55dvh;
+    max-height: min(260px, 38dvh);
+  }
+  .card-inspection,
+  .card-artwork {
+    padding: 14px;
+  }
+  .inspection-details {
+    min-width: 0;
+  }
+}
+@media (max-width: 1100px) and (orientation: landscape) and (max-height: 600px) {
+  .card-inspection {
+    padding: 12px;
+  }
+  .inspection-content {
+    grid-template-columns: minmax(100px, 32%) minmax(0, 1fr);
+    gap: 16px;
+  }
+  .inspection-image {
+    position: sticky;
+    top: 44px;
+  }
+  .inspection-image img {
+    max-height: calc(100dvh - 100px);
+  }
+  .inspection-details h2 {
+    margin-top: 0;
   }
 }
 .social-page {

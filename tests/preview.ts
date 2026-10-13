@@ -228,6 +228,38 @@ void fakeDatabase().then(async (db) => {
         instance(id, owner),
       );
     }
+    if (process.env.PREVIEW_FIELD_EFFECTS === "1") {
+      ["111", "075", "021"].forEach((id, column) => {
+        game.state.slots.find(
+          (s) => s.id === `${owner}:front:${column}`,
+        )!.card = instance(id, owner);
+      });
+      ["023", "021", "025"].forEach((id, column) => {
+        game.state.slots.find(
+          (s) => s.id === `${enemy.ownerId}:front:${column}`,
+        )!.card = instance(id, enemy.ownerId);
+      });
+      game.state.ongoingSpells = [];
+      for (const player of game.state.players) {
+        const rain = instance("005", player.id);
+        player.graveyard.push(rain);
+        game.state.ongoingSpells.push({
+          id: rain.id,
+          ownerId: player.id,
+          kind: "arrowRain",
+          rounds: 2,
+          damage: 3,
+          card: {
+            numeroCatalogo: rain.numeroCatalogo,
+            nome: rain.nome,
+            imgURL: rain.imgURL,
+          },
+        });
+      }
+      game.player(owner).hand = ["005", "004", "009"].map((id) =>
+        instance(id, owner),
+      );
+    }
     if (process.env.PREVIEW_REACTIONS === "1") {
       for (let column = 0; column < 3; column++) {
         const target = instance("021", enemy.ownerId);
