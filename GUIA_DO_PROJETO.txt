@@ -1123,8 +1123,9 @@ intensidade: para definir intensidade, use um efeito adicional na variante.
 variantesMago:[] remove as variantes automáticas: Chuva fica só com dano
 periódico base e Bola fica só com seu status base, sem dano condicionado.
 Se variantesMago estiver ausente, definições antigas preservam as variantes
-históricas. valor/duracao ainda controlam a base; defaults omitidos são Chuva
-3 de dano/2 rodadas e Bola 3 de dano/Cego por 1 rodada.
+históricas. duracao/status omitidos usam Chuva por 2 rodadas e Bola com Cego
+por 1 rodada. valor é obrigatório para publicar; o motor mantém fallback 3
+para compatibilidade com estados antigos sem esse campo.
 É permitido configurar o status inteiro, sua duração e intensidade de forma
 explícita somente nessas variantes; não muda a regra global de um token.
 Atualize descricao quando editar as regras para manter o texto da carta coerente.
