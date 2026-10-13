@@ -27,10 +27,28 @@ void fakeDatabase().then(async (db) => {
         ][n],
         avatarURL: "/assets/avatar.png",
       });
+      const deckId = (n + 200).toString(16).padStart(24, "0");
+      db.decks.push({
+        ...db.decks[0],
+        _id: deckId,
+        userId: id,
+        publico: true,
+        nome: [
+          "Maré de Zarcos",
+          "Chamas do Alto Mago",
+          "Guarda da Terra",
+          "Legião Arcana",
+          "Ventos do Norte",
+          "Noite Profana",
+          "Força da Mana",
+          "Caminhos do Aprendiz",
+        ][n],
+        createdAt: new Date(2026, 0, n + 1),
+      });
       for (let i = 0; i < 20 + n; i++)
         db.matches.push({
           matchId: `ranking-preview-${n}-${i}`,
-          players: [{ userId: id }],
+          players: [{ userId: id, deckId }],
           winner: i < 15 - n ? id : null,
           finishedAt: new Date(),
         });
@@ -62,6 +80,26 @@ void fakeDatabase().then(async (db) => {
     });
   }
   // Optional, isolated fixtures for the profile UI; never touches production data.
+  if (process.env.PREVIEW_TITLES === "1") {
+    const id = "a".repeat(24);
+    db.users.push({
+      _id: id,
+      nome: "Guardião dos Thumos",
+      avatarURL: "/assets/avatar.png",
+    });
+    for (let i = 0; i < 50; i++)
+      db.matches.push({
+        matchId: `title-preview-${i}`,
+        players: [
+          { userId: id, nome: "Guardião dos Thumos" },
+          { userId: "1".repeat(24), nome: "Duelista 1" },
+        ],
+        winner: id,
+        turns: 18,
+        reason: "Mago derrotado.",
+        finishedAt: new Date(2026, 9, 1, 0, i),
+      });
+  }
   if (process.env.PREVIEW_PROFILES === "1") {
     db.decks[0].publico = true;
     db.decks[1].publico = true;

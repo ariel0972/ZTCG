@@ -7,6 +7,7 @@
     <link rel="icon" href="/assets/icons/favicon.svg" />
     <link rel="stylesheet" href="/CSS/app.css" />
     <link rel="stylesheet" href="/CSS/community.css" />
+    <link rel="stylesheet" href="/CSS/battle.css" />
     <script type="module" src="/JS/ranking.js"></script>
   </head>
   <body>
@@ -27,7 +28,8 @@
       </p>
       <p class="ranking-intro">
         Você entra no ranking ao concluir sua primeira partida. Na aba de taxa
-        de vitória, é preciso ter pelo menos 10 partidas completas.
+        de vitória, é preciso ter pelo menos 10 partidas completas. Baralhos
+        públicos entram após 10 partidas com o próprio baralho.
       </p>
       <div class="ranking-tabs" role="tablist" aria-label="Classificação">
         <button
@@ -47,7 +49,31 @@
         >
           Taxa de vitória <small>A partir de 10 partidas</small>
         </button>
+        <button
+          id="decks-tab"
+          role="tab"
+          aria-selected="false"
+          aria-controls="ranking-panel"
+          tabindex="-1"
+        >
+          Baralhos públicos <small>Maior taxa de vitória</small>
+        </button>
       </div>
+      <dialog
+        id="ranking-deck-dialog"
+        class="ranking-deck-dialog"
+        aria-labelledby="ranking-deck-title"
+      >
+        <div class="ranking-deck-heading">
+          <h2 id="ranking-deck-title"></h2>
+          <button id="ranking-deck-close" class="quiet" autofocus>
+            Fechar baralho
+          </button>
+        </div>
+        <p id="ranking-deck-status" role="status"></p>
+        <a id="ranking-deck-owner">Ver perfil do dono →</a>
+        <div id="ranking-deck-cards" class="ranking-deck-cards"></div>
+      </dialog>
       <section
         id="ranking-panel"
         role="tabpanel"

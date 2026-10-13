@@ -967,3 +967,27 @@ O perfil mostra XP, título, sequência, recorde e multiplicadores do próximo
 resultado normal, além do XP de cada partida no histórico paginado. /regras
 explica os valores usando /rules-data. Elegibilidade e desempates do ranking
 continuam por vitórias/taxa, com mínimo de dez partidas apenas na aba por taxa.
+
+ATUALIZAÇÃO — RANKING DE BARALHOS E BADGES (13/10/2026)
+/rankings?mode=decks lista apenas baralhos públicos de donos existentes com
+dez partidas concluídas usando aquele deck. A consulta compara deckId e
+userId do mesmo participante; resultados de outro baralho não contam.
+Empates e derrotas entram no total de partidas, como no ranking de jogadores.
+Ordenação: taxa exata decrescente, vitórias decrescentes, createdAt e ObjectId
+crescentes. Percentual exibido é arredondado para uma casa. Pódio de três,
+lista paginada de vinte. Edições preservam o histórico pelo ID do baralho;
+privados/removidos saem da consulta, republicados recuperam os resultados.
+Match possui índice players.deckId/finishedAt para essa consulta. O DTO do
+ranking retorna somente nome, ícone validado, estatísticas e nome/ID do dono.
+A inspeção busca novamente os decks públicos no perfil antes de mostrar cartas.
+public/JS/ranking.js e community.css incluem a terceira aba e o modal do deck.
+tests/ranking.test.ts cobre elegibilidade por deck, privacidade, dono correto,
+desempates, paginação e continuidade do histórico depois de alterações.
+O título no perfil vira uma badge à direita: vermelho, amarelo e verde nos
+três primeiros títulos. Tumociente inicia os degradês, passando por azul,
+roxo, púrpura, vermelho/dourado e dourado/púrpura/azul nos títulos superiores.
+A animação roda ao passar o mouse ou focar a badge; em telas até 700px ou
+dispositivos sem hover roda sozinha. prefers-reduced-motion desativa o movimento.
+As cores e animações ficam em profile.css; profile.js seleciona a faixa pelo nível.
+PREVIEW_TITLES=1 acrescenta à prévia isolada um perfil Tumociente de nível 7
+para conferir a badge sem mudar qualquer conta real.

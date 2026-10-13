@@ -1,11 +1,149 @@
 .profile-page {
   max-width: 1200px;
 }
-.profile-player-title {
-  color: #e4d0a0;
+.title-badge {
+  --title-edge: #fa8e8e;
+  --title-background: #532329;
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 1 235px;
+  min-width: 170px;
+  max-width: 235px;
+  margin: 48px 0 0 auto;
+  padding: 16px 18px;
+  border: 1px solid var(--title-edge);
+  border-radius: 14px;
+  background: var(--title-background);
+  color: #fff;
+  box-shadow:
+    0 8px 24px #0003,
+    inset 0 1px 0 #ffffff20;
+  overflow: hidden;
+  transition:
+    transform 0.35s ease,
+    box-shadow 0.35s ease;
+}
+.title-badge small {
+  display: block;
+  font-size: 9px;
   font-weight: 700;
+  letter-spacing: 0.13em;
+  color: var(--title-edge);
+  margin-bottom: 6px;
+}
+.title-badge strong {
   font-size: 14px;
-  margin: 6px 0 0;
+  line-height: 1.4;
+}
+.title-badge-rune {
+  color: var(--title-edge);
+  font-size: 26px;
+}
+.title-badge[data-tier="1"] {
+  --title-edge: #f9d777;
+  --title-background: #534324;
+}
+.title-badge[data-tier="2"] {
+  --title-edge: #8ce4b3;
+  --title-background: #1d4938;
+}
+.title-badge[data-tier="3"] {
+  --title-edge: #a2deff;
+  --title-background: linear-gradient(115deg, #205c82, #164b44, #244586);
+}
+.title-badge[data-tier="4"] {
+  --title-edge: #c9b6ff;
+  --title-background: linear-gradient(115deg, #553386, #284a7a, #683985);
+}
+.title-badge[data-tier="5"] {
+  --title-edge: #edb8fc;
+  --title-background: linear-gradient(115deg, #5b2787, #762e6c, #3c3c8b);
+}
+.title-badge[data-tier="6"] {
+  --title-edge: #ffb4dd;
+  --title-background: linear-gradient(115deg, #7a2758, #6d285f, #8a333a);
+}
+.title-badge[data-tier="7"] {
+  --title-edge: #ffe49b;
+  --title-background: linear-gradient(115deg, #805322, #823242, #5c3478);
+}
+.title-badge[data-tier="8"] {
+  --title-edge: #ffe3ac;
+  --title-background: linear-gradient(
+    115deg,
+    #645421,
+    #6a2a71,
+    #294c88,
+    #645421
+  );
+}
+.title-badge[data-animated="true"] {
+  background-size: 280% 100%;
+  animation: title-gradient 7s ease-in-out infinite;
+  animation-play-state: paused;
+}
+.title-badge[data-animated="true"]::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 35%,
+    #fff2 50%,
+    transparent 65%
+  );
+  transform: translateX(-120%);
+  animation: title-shine 7s ease-in-out infinite;
+  animation-play-state: paused;
+  pointer-events: none;
+}
+.title-badge[data-animated="true"]:is(:hover, :focus-visible) {
+  transform: translateY(-3px);
+  box-shadow:
+    0 12px 30px #0005,
+    inset 0 1px 0 #ffffff40;
+  animation-play-state: running;
+}
+.title-badge[data-animated="true"]:is(:hover, :focus-visible)::after {
+  animation-play-state: running;
+}
+@keyframes title-gradient {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+@keyframes title-shine {
+  0%,
+  35% {
+    transform: translateX(-120%);
+  }
+  75%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+@media (hover: none), (max-width: 700px) {
+  .title-badge[data-animated="true"],
+  .title-badge[data-animated="true"]::after {
+    animation-play-state: running;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .title-badge,
+  .title-badge[data-animated="true"],
+  .title-badge[data-animated="true"]::after {
+    animation: none;
+    transition: none;
+    transform: none;
+  }
 }
 .level-track .experience-streaks {
   display: flex;
@@ -328,6 +466,14 @@
   .profile-identity {
     padding: 0 20px 20px;
     gap: 14px;
+    display: grid;
+    grid-template-columns: 82px minmax(0, 1fr);
+  }
+  .title-badge {
+    grid-column: 1 / -1;
+    justify-self: end;
+    margin-top: 4px;
+    padding: 12px 15px;
   }
   .profile-avatar {
     width: 82px;

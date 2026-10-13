@@ -137,6 +137,49 @@ export async function fakeDatabase() {
       },
     ]);
   });
+  patch(Deck, "aggregate", (pipeline) => {
+    const minimum = pipeline.find((s: any) => s.$match?.partidas)?.$match
+      .partidas.$gte;
+    const facet = pipeline.find((s: any) => s.$facet).$facet;
+    const order = pipeline.find((s: any) => s.$sort).$sort;
+    const rows = decks
+      .filter((d) => d.publico === true)
+      .flatMap((d) => {
+        const owner = users.find((u) => equal(u._id, d.userId));
+        if (!owner) return [];
+        const played = matches.filter((m) =>
+          m.players?.some(
+            (p: any) => equal(p.deckId, d._id) && equal(p.userId, d.userId),
+          ),
+        );
+        const wins = played.filter((m) => equal(m.winner, d.userId)).length;
+        return [
+          {
+            ...d,
+            owner,
+            partidas: played.length,
+            vitorias: wins,
+            rate: played.length ? wins / played.length : 0,
+          },
+        ];
+      })
+      .filter((d) => d.partidas >= minimum)
+      .sort((a, b) => {
+        for (const [key, direction] of Object.entries(order)) {
+          if (a[key] < b[key]) return -Number(direction);
+          if (a[key] > b[key]) return Number(direction);
+        }
+        return 0;
+      });
+    const skip = facet.decks[0].$skip;
+    return Promise.resolve([
+      {
+        podium: rows.slice(0, 3),
+        decks: rows.slice(skip, skip + facet.decks[1].$limit),
+        total: [{ count: rows.length }],
+      },
+    ]);
+  });
   function update(row: any, change: any) {
     if (
       change.$set?.nomeKey &&

@@ -39,6 +39,7 @@ Abra `http://127.0.0.1:3187`. Contas `p1@test.local`, `p2@test.local`, `p3@test.
 - Resultados são persistidos e reconhecidos individualmente. Revanche exige os dois jogadores. Perfis mostram estatísticas do histórico completo e apenas os decks que o dono publicou.
 - Níveis usam XP acumulado, incluindo partidas antigas: vitória 40, derrota 32 e empate 30. Desistência, desconexão ou inatividade rendem 20 para ambos. Sequências de vitórias/derrotas somam 10% por repetição, até ×1,5; cada prêmio é arredondado. O perfil mostra título, progresso, sequência e recorde de vitórias. Consulte `/regras#experiencia`.
 - `/ranking` reúne o pódio e a lista por vitórias (uma partida concluída) ou taxa de vitória (mínimo de dez). `/regras` explica o jogo e as reações elementais. Ataques contra tropas Congeladas atingem a própria tropa, preservando a proteção da estrutura.
+- A aba de baralhos públicos exige dez partidas por deck e mantém o histórico após edições. Títulos aparecem em badges próprias no perfil; a partir de Tumociente, o degradê anima no hover e automaticamente no celular.
 
 O catálogo local tem 130 definições, 44 publicadas nesta revisão. `npm run audit` informa as quantidades atuais; registros válidos do banco prevalecem sobre a definição local. Publicação técnica não comprova fidelidade à arte nem balanceamento.
 

@@ -17,4 +17,5 @@ const schema = new Schema(
   { timestamps: true },
 );
 schema.index({ "players.userId": 1, finishedAt: -1 });
+schema.index({ "players.deckId": 1, finishedAt: -1 });
 export default model("Match", schema);

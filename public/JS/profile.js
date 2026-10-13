@@ -228,6 +228,13 @@ async function load() {
     const stats = data.stats;
     $("level").textContent = stats.nivel;
     $("player-title").textContent = stats.titulo;
+    const badge = $("player-title-badge");
+    badge.hidden = false;
+    badge.dataset.tier = [1, 3, 6, 10, 15, 20, 25, 30, Infinity].findIndex(
+      (limit) => stats.nivel <= limit,
+    );
+    badge.dataset.animated = String(stats.nivel >= 7);
+    if (stats.nivel >= 7) badge.tabIndex = 0;
     $("stats").replaceChildren(
       ...[
         [stats.partidas, "Partidas concluídas"],
