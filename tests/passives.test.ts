@@ -199,7 +199,7 @@ test("Refazer caminhos escolhe só feitiço próprio, custa 5 e usa habilidade",
   assert.equal(g.player("p1").mage.usedAbility, true);
   assert.throws(() => act(g, { ...command, targets: [troop.id] }), /utilizada/);
 });
-test("Aprendiz devolve opcionalmente uma vez por rodada, fora de turno, sem mana e independente da habilidade", () => {
+test("Aprendiz devolve opcionalmente e espera uma rodada completa, persistindo a espera após reinício", () => {
   let g = make();
   const mage = apprentice(g, "p2");
   mage.usedAbility = true;
@@ -228,9 +228,21 @@ test("Aprendiz devolve opcionalmente uma vez por rodada, fora de turno, sem mana
   slot(g, "p1", 0).card!.attacked = false;
   g.player("p1").counters.attacks = 0;
   act(g, { type: "attack", slotId: slot(g, "p1", 0).id, targetId });
+  assert.equal(g.state.pendingAttack, undefined);
+  assert.equal(g.player("p2").mage.hpAtual, 10);
+  g = Game.restore(g.exportState());
+  g.state.round++;
+  slot(g, "p1", 0).card!.attacked = false;
+  g.player("p1").counters.attacks = 0;
+  act(g, { type: "attack", slotId: slot(g, "p1", 0).id, targetId });
   assert.ok(g.state.pendingAttack);
   respond(g, "p2", false);
-  assert.equal(g.player("p2").mage.hpAtual, 10);
+  assert.equal(g.player("p2").mage.hpAtual, 6);
+  slot(g, "p1", 0).card!.attacked = false;
+  g.player("p1").counters.attacks = 0;
+  act(g, { type: "attack", slotId: slot(g, "p1", 0).id, targetId });
+  assert.ok(g.state.pendingAttack, "recusar não inicia nova espera");
+  respond(g, "p2", true);
 });
 test("reação também funciona em outra carta e não intercepta feitiço ou habilidade", () => {
   const g = make(),

@@ -111,8 +111,7 @@ export function passiveDescription(h) {
             heal: `cura ${e.valor} de vida`,
             growAttack: `ganha +${e.valor} de ataque básico acumulável`,
             manaRecovery: `recuperação do mago passa a ${e.valor} mana`,
-            reflectAttack:
-              "pode devolver um ataque básico por rodada; resposta opcional em 20 segundos, sem custo",
+            reflectAttack: `pode devolver um ataque básico${e.esperaRodadas ? `; aguarda ${e.esperaRodadas} rodada(s) completa(s) entre usos` : " por rodada"}; resposta opcional em 20 segundos, sem custo`,
             growMaxHp: `ganha ${e.valor} de vida máxima`,
             status: `aplica ${e.status}`,
             mana: `recupera ${e.valor} de mana`,

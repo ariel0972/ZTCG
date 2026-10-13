@@ -345,29 +345,54 @@ export class Game {
           ),
     );
   }
-  private causesDamage(effects: Effect[] = [], abilityId?: string) {
+  private causesDamage(
+    effects: Effect[] = [],
+    abilityId?: string,
+    mageElement?: Card["elemento"],
+  ) {
     return (
       ["ataqueFurtivo", "ordemDaEspada"].includes(abilityId ?? "") ||
-      effects.some(
-        (e) =>
-          [
-            "damage",
-            "stoneVolley",
-            "tornado",
-            "arrowRain",
-            "tremor",
-            "lightOrb",
-            "sandstorm",
-            "meteors",
-          ].includes(e.id) ||
-          (e.id === "status" &&
+      effects.some((e) =>
+        e.id === "lightOrb"
+          ? (e.variantesMago?.find((v) => v.elemento === mageElement)
+              ?.causaDano ??
+              (e.variantesMago === undefined && mageElement === "Fogo")) ||
             [
-              "Envenenado",
-              "Queimado",
-              "Sangrando",
-              "Peste Negra",
-              "Leptospirose",
-            ].includes(canonicalStatus(e.status ?? ""))),
+              e.variantesMago?.find((v) => v.elemento === mageElement)
+                ?.status ??
+                e.status ??
+                "Cego",
+              ...(
+                e.variantesMago?.find((v) => v.elemento === mageElement)
+                  ?.efeitos ?? []
+              ).map((s) => s.status),
+            ].some((s) =>
+              [
+                "Envenenado",
+                "Queimado",
+                "Sangrando",
+                "Peste Negra",
+                "Leptospirose",
+              ].includes(canonicalStatus(s)),
+            )
+          : [
+              "damage",
+              "stoneVolley",
+              "tornado",
+              "arrowRain",
+              "tremor",
+              "lightOrb",
+              "sandstorm",
+              "meteors",
+            ].includes(e.id) ||
+            (e.id === "status" &&
+              [
+                "Envenenado",
+                "Queimado",
+                "Sangrando",
+                "Peste Negra",
+                "Leptospirose",
+              ].includes(canonicalStatus(e.status ?? ""))),
       )
     );
   }
@@ -1551,11 +1576,7 @@ export class Game {
         this.fail("Um mago Cego não pode conjurar feitiços.");
       if (
         this.openingBlocked() &&
-        this.causesDamage(card.efeitos) &&
-        !(
-          card.efeitos.every((e) => e.id === "lightOrb") &&
-          player.mage.elemento !== "Fogo"
-        )
+        this.causesDamage(card.efeitos, undefined, player.mage.elemento)
       )
         this.fail(
           "Feitiços que causam dano são bloqueados na preparação e no primeiro turno de cada jogador.",
@@ -1878,6 +1899,7 @@ export class Game {
     const ongoing = (
       kind: "tornado" | "arrowRain" | "sandstorm",
       damage: number,
+      rounds = 2,
     ) => {
       this.state.ongoingSpells ??= [];
       if (
@@ -1890,7 +1912,7 @@ export class Game {
         id: card.id,
         ownerId: user,
         kind,
-        rounds: 2,
+        rounds,
         damage,
         element: card.elemento,
         card: {
@@ -1905,18 +1927,42 @@ export class Game {
       name: string,
       duration: number,
       value?: number,
+      configured = false,
+      unit?: "turno" | "rodada",
     ) => {
       for (const id of targets) {
         const s = this.targetSlot(id),
           target = this.findCard(id) ?? s?.card;
         if (target) {
-          applyStatus(
+          const previous = target.statuses.find(
+            (s) => canonicalStatus(s.nome) === canonicalStatus(name),
+          );
+          const previousDuration = previous?.turnosRestantes ?? 0;
+          const previousUnit = previous?.unidade ?? "rodada";
+          const applied = applyStatus(
             target.statuses,
             name,
             duration,
             value,
             this.state.turn,
-          ).originOwnerId = user;
+          );
+          if (configured) {
+            const durationUnit =
+              unit ??
+              (canonicalStatus(name) === "Congelado" ? "turno" : "rodada");
+            applied.unidade = durationUnit;
+            applied.turnosRestantes = Math.max(
+              duration,
+              previousUnit === durationUnit ? previousDuration : 0,
+            );
+            if (durationUnit === "turno")
+              applied.expiraNoTurno =
+                this.state.turn + applied.turnosRestantes - 1;
+            else delete applied.expiraNoTurno;
+            if (value !== undefined) applied.valor = value;
+          }
+          applied.originOwnerId = user;
+          applied.origin = card.nome;
           this.trigger("onStatusApplied", {
             ownerId: target.ownerId,
             cardId: target.id,
@@ -1966,15 +2012,36 @@ export class Game {
         ongoing("tornado", 3);
         break;
       }
-      case "arrowRain":
-        ongoing("arrowRain", mageElement === "Fogo" ? 5 : 3);
-        if (mageElement === "Agua")
-          status(this.enemyTargets(user), "Congelado", 2);
-        if (mageElement === "Ar")
-          status(this.enemyTargets(user, true), "Sangrando", 3);
-        if (mageElement === "Terra")
-          status(this.enemyTargets(user, true), "Cego", 2);
+      case "arrowRain": {
+        const variant = effect.variantesMago?.find(
+          (v) => v.elemento === mageElement,
+        );
+        const legacy = effect.variantesMago === undefined;
+        ongoing(
+          "arrowRain",
+          (effect.valor ?? 3) +
+            (variant?.bonusDano ?? (legacy && mageElement === "Fogo" ? 2 : 0)),
+          variant?.duracao ?? effect.duracao ?? 2,
+        );
+        if (legacy) {
+          if (mageElement === "Agua")
+            status(this.enemyTargets(user), "Congelado", 2);
+          if (mageElement === "Ar")
+            status(this.enemyTargets(user, true), "Sangrando", 3);
+          if (mageElement === "Terra")
+            status(this.enemyTargets(user, true), "Cego", 2);
+        }
+        for (const extra of variant?.efeitos ?? [])
+          status(
+            this.enemyTargets(user, extra.alvo === "TodosInimigos"),
+            extra.status,
+            extra.duracao,
+            extra.valor,
+            true,
+            extra.unidade,
+          );
         break;
+      }
       case "protectionShield":
         status(ids, "EscudoProtecao", 2, 3);
         break;
@@ -1998,21 +2065,46 @@ export class Game {
         );
         break;
       }
-      case "lightOrb":
+      case "lightOrb": {
+        const variant = effect.variantesMago?.find(
+          (v) => v.elemento === mageElement,
+        );
+        const damages =
+          variant?.causaDano ??
+          (effect.variantesMago === undefined && mageElement === "Fogo");
         if (card.elemento) this.react(user, ids, card.elemento);
-        if (mageElement === "Fogo")
+        if (damages)
           for (const id of ids)
             this.damage(
               id,
-              3 + bonus,
+              (effect.valor ?? 3) + (variant?.bonusDano ?? 0) + bonus,
               undefined,
               false,
               card.elemento,
               undefined,
               card.nome,
             );
-        status(ids, "Cego", 2);
+        const name = variant?.status ?? effect.status ?? "Cego";
+        if (name)
+          status(
+            ids,
+            name,
+            variant?.duracao ?? effect.duracao ?? 1,
+            undefined,
+            true,
+            effect.unidade,
+          );
+        for (const extra of variant?.efeitos ?? [])
+          status(
+            this.enemyTargets(user, extra.alvo === "TodosInimigos"),
+            extra.status,
+            extra.duracao,
+            extra.valor,
+            true,
+            extra.unidade,
+          );
         break;
+      }
       case "sandstorm":
         if (card.elemento) this.react(user, ids, card.elemento);
         status(ids, "Cego", 2);
@@ -2416,6 +2508,9 @@ export class Game {
           rule.efeitos.some(
             (a) =>
               a.id === "reflectAttack" &&
+              (card.reflectedAttackRound === undefined ||
+                this.state.round - card.reflectedAttackRound >
+                  (a.esperaRodadas ?? 0)) &&
               matchesPassiveFilter(attacker, a.filtro),
           ) &&
           passiveMatches(

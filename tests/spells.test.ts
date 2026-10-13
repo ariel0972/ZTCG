@@ -6,7 +6,208 @@ import { cardSchema, Card } from "../src/types/card";
 import { Game } from "../src/game/engine";
 import type { Instance } from "../src/game/state";
 import { playableErrors } from "../src/game/capabilities";
+import CardModel from "../src/db/models/Card";
+import { cleanCard } from "../src/services/catalog";
 const catalog = raw.map((c) => cardSchema.parse(c));
+
+test("configurações especiais preservam variantes e espera na persistência e rejeitam combinações sem uso", () => {
+  for (const id of ["005", "008", "016", "028"]) {
+    const card = catalog.find((c) => c.numeroCatalogo === id)!;
+    const doc = new CardModel(card);
+    assert.equal(doc.validateSync(), undefined);
+    const restored = cardSchema.parse(cleanCard(doc.toObject()));
+    assert.deepEqual(restored.efeitos, card.efeitos);
+    assert.deepEqual(restored.habilidadesPassivas, card.habilidadesPassivas);
+    assert.deepEqual(playableErrors(restored), []);
+  }
+  const base = catalog.find((c) => c.numeroCatalogo === "005")!;
+  assert.ok(
+    playableErrors(
+      cardSchema.parse({
+        ...base,
+        efeitos: [{ id: "damage", valor: 3, variantesMago: [] }],
+      }),
+    ).length,
+  );
+  assert.ok(
+    playableErrors(
+      cardSchema.parse({
+        ...base,
+        efeitos: [{ id: "arrowRain", valor: 3, duracao: 0 }],
+      }),
+    ).length,
+  );
+  assert.ok(
+    playableErrors(
+      cardSchema.parse({
+        ...base,
+        efeitos: [
+          {
+            id: "arrowRain",
+            valor: 3,
+            variantesMago: [
+              {
+                elemento: "Agua",
+                efeitos: [
+                  {
+                    id: "status",
+                    alvo: "TodasTropasInimigas",
+                    status: "Queimando",
+                    valor: 9,
+                    duracao: 2,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    ).length,
+    "aliases também respeitam o limite de intensidade",
+  );
+  assert.ok(
+    playableErrors(
+      cardSchema.parse({
+        ...base,
+        efeitos: [
+          {
+            id: "arrowRain",
+            valor: 3,
+            variantesMago: [{ elemento: "Fogo" }, { elemento: "Fogo" }],
+          },
+        ],
+      }),
+    ).length,
+  );
+});
+
+test("Chuva usa dano e duração configurados, com bônus da variante do mago", () => {
+  let g = make("Fogo");
+  const target = troop(g, "p2", 0, 50);
+  cast(g, "005", [], "p1", {
+    efeitos: [
+      {
+        id: "arrowRain",
+        valor: 4,
+        duracao: 3,
+        variantesMago: [{ elemento: "Fogo", bonusDano: 2 }],
+      },
+    ],
+  });
+  assert.equal(g.state.ongoingSpells![0].damage, 6);
+  assert.equal(g.state.ongoingSpells![0].rounds, 3);
+  assert.equal(target.card!.hpAtual, 50);
+  g = Game.restore(g.exportState());
+  for (const rounds of [2, 1, 0]) {
+    endRound(g);
+    assert.equal(g.state.ongoingSpells![0]?.rounds ?? 0, rounds);
+  }
+  assert.equal(g.player("p2").mage.hpAtual, 2);
+  assert.equal(
+    g.state.slots.find((s) => s.id === target.id)!.card!.hpAtual,
+    32,
+  );
+});
+
+test("variante troca o status e configura duração/intensidade sem congelar pelo código fixo", () => {
+  const g = make("Agua"),
+    target = troop(g, "p2", 0, 50);
+  cast(g, "005", [], "p1", {
+    efeitos: [
+      {
+        id: "arrowRain",
+        valor: 2,
+        duracao: 1,
+        variantesMago: [
+          {
+            elemento: "Agua",
+            efeitos: [
+              {
+                id: "status",
+                alvo: "TodasTropasInimigas",
+                status: "Queimado",
+                valor: 2,
+                duracao: 4,
+                unidade: "rodada",
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+  const burned = target.card!.statuses.find((s) => s.nome === "Queimado")!;
+  assert.equal(burned.turnosRestantes, 4);
+  assert.equal(burned.valor, 2);
+  assert.ok(!target.card!.statuses.some((s) => s.nome === "Congelado"));
+  assert.equal(g.player("p2").mage.statuses.length, 0);
+  endRound(g);
+  assert.equal(target.card!.hpAtual, 46);
+  assert.equal(g.player("p2").mage.hpAtual, 18);
+});
+
+test("Bola configura dano, status e duração por mago; variante vazia desliga dano e legado continua compatível", () => {
+  const g = make("Ar");
+  cast(g, "008", [], "p1", {
+    efeitos: [
+      {
+        id: "lightOrb",
+        valor: 4,
+        status: "Cego",
+        duracao: 1,
+        variantesMago: [
+          {
+            elemento: "Ar",
+            causaDano: true,
+            bonusDano: 2,
+            status: "Incapacitado",
+            duracao: 3,
+          },
+        ],
+      },
+    ],
+  });
+  assert.equal(g.player("p2").mage.hpAtual, 14);
+  assert.equal(
+    g.player("p2").mage.statuses.find((s) => s.nome === "Incapacitado")!
+      .turnosRestantes,
+    3,
+  );
+  assert.ok(!g.player("p2").mage.statuses.some((s) => s.nome === "Cego"));
+  const noDamage = make("Fogo");
+  cast(noDamage, "008", [], "p1", {
+    efeitos: [
+      { id: "lightOrb", valor: 9, status: "", duracao: 1, variantesMago: [] },
+    ],
+  });
+  assert.equal(noDamage.player("p2").mage.hpAtual, 20);
+  assert.ok(
+    !noDamage.player("p2").mage.statuses.some((s) => s.nome === "Cego"),
+  );
+  const legacy = make("Fogo");
+  cast(legacy, "008", [], "p1", { efeitos: [{ id: "lightOrb", valor: 3 }] });
+  assert.equal(legacy.player("p2").mage.hpAtual, 17);
+  assert.equal(
+    legacy.player("p2").mage.statuses.find((s) => s.nome === "Cego")!
+      .turnosRestantes,
+    1,
+  );
+  const opening = make("Ar");
+  opening.state.phase = "PREPARATION";
+  assert.throws(
+    () =>
+      cast(opening, "008", [], "p1", {
+        efeitos: [
+          {
+            id: "lightOrb",
+            valor: 4,
+            variantesMago: [{ elemento: "Ar", causaDano: true }],
+          },
+        ],
+      }),
+    /preparação/,
+  );
+});
 function act(g: Game, user: string, data: object) {
   return g.execute(user, {
     ...data,

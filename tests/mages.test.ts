@@ -114,7 +114,7 @@ test("magos publicados têm limites da arte; aparência do deck chega aos dois j
     "common",
   );
 });
-test("Mago de Fogo mantém bônus a cada dois feitiços; Bola de Fogo atinge tropas laterais sem atingir o mago", () => {
+test("Mago de Fogo acumula a cada feitiço de Fogo para os próximos; Bola de Fogo respeita seus alvos", () => {
   const g = make();
   g.state.slots.find((s) => s.id === "p2:front:0")!.card = instance(
     "021",
@@ -128,14 +128,14 @@ test("Mago de Fogo mantém bônus a cada dois feitiços; Bola de Fogo atinge tro
   );
   g.player("p1").mana = 20;
   for (let n = 0; n < 3; n++) cast(g, "001");
-  assert.equal(g.player("p1").mage.fireDamageBonus, 1);
+  assert.equal(g.player("p1").mage.fireDamageBonus, 3);
   assert.equal(
     g.state.slots.find((s) => s.id === "p2:front:0")!.card!.hpAtual,
-    50,
+    48,
   );
   assert.equal(
     g.state.slots.find((s) => s.id === "p2:arm:front-right")!.card!.hpAtual,
-    50,
+    48,
   );
   assert.equal(g.player("p2").mage.hpAtual, 20);
   act(g, "p1", { type: "endTurn" });
@@ -145,9 +145,9 @@ test("Mago de Fogo mantém bônus a cada dois feitiços; Bola de Fogo atinge tro
   cast(g, "001");
   assert.equal(
     g.state.slots.find((s) => s.id === "p2:front:0")!.card!.hpAtual,
-    41,
+    35,
   );
-  assert.equal(g.player("p1").mage.fireDamageBonus, 2);
+  assert.equal(g.player("p1").mage.fireDamageBonus, 5);
   const before = g.player("p1").mage.fireSpellsCast;
   cast(g, "002", [g.player("p2").mage.id]);
   assert.equal(g.player("p1").mage.fireSpellsCast, before);

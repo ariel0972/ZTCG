@@ -24,7 +24,7 @@
     "nome": "Bola de luz",
     "tipo": "Feitico",
     "custoMana": 4,
-    "descricao": "Aplica Cego a todos os inimigos por 2 rodadas. Um mago Cego não pode conjurar feitiços. Com Mago de Fogo, também causa 3 de dano.",
+    "descricao": "Aplica Cego a todos os inimigos por 1 rodada. Um mago Cego não pode conjurar feitiços. Com Mago de Fogo, também causa 3 de dano, somando seu bônus acumulado de feitiços de Fogo.",
     "imgURL": "/assets/Cards/Bola de luz.png",
     "publicado": true,
     "versao": 2,
@@ -33,7 +33,15 @@
     "efeitos": [
       {
         "id": "lightOrb",
-        "valor": 3
+        "valor": 3,
+        "status": "Cego",
+        "duracao": 1,
+        "variantesMago": [
+          {
+            "elemento": "Fogo",
+            "causaDano": true
+          }
+        ]
       }
     ],
     "maxAlvos": 1
@@ -475,7 +483,50 @@
     "efeitos": [
       {
         "id": "arrowRain",
-        "valor": 3
+        "valor": 3,
+        "duracao": 2,
+        "variantesMago": [
+          {
+            "elemento": "Fogo",
+            "bonusDano": 2
+          },
+          {
+            "elemento": "Agua",
+            "efeitos": [
+              {
+                "id": "status",
+                "alvo": "TodasTropasInimigas",
+                "status": "Congelado",
+                "duracao": 2,
+                "unidade": "turno"
+              }
+            ]
+          },
+          {
+            "elemento": "Ar",
+            "efeitos": [
+              {
+                "id": "status",
+                "alvo": "TodosInimigos",
+                "status": "Sangrando",
+                "duracao": 3,
+                "unidade": "rodada"
+              }
+            ]
+          },
+          {
+            "elemento": "Terra",
+            "efeitos": [
+              {
+                "id": "status",
+                "alvo": "TodosInimigos",
+                "status": "Cego",
+                "duracao": 2,
+                "unidade": "rodada"
+              }
+            ]
+          }
+        ]
       }
     ],
     "maxAlvos": 1
@@ -1594,8 +1645,16 @@
         "nome": "Ajudante",
         "custoMana": 3,
         "alvo": "UnicoAliado",
-        "filtroAlvo": { "numeroCatalogo": "021", "tipo": "Tropa" },
-        "efeitos": [{ "id": "heal", "valor": 4 }],
+        "filtroAlvo": {
+          "numeroCatalogo": "021",
+          "tipo": "Tropa"
+        },
+        "efeitos": [
+          {
+            "id": "heal",
+            "valor": 4
+          }
+        ],
         "descricao": "Cura 4 de vida de um Cavaleiro aliado escolhido, inclusive montado e sem exigir adjacência. Não ultrapassa a vida máxima."
       },
       {
@@ -1603,9 +1662,17 @@
         "nome": "Em Guarda",
         "custoMana": 5,
         "alvo": "UnicoAliado",
-        "filtroAlvo": { "numeroCatalogo": "021", "tipo": "Tropa" },
+        "filtroAlvo": {
+          "numeroCatalogo": "021",
+          "tipo": "Tropa"
+        },
         "efeitos": [
-          { "id": "guardTarget", "valor": 2, "duracao": 2, "unidade": "turno" }
+          {
+            "id": "guardTarget",
+            "valor": 2,
+            "duracao": 2,
+            "unidade": "turno"
+          }
         ],
         "descricao": "Protege um Cavaleiro aliado até o fim do próximo turno adversário. Intercepta ataques básicos e reduz 2 de cada golpe recebido pelo Escudeiro; sua estrutura absorve primeiro. Se o Cavaleiro estiver montado, protege somente o dano excedente do Cavalo. Reaplicar renova e troca o protegido."
       }
@@ -1909,7 +1976,12 @@
         "custoMana": 4,
         "alvo": "MultiplosInimigos",
         "maxAlvos": 2,
-        "efeitos": [{ "id": "damage", "valor": 3 }],
+        "efeitos": [
+          {
+            "id": "damage",
+            "valor": 3
+          }
+        ],
         "descricao": "Escolha 1 ou 2 inimigos diferentes, incluindo tropas, mago ou estruturas. Cada um recebe 3 de dano de Fogo, respeitando as proteções normais."
       },
       {
@@ -1917,7 +1989,15 @@
         "nome": "Elevar Moral",
         "custoMana": 5,
         "alvo": "TodosAliados",
-        "efeitos": [{ "id": "spendAttack" }, { "id": "heal", "valor": 3 }],
+        "efeitos": [
+          {
+            "id": "spendAttack"
+          },
+          {
+            "id": "heal",
+            "valor": 3
+          }
+        ],
         "descricao": "Cura 3 de vida de todos os aliados: ela própria, tropas, mago e estruturas. Não ultrapassa a vida máxima. Exige um ataque disponível da Dançarina e do limite do mago; consome ambos."
       }
     ],
@@ -2120,7 +2200,7 @@
     "nome": "Aprendiz de mago",
     "tipo": "Mago",
     "custoMana": 0,
-    "descricao": "Recupera 5 de mana, em vez de 3, se não houver tropas inimigas no início do seu turno. Pode devolver um ataque básico recebido de uma tropa inimiga uma vez por rodada, sem custo, escolhendo em até 20 segundos.",
+    "descricao": "Recupera 5 de mana, em vez de 3, se não houver tropas inimigas no início do seu turno. Pode devolver um ataque básico de tropa inimiga, escolhendo em até 20 segundos; após usar, aguarda uma rodada completa entre usos.",
     "imgURL": "/assets/Cards/Aprendiz de Mago.png",
     "publicado": false,
     "versao": 1,
@@ -2171,10 +2251,11 @@
             "id": "reflectAttack",
             "filtro": {
               "tipo": "Tropa"
-            }
+            },
+            "esperaRodadas": 1
           }
         ],
-        "descricao": "Uma vez por rodada, pode cancelar um ataque básico recebido de uma tropa inimiga e devolver seu dano ao atacante. Resposta opcional de 20 segundos, gratuita e independente da habilidade. O turno fica pausado; sem resposta, recebe o ataque."
+        "descricao": "Pode cancelar um ataque básico recebido de uma tropa inimiga e devolver seu dano ao atacante. Após usar, fica indisponível durante a rodada seguinte. Resposta opcional de 20 segundos, gratuita e independente da habilidade. Recusar ou não responder não inicia a espera."
       }
     ]
   },
@@ -2183,7 +2264,7 @@
     "nome": "Mago de fogo",
     "tipo": "Mago",
     "custoMana": 0,
-    "descricao": "Ignir. A cada 2 feitiços de Fogo conjurados, ganha permanentemente +1 de dano nos próximos feitiços de Fogo.",
+    "descricao": "Ignir. Cada feitiço de Fogo conjurado aumenta permanentemente em 1 o dano dos próximos feitiços de Fogo. O bônus não aumenta o dano do feitiço que o gerou.",
     "imgURL": "/assets/Cards/Mago de fogo.png",
     "publicado": true,
     "versao": 2,
@@ -2213,9 +2294,21 @@
     "habilidadesPassivas": [
       {
         "gatilho": "onSpellCast",
-        "efeito": "acumularDanoFogo",
-        "condicao": "Fogo",
-        "descricao": "Conta os feitiços de Fogo conjurados durante toda a partida. A cada 2, aumenta em 1 o bônus permanente de dano dos próximos feitiços de Fogo."
+        "escopo": "aliado",
+        "filtroEvento": {
+          "elemento": "Fogo",
+          "tipo": "Feitico"
+        },
+        "efeitos": [
+          {
+            "id": "spellDamageBonus",
+            "elemento": "Fogo",
+            "valor": 1,
+            "contador": "legacy-fire-spells",
+            "aCada": 1
+          }
+        ],
+        "descricao": "Cada feitiço de Fogo conjurado concede +1 de dano permanente e acumulável aos próximos feitiços de Fogo. O primeiro recebe +0, o segundo +1, o terceiro +2."
       }
     ]
   },

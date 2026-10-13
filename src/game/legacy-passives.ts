@@ -125,5 +125,16 @@ export function initializeLegacyCounters(card: Instance) {
 export function synchronizeLegacyCounters(card: Instance) {
   if (card.passiveCounters?.[legacyFireCounter] === undefined) return;
   card.fireSpellsCast = card.passiveCounters[legacyFireCounter];
-  card.fireDamageBonus = Math.floor(card.fireSpellsCast / 2);
+  card.fireDamageBonus = card.habilidadesPassivas
+    .flatMap((h) => normalizePassive(h).efeitos)
+    .reduce(
+      (sum, action) =>
+        sum +
+        (action.id === "spellDamageBonus" &&
+        action.elemento === "Fogo" &&
+        action.contador === legacyFireCounter
+          ? Math.floor(card.fireSpellsCast! / action.aCada) * action.valor
+          : 0),
+      0,
+    );
 }

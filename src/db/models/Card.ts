@@ -1,6 +1,32 @@
 import { Schema, model } from "mongoose";
 import { Card, cardTypes, elements, targets, triggers } from "../../types/card";
 const n = { type: Number, min: 0, max: 1000 };
+const spellVariantStatus = new Schema(
+  {
+    id: { type: String, enum: ["status"], required: true },
+    alvo: {
+      type: String,
+      enum: ["TodosInimigos", "TodasTropasInimigas"],
+      required: true,
+    },
+    status: { type: String, required: true },
+    duracao: { ...n, min: 1, required: true },
+    valor: n,
+    unidade: { type: String, enum: ["turno", "rodada"] },
+  },
+  { _id: false, strict: "throw" },
+);
+const spellVariant = new Schema(
+  {
+    elemento: { type: String, enum: elements, required: true },
+    bonusDano: n,
+    causaDano: Boolean,
+    duracao: { ...n, min: 1 },
+    status: String,
+    efeitos: { type: [spellVariantStatus], default: undefined },
+  },
+  { _id: false, strict: "throw" },
+);
 const effect = new Schema(
   {
     id: { type: String, required: true },
@@ -12,6 +38,7 @@ const effect = new Schema(
     carta: String,
     seNaoUsada: String,
     requerStatus: String,
+    variantesMago: { type: [spellVariant], default: undefined },
   },
   { _id: false, strict: "throw" },
 );
@@ -83,6 +110,7 @@ const passiveAction = new Schema(
     filtro: { type: passiveFilter, default: undefined },
     qualquerDe: { type: [passiveFilter], default: undefined },
     colunaAtacante: { type: Number, min: 0, max: 2 },
+    esperaRodadas: { type: Number, min: 0, max: 100 },
   },
   { _id: false, strict: "throw" },
 );

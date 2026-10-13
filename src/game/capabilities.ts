@@ -137,6 +137,64 @@ export function playableErrors(card: Card): string[] {
     }
   const checkEffects = (effects: Effect[], target?: TipoAlvoFeitico) => {
     for (const e of effects) {
+      const configurable = ["arrowRain", "lightOrb"].includes(e.id);
+      if (e.variantesMago && !configurable)
+        errors.push("variantesMago exige arrowRain ou lightOrb.");
+      if (configurable && e.duracao !== undefined && e.duracao < 1)
+        errors.push("Duração do feitiço deve ser positiva.");
+      if (e.id === "arrowRain" && (e.status !== undefined || e.unidade))
+        errors.push(
+          "Chuva usa status/unidade dentro das variantes, não no efeito base.",
+        );
+      if (e.id === "lightOrb" && e.status && !statusIds.includes(e.status))
+        errors.push("Status base da Bola de Luz não implementado.");
+      if (e.variantesMago) {
+        const seen = new Set<string>();
+        for (const variant of e.variantesMago) {
+          if (seen.has(variant.elemento))
+            errors.push("Cada elemento pode ter apenas uma variante.");
+          seen.add(variant.elemento);
+          if (
+            e.id !== "lightOrb" &&
+            (variant.causaDano !== undefined || variant.status !== undefined)
+          )
+            errors.push(
+              "causaDano/status da variante são exclusivos de lightOrb; use efeitos para Chuva.",
+            );
+          if (variant.status && !statusIds.includes(variant.status))
+            errors.push("Status da variante não implementado.");
+          for (const extra of variant.efeitos ?? []) {
+            const statusName = canonicalStatus(extra.status);
+            if (!statusIds.includes(extra.status))
+              errors.push("Status adicional não implementado.");
+            if (
+              ["BonusAtaque", "ReducaoDano", "ReducaoAtaqueTropa"].includes(
+                extra.status,
+              ) &&
+              !extra.valor
+            )
+              errors.push("Bônus/redução adicional exige valor positivo.");
+            if (
+              statusName === "Queimado" &&
+              extra.valor !== undefined &&
+              (extra.valor < 1 || extra.valor > 3)
+            )
+              errors.push("Queimado aceita intensidade de 1 a 3.");
+            if (
+              statusName === "Sangrando" &&
+              extra.valor !== undefined &&
+              (extra.valor < 1 || extra.valor > 5)
+            )
+              errors.push("Sangrando aceita intensidade de 1 a 5.");
+            if (
+              statusName === "Envenenado" &&
+              extra.valor !== undefined &&
+              extra.valor !== 1
+            )
+              errors.push("Envenenado mantém intensidade 1.");
+          }
+        }
+      }
       if (!(effectIds as readonly string[]).includes(e.id))
         errors.push(`Efeito ${e.id} não implementado.`);
       if (e.id === "searchNamed" && !e.carta)
@@ -145,10 +203,11 @@ export function playableErrors(card: Card): string[] {
         errors.push("carta/seNaoUsada exigem searchNamed.");
       if (
         e.unidade &&
-        (!["status", "guardTarget"].includes(e.id) ||
-          ["Envenenado", "Queimado", "Sangrando", "Congelado"].includes(
-            canonicalStatus(e.status ?? ""),
-          ))
+        (!["status", "guardTarget", "lightOrb"].includes(e.id) ||
+          (e.id !== "lightOrb" &&
+            ["Envenenado", "Queimado", "Sangrando", "Congelado"].includes(
+              canonicalStatus(e.status ?? ""),
+            )))
       )
         errors.push(
           "Unidade personalizada exige status sem duração elemental fixa.",

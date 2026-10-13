@@ -57,6 +57,26 @@ const identifier = z
   .min(1)
   .max(80)
   .regex(/^[a-zA-Z0-9_-]+$/);
+const spellVariantStatusSchema = z
+  .object({
+    id: z.literal("status"),
+    alvo: z.enum(["TodosInimigos", "TodasTropasInimigas"]),
+    status: z.string().min(1).max(80),
+    duracao: z.number().int().min(1).max(1000),
+    valor: number.optional(),
+    unidade: z.enum(["turno", "rodada"]).optional(),
+  })
+  .strict();
+export const spellVariantSchema = z
+  .object({
+    elemento: z.enum(elements),
+    bonusDano: number.optional(),
+    causaDano: z.boolean().optional(),
+    duracao: z.number().int().min(1).max(1000).optional(),
+    status: z.string().max(80).optional(),
+    efeitos: z.array(spellVariantStatusSchema).max(12).optional(),
+  })
+  .strict();
 export const effectSchema = z
   .object({
     id: identifier,
@@ -74,6 +94,7 @@ export const effectSchema = z
       .string()
       .regex(/^\d{3,6}$/)
       .optional(),
+    variantesMago: z.array(spellVariantSchema).max(6).optional(),
   })
   .strict();
 export const activeSchema = z
@@ -160,6 +181,7 @@ export const passiveActionSchema = z.discriminatedUnion("id", [
     .object({
       id: z.literal("reflectAttack"),
       filtro: passiveFilterSchema.optional(),
+      esperaRodadas: z.number().int().min(0).max(100).optional(),
     })
     .strict(),
   z

@@ -1072,3 +1072,80 @@ durable.ts lê sala e confirmação do lobby em paralelo, mantendo validação
 de participantes, confirmação da partida e gravação durável por versão.
 As mudanças reduzem consultas duplicadas e viagens sequenciais ao banco;
 a latência real das jogadas deve ser medida depois, sem garantia de tempo fixo.
+
+ATUALIZAÇÃO — CONFIGURAR CHUVA, BOLA DE LUZ E PASSIVAS (13/10/2026)
+- scripts/update-configurable-spells.ts — Sincroniza 005/008/016/028 após publicar o motor novo, com plano sem escrita, backup, comparação de versões e preservação de atributos, publicação e passivas não relacionadas.
+Antes, valor em arrowRain/lightOrb era obrigatório na validação, mas o motor
+usava números fixos. Agora valor controla o dano base. Nesta atualização,
+essas duas regras especiais também aceitam duracao e variantesMago.
+Configuração de Chuva de Flechas (efeitos da carta):
+[
+  {"id":"arrowRain","valor":3,"duracao":2,"variantesMago":[
+    {"elemento":"Fogo","bonusDano":2},
+    {"elemento":"Agua","efeitos":[{"id":"status","alvo":"TodasTropasInimigas","status":"Congelado","duracao":2,"unidade":"turno"}]},
+    {"elemento":"Ar","efeitos":[{"id":"status","alvo":"TodosInimigos","status":"Sangrando","duracao":3,"unidade":"rodada"}]},
+    {"elemento":"Terra","efeitos":[{"id":"status","alvo":"TodosInimigos","status":"Cego","duracao":2,"unidade":"rodada"}]}
+  ]}
+]
+Chuva: valor é o dano periódico base; duracao conta acionamentos no fim de
+rodada. bonusDano da variante é somado: valor 4 + bônus Fogo 2 resulta em 6.
+Não causa dano inicial. Cada dono pode manter uma cópia ativa; rodada final
+continua processando os dois lados antes de decidir vitória/empate.
+Configuração de Bola de Luz:
+[
+  {"id":"lightOrb","valor":3,"status":"Cego","duracao":1,
+   "variantesMago":[{"elemento":"Fogo","causaDano":true}]}
+]
+Bola: status/duracao definem o efeito base em todos os inimigos. unidade é
+opcional (rodada normalmente; Congelado usa turno se não especificar).
+status:"" desativa o status base. O dano só ocorre se a variante selecionada
+tiver causaDano:true; é valor + bonusDano + bônus de feitiços do mago.
+Na variante de Bola, status e duracao podem substituir os campos base.
+Exemplo: {"elemento":"Ar","causaDano":true,"bonusDano":2,"status":"Incapacitado","duracao":3}.
+Cada variante seleciona exatamente um elemento do mago, não o elemento
+da carta. São aceitos Fogo, Agua, Terra, Ar, Zarcos e Neutro; no máximo seis,
+sem elementos repetidos. Não altera o token/reação do elemento da carta.
+duracao da variante substitui a duração base; bonusDano aceita inteiro 0–1000.
+causaDano/status na variante são exclusivos da Bola; Chuva aplica seus status
+pelos efeitos adicionais. Esses efeitos adicionais aceitam somente id:status,
+com alvo TodosInimigos (inclui mago) ou TodasTropasInimigas (inclui montados).
+Cada um exige status implementado e duracao positiva; aceita unidade turno
+ou rodada e valor opcional para intensidade/escudo/redução.
+Exemplo para trocar o efeito da Chuva com Água:
+{"elemento":"Agua","efeitos":[{"id":"status","alvo":"TodasTropasInimigas","status":"Queimado","valor":2,"duracao":4,"unidade":"rodada"}]}
+Essas durações explícitas configuram o status do feitiço, incluindo os tokens
+elementais; os tokens gerados pelas reações normais mantêm suas próprias regras.
+Reaplicar esse efeito configurado não encurta um status na mesma unidade. Queimado aceita
+valor 1–3, Sangrando 1–5 e Envenenado mantém valor 1. Sem valor explícito,
+as regras normais de intensidade/acúmulo são usadas. Bônus/reduções exigem
+valor positivo. Status não pode usar o campo valor de dano base da Bola como
+intensidade: para definir intensidade, use um efeito adicional na variante.
+variantesMago:[] remove as variantes automáticas: Chuva fica só com dano
+periódico base e Bola fica só com seu status base, sem dano condicionado.
+Se variantesMago estiver ausente, definições antigas preservam as variantes
+históricas. valor/duracao ainda controlam a base; defaults omitidos são Chuva
+3 de dano/2 rodadas e Bola 3 de dano/Cego por 1 rodada.
+É permitido configurar o status inteiro, sua duração e intensidade de forma
+explícita somente nessas variantes; não muda a regra global de um token.
+Atualize descricao quando editar as regras para manter o texto da carta coerente.
+
+ESPERA DA REAÇÃO DO APRENDIZ
+No efeito reflectAttack, esperaRodadas aceita inteiro 0–100, opcional.
+{"gatilho":"onTargeted","escopo":"proprio","efeitos":[{"id":"reflectAttack","filtro":{"tipo":"Tropa"},"esperaRodadas":1}]}
+0 ou campo omitido: uma devolução por rodada. 1: usar na rodada 3 bloqueia
+novos usos na 3 e toda a 4; libera na 5. Recusar ou deixar a janela expirar
+não inicia espera. Mana, recuperação e habilidade Refazer Caminhos permanecem
+independentes. A espera fica na instância e sobrevive ao reinício do servidor.
+Esse campo pertence a reflectAttack; não é cooldown genérico de outras ações.
+
+MAGO DE FOGO
+Use a passiva declarativa, em vez da forma antiga efeito:acumularDanoFogo:
+{"gatilho":"onSpellCast","escopo":"aliado","filtroEvento":{"elemento":"Fogo","tipo":"Feitico"},"efeitos":[{"id":"spellDamageBonus","elemento":"Fogo","valor":1,"contador":"legacy-fire-spells","aCada":1}]}
+Cada feitiço de Fogo (incluindo assinatura conjurada) aumenta o bônus acumulado
+em 1, aplicado somente a partir do próximo feitiço. Primeiro +0, segundo +1,
+terceiro +2. Sacrificar um feitiço não é conjurar. Feitiços de outros elementos
+não contam. aCada continua configurável; partidas antigas com a regra legada
+mantêm sua definição a cada dois, sem reescrever partidas em andamento.
+O contador e a badge de bônus refletem a frequência configurada.
+Sincronização: tsx scripts/update-configurable-spells.ts mostra o plano.
+--apply grava backup e altera somente os campos listados, depois do deploy.

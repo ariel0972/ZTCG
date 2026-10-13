@@ -79,7 +79,9 @@ export function describePassiveActions(actions: PassiveAction[]) {
         case "manaRecovery":
           return `Recuperação de mana definida em ${a.valor}`;
         case "reflectAttack":
-          return "Pode devolver um ataque básico por rodada";
+          return a.esperaRodadas
+            ? `Pode devolver um ataque básico; aguarda ${a.esperaRodadas} rodada(s) completa(s) entre usos`
+            : "Pode devolver um ataque básico por rodada";
         case "status":
           return `Aplicou ${a.status}`;
         case "mana":
@@ -576,6 +578,16 @@ export const passiveTemplates: { nome: string; passiva: DeclarativePassive }[] =
         gatilho: "onTargeted",
         escopo: "proprio",
         efeitos: [{ id: "reflectAttack" }],
+      },
+    },
+    {
+      nome: "Reação opcional: aguardar uma rodada completa entre devoluções",
+      passiva: {
+        gatilho: "onTargeted",
+        escopo: "proprio",
+        efeitos: [
+          { id: "reflectAttack", esperaRodadas: 1, filtro: { tipo: "Tropa" } },
+        ],
       },
     },
     {
