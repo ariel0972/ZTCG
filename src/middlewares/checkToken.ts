@@ -25,12 +25,28 @@ export async function checkToken(
   try {
     if (!token) throw new Error();
     req.userId = verifyToken(token);
-    const payload = jwt.decode(token) as jwt.JwtPayload;
-    const user = await User.findById(req.userId);
-    if (!user || (payload.sv ?? 0) !== (user.sessionVersion ?? 0))
-      throw new Error();
-    next();
   } catch {
     next(new AppError(401, "Entre na sua conta novamente.", "UNAUTHORIZED"));
+    return;
+  }
+  const payload = jwt.decode(token!) as jwt.JwtPayload;
+  try {
+    const user = await User.findById(req.userId)
+      .select("sessionVersion")
+      .lean();
+    if (!user || (payload.sv ?? 0) !== (user.sessionVersion ?? 0)) {
+      next(new AppError(401, "Entre na sua conta novamente.", "UNAUTHORIZED"));
+      return;
+    }
+    next();
+  } catch {
+    // A database failure is not a revoked session; avoid refresh/login storms.
+    next(
+      new AppError(
+        503,
+        "Banco indisponível. Tente novamente em instantes.",
+        "DATABASE_UNAVAILABLE",
+      ),
+    );
   }
 }

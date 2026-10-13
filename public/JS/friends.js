@@ -9,7 +9,8 @@ let user,
   refreshPromise,
   relations = [],
   searchResults = [],
-  lastSnapshot;
+  lastRelations,
+  lastInvites;
 const $ = (id) => document.getElementById(id);
 createSocialTabs($("social-tabs"));
 function requestedTab() {
@@ -186,16 +187,26 @@ async function refresh(force = false) {
     if (!force) return;
   }
   refreshPromise = (async () => {
-    const [friends, invites] = await Promise.all([
-      api("/friends"),
-      api("/friends/invites"),
+    const options = force ? { cache: "reload" } : {};
+    const [friends, invites] = await Promise.allSettled([
+      api("/friends", options).then((data) => {
+        const snapshot = JSON.stringify(data.relations);
+        if (force || snapshot !== lastRelations) {
+          lastRelations = snapshot;
+          relations = data.relations;
+          renderRelations();
+        }
+      }),
+      api("/friends/invites", options).then((data) => {
+        const snapshot = JSON.stringify(data.invites);
+        if (force || snapshot !== lastInvites) {
+          lastInvites = snapshot;
+          renderInvites(data.invites);
+        }
+      }),
     ]);
-    const snapshot = JSON.stringify([friends.relations, invites.invites]);
-    if (!force && snapshot === lastSnapshot) return;
-    lastSnapshot = snapshot;
-    relations = friends.relations;
-    renderRelations();
-    renderInvites(invites.invites);
+    for (const result of [friends, invites])
+      if (result.status === "rejected") throw result.reason;
   })();
   try {
     await refreshPromise;
@@ -228,23 +239,24 @@ async function init() {
   $("social-intro").textContent =
     "Encontre seus amigos, acompanhe pedidos e combine a próxima partida.";
   $("social-controls").hidden = false;
-  try {
-    const data = await api("/decks");
-    for (const d of data.decks) {
-      const option = node("option", d.nome);
-      option.value = d._id;
-      $("social-deck").append(option);
-    }
-    await refresh();
-    const timer = setInterval(() => {
-      if (!document.hidden)
-        void refresh().catch((e) => message(e.message, true));
-    }, 5000);
-    window.addEventListener("beforeunload", () => clearInterval(timer), {
-      once: true,
-    });
-  } catch (e) {
-    message(e.message, true);
-  }
+  const timer = setInterval(() => {
+    if (!document.hidden) void refresh().catch((e) => message(e.message, true));
+  }, 5000);
+  window.addEventListener("beforeunload", () => clearInterval(timer), {
+    once: true,
+  });
+  // Friends and invitations remain usable when deck loading is slow or fails.
+  await Promise.allSettled([
+    refresh().catch((e) => message(e.message, true)),
+    api("/decks")
+      .then((data) => {
+        for (const d of data.decks) {
+          const option = node("option", d.nome);
+          option.value = d._id;
+          $("social-deck").append(option);
+        }
+      })
+      .catch((e) => message(e.message, true)),
+  ]);
 }
 void init();

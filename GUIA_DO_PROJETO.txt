@@ -1053,3 +1053,22 @@ habilidade por rodada entre suas habilidades.
 Sincronização: tsx scripts/update-field-abilities.ts mostra o plano; --apply
 grava backup em backups/ e modifica só os campos listados. Aplicar depois
 de publicar o motor/schema novo. O script é idempotente.
+
+ATUALIZAÇÃO — LATÊNCIA E CARREGAMENTO SOCIAL (13/10/2026)
+- tests/request-performance.test.ts — Compartilhamento apenas de leituras sociais em curso, isolamento por sessão, atualização após escrita e distinção entre banco indisponível e sessão revogada.
+vercel.json fixa regions:["gru1"] para executar o servidor em São Paulo,
+perto do MongoDB. A região da CDN não indica sozinha a região da função;
+verifique o caminho x-vercel-id em respostas da API após a publicação.
+auth.js compartilha somente GETs simultâneos de /friends e /friends/invites
+sem opções, pela sessão atual. Não guarda respostas prontas, erros ou escritas.
+cache:"reload" ignora esse compartilhamento nas atualizações após mutações.
+friends.js inicia a lista e os convites junto dos baralhos, com falhas isoladas:
+uma lista disponível aparece mesmo quando outra consulta falha ou demora.
+A atualização periódica continua após erro inicial e tenta recuperar os dados.
+checkToken.ts continua validando a assinatura, existência da conta e versão
+da sessão em cada requisição; lê somente sessionVersion. Falha de consulta
+retorna DATABASE_UNAVAILABLE/503 em vez de 401, evitando renovação indevida.
+durable.ts lê sala e confirmação do lobby em paralelo, mantendo validação
+de participantes, confirmação da partida e gravação durável por versão.
+As mudanças reduzem consultas duplicadas e viagens sequenciais ao banco;
+a latência real das jogadas deve ser medida depois, sem garantia de tempo fixo.

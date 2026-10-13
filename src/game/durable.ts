@@ -212,11 +212,15 @@ export class DurableGame {
     });
   }
   private async authorized(id: string, user?: string, claims?: Lobby) {
-    const room = await this.store.room(id);
+    const [room, data] = await Promise.all([
+      this.store.room(id),
+      claims
+        ? Promise.resolve(claims)
+        : this.store.lobby().then((lobby) => lobby.data),
+    ]);
     if (!room) throw new AppError(404, "Partida não encontrada.");
     if (user && !room.entries.some((e) => e.id === user))
       throw new AppError(403, "Acesso negado.");
-    const data = claims ?? (await this.store.lobby()).data;
     if (
       room.game.state.status === "ACTIVE" &&
       !room.entries.every((e) => data.active[e.id] === id)

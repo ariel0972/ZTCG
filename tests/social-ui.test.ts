@@ -75,113 +75,126 @@ test("amizade acompanha envio, cancelamento, aceite e remoção sem duplicar aç
   assert.equal(controls.textContent, "Desfazer amizade");
   dom.window.close();
 });
-test("tela de amigos separa relações, filtra amigos e mantém pedidos na busca", async () => {
-  const helpers = await import(modulePath);
-  const html = await readFile("public/HTML/friends.html", "utf8"),
-    dom = new JSDOM(html, { url: "http://localhost/HTML/friends.html" }),
-    doc = dom.window.document;
-  const relations = [
-    { id: "2".repeat(24), nome: "Áriel", status: "accepted" },
-    { id: "3".repeat(24), nome: "Bruno", status: "pending", incoming: false },
-    { id: "4".repeat(24), nome: "Catarina", status: "pending", incoming: true },
-  ];
-  const api = async (path: string) =>
-    path === "/decks"
-      ? { decks: [] }
-      : path === "/friends"
-        ? { relations }
-        : path === "/friends/invites"
-          ? { invites: [] }
-          : { users: [relations[1]] };
-  const node = (tag: string, text = "", className = "") => {
-    const e = doc.createElement(tag);
-    e.textContent = text;
-    e.className = className;
-    return e;
-  };
-  const source = (await readFile("public/JS/friends.js", "utf8")).replace(
-    /^import[\s\S]*?from ".*?";\s*/gm,
-    "",
-  );
-  new Function(
-    "document",
-    "window",
-    "FormData",
-    "location",
-    "api",
-    "navbar",
-    "message",
-    "node",
-    "profilePath",
-    "splitRelations",
-    "filterFriends",
-    "friendshipButtons",
-    "createSocialTabs",
-    "setInterval",
-    source,
-  )(
-    doc,
-    dom.window,
-    dom.window.FormData,
-    dom.window.location,
-    api,
-    async () => ({ id: "1".repeat(24) }),
-    () => {},
-    node,
-    (id: string) => `/thumosplayer/${id}`,
-    helpers.splitRelations,
-    helpers.filterFriends,
-    helpers.friendshipButtons,
-    helpers.createSocialTabs,
-    () => 0,
-  );
-  await tick();
-  await tick();
-  assert.match(doc.getElementById("friend-list")!.textContent!, /Áriel/);
-  assert.doesNotMatch(
-    doc.getElementById("friend-list")!.textContent!,
-    /Bruno|Catarina/,
-  );
-  assert.match(
-    doc.getElementById("outgoing-requests")!.textContent!,
-    /Bruno.*Pedido Enviado.*Cancelar envio/,
-  );
-  assert.match(
-    doc.getElementById("incoming-requests")!.textContent!,
-    /Catarina.*Aceitar amizade/,
-  );
-  const input = doc.getElementById("friends-filter") as HTMLInputElement;
-  input.value = "ariel";
-  input.dispatchEvent(new dom.window.Event("input"));
-  assert.match(doc.getElementById("friend-list")!.textContent!, /Áriel/);
-  input.value = "Bruno";
-  input.dispatchEvent(new dom.window.Event("input"));
-  assert.match(doc.getElementById("friend-list")!.textContent!, /Nenhum amigo/);
-  (doc.getElementById("requests-tab") as HTMLButtonElement).click();
-  assert.equal(doc.getElementById("friends-panel")!.hidden, true);
-  assert.equal(doc.getElementById("requests-panel")!.hidden, false);
-  doc.querySelector<HTMLInputElement>('[name="q"]')!.value = "Bruno";
-  doc
-    .getElementById("friend-search")!
-    .dispatchEvent(new dom.window.Event("submit", { cancelable: true }));
-  await tick();
-  assert.match(
-    doc.getElementById("search-results")!.textContent!,
-    /Pedido Enviado.*Cancelar envio/,
-  );
-  assert.doesNotMatch(
-    doc.getElementById("search-results")!.textContent!,
-    /Pedir amizade/,
-  );
-  doc
-    .getElementById("requests-tab")!
-    .dispatchEvent(
+for (const outage of ["none", "decks", "invites"])
+  test(`tela de amigos separa relações e funciona com falha em ${outage}`, async () => {
+    const helpers = await import(modulePath);
+    const html = await readFile("public/HTML/friends.html", "utf8"),
+      dom = new JSDOM(html, { url: "http://localhost/HTML/friends.html" }),
+      doc = dom.window.document;
+    const relations = [
+      { id: "2".repeat(24), nome: "Áriel", status: "accepted" },
+      { id: "3".repeat(24), nome: "Bruno", status: "pending", incoming: false },
+      {
+        id: "4".repeat(24),
+        nome: "Catarina",
+        status: "pending",
+        incoming: true,
+      },
+    ];
+    const api = async (path: string) => {
+      if (
+        (outage === "decks" && path === "/decks") ||
+        (outage === "invites" && path === "/friends/invites")
+      )
+        throw Error("Falha isolada de carregamento");
+      return path === "/decks"
+        ? { decks: [] }
+        : path === "/friends"
+          ? { relations }
+          : path === "/friends/invites"
+            ? { invites: [] }
+            : { users: [relations[1]] };
+    };
+    const node = (tag: string, text = "", className = "") => {
+      const e = doc.createElement(tag);
+      e.textContent = text;
+      e.className = className;
+      return e;
+    };
+    const source = (await readFile("public/JS/friends.js", "utf8")).replace(
+      /^import[\s\S]*?from ".*?";\s*/gm,
+      "",
+    );
+    new Function(
+      "document",
+      "window",
+      "FormData",
+      "location",
+      "api",
+      "navbar",
+      "message",
+      "node",
+      "profilePath",
+      "splitRelations",
+      "filterFriends",
+      "friendshipButtons",
+      "createSocialTabs",
+      "setInterval",
+      source,
+    )(
+      doc,
+      dom.window,
+      dom.window.FormData,
+      dom.window.location,
+      api,
+      async () => ({ id: "1".repeat(24) }),
+      () => {},
+      node,
+      (id: string) => `/thumosplayer/${id}`,
+      helpers.splitRelations,
+      helpers.filterFriends,
+      helpers.friendshipButtons,
+      helpers.createSocialTabs,
+      () => 0,
+    );
+    await tick();
+    await tick();
+    assert.match(doc.getElementById("friend-list")!.textContent!, /Áriel/);
+    assert.doesNotMatch(
+      doc.getElementById("friend-list")!.textContent!,
+      /Bruno|Catarina/,
+    );
+    assert.match(
+      doc.getElementById("outgoing-requests")!.textContent!,
+      /Bruno.*Pedido Enviado.*Cancelar envio/,
+    );
+    assert.match(
+      doc.getElementById("incoming-requests")!.textContent!,
+      /Catarina.*Aceitar amizade/,
+    );
+    const input = doc.getElementById("friends-filter") as HTMLInputElement;
+    input.value = "ariel";
+    input.dispatchEvent(new dom.window.Event("input"));
+    assert.match(doc.getElementById("friend-list")!.textContent!, /Áriel/);
+    input.value = "Bruno";
+    input.dispatchEvent(new dom.window.Event("input"));
+    assert.match(
+      doc.getElementById("friend-list")!.textContent!,
+      /Nenhum amigo/,
+    );
+    (doc.getElementById("requests-tab") as HTMLButtonElement).click();
+    assert.equal(doc.getElementById("friends-panel")!.hidden, true);
+    assert.equal(doc.getElementById("requests-panel")!.hidden, false);
+    doc.querySelector<HTMLInputElement>('[name="q"]')!.value = "Bruno";
+    doc
+      .getElementById("friend-search")!
+      .dispatchEvent(new dom.window.Event("submit", { cancelable: true }));
+    await tick();
+    assert.match(
+      doc.getElementById("search-results")!.textContent!,
+      /Pedido Enviado.*Cancelar envio/,
+    );
+    assert.doesNotMatch(
+      doc.getElementById("search-results")!.textContent!,
+      /Pedir amizade/,
+    );
+    doc.getElementById("requests-tab")!.dispatchEvent(
       new dom.window.KeyboardEvent("keydown", {
         key: "ArrowRight",
         bubbles: true,
       }),
     );
-  assert.equal(doc.getElementById("invites-panel")!.hidden, false);
-  assert.equal(doc.getElementById("requests-panel")!.hidden, true);
-  dom.window.close();
-});
+    assert.equal(doc.getElementById("invites-panel")!.hidden, false);
+    assert.equal(doc.getElementById("requests-panel")!.hidden, true);
+    dom.window.close();
+  });

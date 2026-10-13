@@ -4,7 +4,26 @@ export function token() {
   return sessionStorage.getItem("token") || localStorage.getItem("token");
 }
 let refreshing, socialNotifications;
-export async function api(path, options = {}, renewed = false) {
+const socialReads = new Map();
+export function api(path, options = {}, renewed = false) {
+  // Share only simultaneous social reads in the same session, never results.
+  // Explicit reloads after a mutation must fetch a fresh snapshot.
+  if (
+    !renewed &&
+    ["/friends", "/friends/invites"].includes(path) &&
+    Object.keys(options).length === 0
+  ) {
+    const key = `${token() || ""}:${path}`;
+    if (socialReads.has(key)) return socialReads.get(key);
+    const pending = fetchApi(path, options, renewed).finally(() => {
+      if (socialReads.get(key) === pending) socialReads.delete(key);
+    });
+    socialReads.set(key, pending);
+    return pending;
+  }
+  return fetchApi(path, options, renewed);
+}
+async function fetchApi(path, options, renewed) {
   const controller = new AbortController(),
     timeout = setTimeout(() => controller.abort(), 10000);
   try {
