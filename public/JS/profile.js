@@ -184,6 +184,11 @@ function renderHistory(matches, append = false) {
       detail,
       date,
     );
+    if (match.xpGanho !== undefined) {
+      const earned = node("span", `+${match.xpGanho} XP`, "match-xp");
+      earned.title = `Multiplicador desta partida: ×${Number(match.multiplicadorXp || 1).toLocaleString("pt-BR")}`;
+      row.append(earned);
+    }
     $("history").append(row);
   }
   if (!$("history").children.length)
@@ -222,6 +227,7 @@ async function load() {
     $("name").value = data.user.nome;
     const stats = data.stats;
     $("level").textContent = stats.nivel;
+    $("player-title").textContent = stats.titulo;
     $("stats").replaceChildren(
       ...[
         [stats.partidas, "Partidas concluídas"],
@@ -236,9 +242,33 @@ async function load() {
     );
     $("level-label").textContent = `Rumo ao nível ${stats.nivel + 1}`;
     $("level-caption").textContent =
-      `${stats.progresso}/${stats.proximoNivel} partidas`;
+      `${stats.progresso.toLocaleString("pt-BR")}/${stats.proximoNivel.toLocaleString("pt-BR")} XP`;
     $("level-progress").value = stats.progresso;
     $("level-progress").max = stats.proximoNivel;
+    $("experience-caption").textContent =
+      `${stats.xp.toLocaleString("pt-BR")} XP acumulados · Faltam ${stats.xpParaProximoNivel.toLocaleString("pt-BR")} XP para o nível ${stats.nivel + 1}.`;
+    $("experience-streaks").replaceChildren(
+      node(
+        "span",
+        `Vitórias seguidas: ${stats.sequenciaVitorias}`,
+        "experience-streak",
+      ),
+      node(
+        "span",
+        `Recorde: ${stats.maiorSequenciaVitorias}`,
+        "experience-streak",
+      ),
+      node(
+        "span",
+        `Próxima vitória: ×${stats.multiplicadorProximaVitoria.toLocaleString("pt-BR")}`,
+        "experience-multiplier",
+      ),
+      node(
+        "span",
+        `Próxima derrota: ×${stats.multiplicadorProximaDerrota.toLocaleString("pt-BR")}`,
+        "experience-multiplier",
+      ),
+    );
     $("history-total").textContent = `${stats.partidas} partidas no total`;
     renderDecks();
     renderHistory(data.matches);

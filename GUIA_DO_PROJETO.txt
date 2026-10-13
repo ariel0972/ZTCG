@@ -942,3 +942,28 @@ Atributos e habilidades começam abertos; descrição/passivas ficam recolhidas.
 Os ícones preservam nomes acessíveis e dicas: custo, vida, ataque, defesa/resistência
 e fraqueza. Resistência mostra dano ÷2; fraqueza mostra dano ×2. Nenhuma regra mudou.
 Imagem, controles de cópias, adicionar/remover e ampliação continuam disponíveis.
+
+ATUALIZAÇÃO — EXPERIÊNCIA E TÍTULOS (13/10/2026)
+- src/services/experience.ts — Regras de XP, títulos, limiares acumulados, cálculo cronológico de sequências e prêmios individuais; fonte compartilhada por perfis, autenticação, ranking e /rules-data.
+- tests/experience.test.ts — Verifica limites de nível/título, valores e arredondamento dos prêmios, multiplicadores, reset por encerramento especial e ordem estável do histórico.
+O histórico único de Match é a fonte de XP, incluindo todas as partidas antigas.
+Reconsultar um perfil não concede XP novamente. Não há migração que grave valores
+duplicados nos contadores antigos de User. Perfil, sessão e ranking usam o cálculo
+atual; o ranking busca os históricos dos jogadores exibidos em uma consulta.
+Partida normal: vitória 40 (30+10), derrota 32 (30+2), empate 30.
+Desistência, desconexão e inatividade: ambos recebem 20, sem multiplicador.
+Resultado igual consecutivo normal: ×1,0, ×1,1, ×1,2, ×1,3, ×1,4, ×1,5;
+o teto vale a partir da sexta vitória ou derrota. Resultado oposto reinicia a
+sequência correspondente. Empates e encerramentos especiais zeram as duas
+sequências de cada jogador. Arredonde cada prêmio ao inteiro mais próximo:
+quarta derrota seguida = 32 ×1,3 = 41,6 → 42 XP. O recorde não é zerado.
+XP total para níveis 1–8: 0, 100, 240, 560, 980, 1600, 2420, 3440.
+Após o nível 5, com n = nível - 5: limiar = 980 + 520n + 100n².
+Intervalos crescem 200 XP a cada nível; subir de nível não consome XP.
+Títulos: 1 Noviço em Mana; 2–3 Aprendiz de thumos; 4–6 Thumo praticante;
+7–10 Tumociente; 11–15 Thumista Avançado; 16–20 Alto Mago;
+21–25 Mago Experiente; 26–30 Dominante da Mana; 31+ Alto Sacerdote Thumista.
+O perfil mostra XP, título, sequência, recorde e multiplicadores do próximo
+resultado normal, além do XP de cada partida no histórico paginado. /regras
+explica os valores usando /rules-data. Elegibilidade e desempates do ranking
+continuam por vitórias/taxa, com mínimo de dez partidas apenas na aba por taxa.

@@ -42,6 +42,7 @@
               >
             </div>
             <p id="profile-subtitle" class="muted"></p>
+            <p id="player-title" class="profile-player-title"></p>
             <div class="profile-actions">
               <div
                 id="profile-friendship"
@@ -66,10 +67,18 @@
           <progress
             id="level-progress"
             value="0"
-            max="10"
+            max="100"
             aria-label="Progresso de nível"
           ></progress>
-          <p class="hint">Cada 10 partidas concluídas, um novo nível.</p>
+          <p id="experience-caption" class="hint"></p>
+          <div
+            id="experience-streaks"
+            class="experience-streaks"
+            aria-label="Sequências e multiplicadores"
+          ></div>
+          <a href="/regras#experiencia" class="hint"
+            >Como ganhar XP e subir de nível →</a
+          >
         </div>
         <nav class="profile-tabs" aria-label="Seções do perfil">
           <a href="#decks-section">Baralhos</a

@@ -1,6 +1,7 @@
 import { profileRoutes } from "./routes/profileRoutes";
 import { rankingRoutes } from "./routes/rankingRoutes";
 import { reactionDescriptions } from "./game/reactions";
+import { experienceRules } from "./services/experience";
 import express, { ErrorRequestHandler } from "express";
 import path from "node:path";
 import mongoose from "mongoose";
@@ -57,7 +58,11 @@ export function createApp(
   });
   app.use(express.static(path.join(__dirname, "..", "public")));
   app.get("/rules-data", (_req, res) =>
-    res.json({ success: true, reactions: reactionDescriptions }),
+    res.json({
+      success: true,
+      reactions: reactionDescriptions,
+      experience: experienceRules(),
+    }),
   );
   app.get(["/ranking", "/regras"], (req, res) => {
     res.sendFile(
@@ -184,7 +189,7 @@ export function createApp(
     if (req.params.id !== req.userId) throw new AppError(403, "Acesso negado.");
     const user = await User.findById(req.userId);
     if (!user) throw new AppError(404, "Conta não encontrada.");
-    res.json({ success: true, user: publicUser(user) });
+    res.json({ success: true, user: await publicUser(user) });
   });
   app.get("/matches", checkToken, async (req: AuthRequest, res) => {
     const matches = await Match.find({ "players.userId": req.userId })

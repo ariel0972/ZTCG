@@ -6,7 +6,7 @@ import Deck from "../db/models/decks";
 import Match from "../db/models/match";
 import { AuthRequest } from "../types";
 import { AppError } from "../lib/errors";
-import { profileStats } from "../services/profiles";
+import { profileExperience } from "../services/profiles";
 import { deckDTO } from "../services/decks";
 export const profileRoutes = Router();
 profileRoutes.get("/:id", async (req: AuthRequest, res) => {
@@ -24,8 +24,8 @@ profileRoutes.get("/:id", async (req: AuthRequest, res) => {
   const owner = id === req.userId;
   const user = await User.findById(id).select("nome avatarURL").lean();
   if (!user) throw new AppError(404, "Jogador não encontrado.");
-  const [stats, decks, matches] = await Promise.all([
-    profileStats(id),
+  const [experience, decks, matches] = await Promise.all([
+    profileExperience(id),
     Deck.collection
       .find({
         userId: new Types.ObjectId(id),
@@ -38,6 +38,7 @@ profileRoutes.get("/:id", async (req: AuthRequest, res) => {
       .limit(20)
       .lean(),
   ]);
+  const stats = experience.stats;
   res.setHeader("Cache-Control", "no-store");
   res.json({
     success: true,
@@ -64,6 +65,7 @@ profileRoutes.get("/:id", async (req: AuthRequest, res) => {
       turns: m.turns,
       finishedAt: m.finishedAt,
       reason: m.reason,
+      ...experience.awards.get(m.matchId),
     })),
     page,
     hasMore: (page + 1) * 20 < stats.partidas,

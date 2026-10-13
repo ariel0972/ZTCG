@@ -1,6 +1,38 @@
 .profile-page {
   max-width: 1200px;
 }
+.profile-player-title {
+  color: #e4d0a0;
+  font-weight: 700;
+  font-size: 14px;
+  margin: 6px 0 0;
+}
+.level-track .experience-streaks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 8px;
+  margin: 12px 0;
+}
+.experience-streak,
+.experience-multiplier {
+  border: 1px solid #56758366;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: #c7deea;
+  background: #1d3540;
+}
+.experience-multiplier {
+  color: #ead49b;
+  border-color: #cfb16d66;
+}
+.match-xp {
+  color: #e4d0a0;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
 .profile-hero {
   overflow: hidden;
   border: 1px solid #38505a;

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import User from "../db/models/user";
 import Match from "../db/models/match";
-import { progression } from "../services/profiles";
+import { experienceHistory, ExperienceMatch } from "../services/experience";
 
 export const rankingRoutes = Router();
 rankingRoutes.get("/", async (req, res) => {
@@ -80,16 +80,38 @@ rankingRoutes.get("/", async (req, res) => {
       },
     },
   ]);
-  const player = (row: any, position: number) => ({
-    id: String(row._id),
-    nome: row.nome,
-    avatarURL: row.avatarURL,
-    partidas: row.partidas,
-    vitorias: row.vitorias,
-    taxaVitorias: Math.round(row.rate * 1000) / 10,
-    nivel: progression(row.partidas).nivel,
-    position,
-  });
+  const displayed = [...result.podium, ...result.players];
+  const histories = new Map<string, ExperienceMatch[]>(
+    displayed.map((r: any) => [String(r._id), []]),
+  );
+  if (displayed.length) {
+    const records = await Match.find({
+      "players.userId": { $in: [...histories.keys()] },
+    })
+      .select("matchId players.userId winner reason finishedAt createdAt")
+      .lean();
+    for (const record of records)
+      for (const participant of record.players)
+        histories.get(String(participant.userId))?.push(record);
+  }
+  const player = (row: any, position: number) => {
+    const stats = experienceHistory(
+      String(row._id),
+      histories.get(String(row._id)) || [],
+    ).stats;
+    return {
+      id: String(row._id),
+      nome: row.nome,
+      avatarURL: row.avatarURL,
+      partidas: row.partidas,
+      vitorias: row.vitorias,
+      taxaVitorias: Math.round(row.rate * 1000) / 10,
+      nivel: stats.nivel,
+      titulo: stats.titulo,
+      xp: stats.xp,
+      position,
+    };
+  };
   const total = result.total[0]?.count ?? 0;
   res.setHeader("Cache-Control", "no-store");
   res.json({

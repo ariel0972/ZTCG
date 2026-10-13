@@ -26,7 +26,11 @@ export async function fakeDatabase() {
         ([key, value]: [string, any]) => {
           if (key === "$or") return value.some((c: any) => matches(row, c));
           if (key === "players.userId")
-            return row.players?.some((p: any) => equal(p.userId, value));
+            return row.players?.some((p: any) =>
+              value?.$in
+                ? value.$in.some((id: any) => equal(p.userId, id))
+                : equal(p.userId, value),
+            );
           const actual = row[key];
           if (
             value &&

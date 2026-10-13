@@ -28,6 +28,7 @@ function entry(player, podium = false) {
   identity.append(
     node("strong", player.nome),
     node("span", `Nível ${player.nivel}`, "muted"),
+    node("span", player.titulo, "muted"),
   );
   const metric = node(
     "strong",

@@ -9,6 +9,7 @@ import { AppError } from "../lib/errors";
 import { rateLimit } from "../middlewares/rateLimit";
 import { passwordRoutes } from "./passwordRoutes";
 import { playerName, playerNameKey } from "../services/player-name";
+import { profileStats } from "../services/profiles";
 const router = Router();
 router.use(passwordRoutes());
 const refreshCookie = "ztcg_refresh";
@@ -80,7 +81,7 @@ router.post("/refresh", rateLimit(30), async (req, res) => {
     res.json({
       success: true,
       token: issueSession(user, res),
-      user: publicUser(user),
+      user: await publicUser(user),
     });
   } catch {
     throw new AppError(401, "Entre na sua conta novamente.", "UNAUTHORIZED");
@@ -116,15 +117,18 @@ const register = credentials
     path: ["confirmPassword"],
     message: "As senhas são diferentes.",
   });
-export function publicUser(user: any) {
+export async function publicUser(user: any) {
+  const stats = await profileStats(String(user._id));
   return {
     id: String(user._id),
     _id: String(user._id),
     nome: user.nome,
     avatarURL: user.avatarURL,
-    nivel: user.nivel,
-    vitorias: user.vitorias,
-    partidas: user.partidas,
+    nivel: stats.nivel,
+    titulo: stats.titulo,
+    xp: stats.xp,
+    vitorias: stats.vitorias,
+    partidas: stats.partidas,
     admin: user.admin,
   };
 }
@@ -162,14 +166,14 @@ router.post("/logar", rateLimit(20), async (req, res) => {
   res.json({
     success: true,
     token,
-    user: publicUser(user),
+    user: await publicUser(user),
     content: "Login realizado.",
   });
 });
 router.get("/me", checkToken, async (req: AuthRequest, res) => {
   const user = await User.findById(req.userId);
   if (!user) throw new AppError(401, "Conta não encontrada.");
-  res.json({ success: true, user: publicUser(user) });
+  res.json({ success: true, user: await publicUser(user) });
 });
 router.put("/user/edit", checkToken, async (req: AuthRequest, res) => {
   const input = z
@@ -203,7 +207,7 @@ router.put("/user/edit", checkToken, async (req: AuthRequest, res) => {
   if (!user) throw new AppError(404, "Conta não encontrada.");
   res.json({
     success: true,
-    user: publicUser(user),
+    user: await publicUser(user),
     content: "Perfil atualizado.",
   });
 });

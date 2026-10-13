@@ -24,6 +24,7 @@ test("rankings públicos usam histórico real, desempates, mínimo de 10 e pagin
         matchId: `${n}-${i}`,
         players: [{ userId: id(n) }],
         winner: i < wins ? id(n) : null,
+        finishedAt: new Date(2026, 9, 1, 0, i),
       });
   };
   player(1, 12, 24);
@@ -49,7 +50,9 @@ test("rankings públicos usam histórico real, desempates, mínimo de 10 e pagin
     assert.equal(wins.players.length, 20);
     assert.equal(wins.hasMore, true);
     assert.equal(wins.podium[0].vitorias, 12);
-    assert.equal(wins.podium[0].nivel, 3);
+    assert.equal(wins.podium[0].nivel, 5);
+    assert.equal(wins.podium[0].xp, 1020);
+    assert.equal(wins.podium[0].titulo, "Thumo praticante");
     assert.equal(wins.players[0].id, id(4));
     assert.equal(wins.players[0].position, 4);
     for (const p of [...wins.podium, ...wins.players])
@@ -63,6 +66,8 @@ test("rankings públicos usam histórico real, desempates, mínimo de 10 e pagin
           "vitorias",
           "taxaVitorias",
           "nivel",
+          "titulo",
+          "xp",
           "position",
         ].sort(),
       );
@@ -85,6 +90,10 @@ test("rankings públicos usam histórico real, desempates, mínimo de 10 e pagin
       assert.equal((await fetch(base + path)).status, 200);
     const rules = await read("/rules-data");
     assert.equal(Object.keys(rules.reactions).length, 8);
+    assert.equal(rules.experience.maximumMultiplier, 1.5);
+    assert.equal(rules.experience.interrupted, 20);
+    assert.equal(rules.experience.thresholds[30].xp, 82100);
+    assert.equal(rules.experience.titles.at(-1).max, null);
     db.matches.length = 0;
     assert.equal((await read("/rankings?mode=rate")).total, 0);
     db.users.length = 0;

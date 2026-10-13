@@ -8,12 +8,12 @@ import { createApp } from "../src/application";
 import { fakeDatabase } from "./support/database";
 import { progression } from "../src/services/profiles";
 import { deckDTO } from "../src/services/decks";
-test("nível deriva de todas as partidas concluídas", () => {
+test("nível deriva do XP acumulado", () => {
   assert.equal(progression(0).nivel, 1);
-  assert.equal(progression(9).nivel, 1);
-  assert.equal(progression(10).nivel, 2);
-  assert.equal(progression(41).nivel, 5);
-  assert.equal(progression(41).progresso, 1);
+  assert.equal(progression(99).nivel, 1);
+  assert.equal(progression(100).nivel, 2);
+  assert.equal(progression(981).nivel, 5);
+  assert.equal(progression(981).progresso, 1);
 });
 test("perfis usam totais reais, paginam histórico e respeitam baralhos privados", async () => {
   process.env.SECRET = "profiles-test-only-012345678901234567890";
@@ -66,7 +66,20 @@ test("perfis usam totais reais, paginam histórico e respeitam baralhos privados
     assert.equal(data.stats.vitorias, 31);
     assert.equal(data.stats.empates, 5);
     assert.equal(data.stats.derrotas, 5);
-    assert.equal(data.stats.nivel, 5);
+    assert.equal(data.stats.nivel, 6);
+    assert.equal(data.stats.xp, 2142);
+    assert.equal(data.stats.titulo, "Thumo praticante");
+    assert.equal(data.stats.progresso, 542);
+    assert.equal(data.stats.proximoNivel, 820);
+    assert.equal(data.stats.xpParaProximoNivel, 278);
+    assert.equal(data.stats.sequenciaVitorias, 0);
+    assert.equal(data.stats.maiorSequenciaVitorias, 31);
+    assert.equal(data.matches[0].xpGanho, 30);
+    const me = (await call("/auth/me", id)).data;
+    assert.equal(me.user.nivel, 6);
+    assert.equal(me.user.xp, 2142);
+    assert.equal(me.user.titulo, data.stats.titulo);
+    assert.equal((await call(`/profiles/${id}`)).data.stats.xp, 2142);
     assert.equal(data.matches.length, 20);
     assert.equal(data.hasMore, true);
     assert.deepEqual(data.decks, []);
