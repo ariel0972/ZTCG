@@ -1212,3 +1212,36 @@ após publicar o motor novo, --apply salva backup e grava versões por comparaç
 Ícones de navegação: app.css define máscaras vetoriais para Ranking (troféu)
 e Regras (livro), com ordem consistente no menu. Amigos, recuperação e troca
 de senha passaram a declarar o mesmo favicon.svg das demais páginas.
+
+
+ALVO DIFERENTE POR EFEITO DE HABILIDADE (14/10/2026)
+Efeitos damage, heal e status de habilidades de Tropa, Mago e Estrutura
+aceitam alvo:"Proprio" opcional. Omitido, o efeito usa os alvos da habilidade.
+Proprio identifica a instância exata que usou a habilidade, incluindo quem
+monta. É diferente de alvoAutomatico:"Proprio", que seleciona a origem para
+TODOS os efeitos da habilidade. Não use alvoAutomatico com alvo de área.
+Exemplo de Caminhando nas Sombras (valores ilustrativos; preserve os do editor):
+{
+  "id":"caminharnassombras",
+  "nome":"Caminhando nas Sombras",
+  "custoMana":5,
+  "alvo":"TodasTropasInimigas",
+  "efeitos":[
+    {"id":"damage","valor":2},
+    {"id":"status","alvo":"Proprio","status":"Esconder","duracao":2,"unidade":"turno"}
+  ]
+}
+O dano ocorre nas tropas inimigas (com estruturas/proteções normais) e só a
+origem recebe Esconder. Uma habilidade é gasta, sem consumir o ataque básico.
+A escolha de desviar de um inimigo não impede o efeito na origem nem os demais
+alvos. Habilidades existentes sem alvo por efeito mantêm o comportamento.
+Esse campo novo não está disponível em efeitos diretos de feitiços nem em
+draw, mana, field, spendAttack, guardTarget, remoções ou efeitos especiais.
+O validador recusa essas combinações e valores diferentes de Proprio.
+Esconder com duracao:2/unidade:turno cobre o fim do turno atual e o próximo
+turno adversário, funcionando em qualquer posição da rodada. Com duracao:1 e
+sem unidade, termina no fim da rodada atual. Esconder impede selecionar a carta
+por ataques e efeitos individuais inimigos; não impede áreas e é perdido ao
+atacar normalmente. Não equivale a invulnerabilidade.
+A ampliação não grava a segunda habilidade automaticamente no Assassino do
+banco, preservando o conteúdo que o administrador está editando.

@@ -80,6 +80,7 @@ export const spellVariantSchema = z
 export const effectSchema = z
   .object({
     id: identifier,
+    alvo: z.literal("Proprio").optional(),
     valor: number.optional(),
     status: z.string().max(80).optional(),
     duracao: number.optional(),

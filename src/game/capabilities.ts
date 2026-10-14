@@ -139,8 +139,22 @@ export function playableErrors(card: Card): string[] {
           "Efeito especial representa uma regra completa: use somente um efeito.",
         );
     }
-  const checkEffects = (effects: Effect[], target?: TipoAlvoFeitico) => {
+  const checkEffects = (
+    effects: Effect[],
+    target?: TipoAlvoFeitico,
+    ability = false,
+  ) => {
     for (const e of effects) {
+      if (
+        e.alvo &&
+        (!ability ||
+          !["damage", "heal", "status"].includes(e.id) ||
+          !["Tropa", "Mago", "Estrutura"].includes(card.tipo))
+      )
+        errors.push(
+          "Alvo Proprio por efeito exige damage, heal ou status em habilidade de Tropa, Mago ou Estrutura.",
+        );
+      const effectTarget = e.alvo === "Proprio" ? "UnicoAliado" : target;
       const configurable = ["arrowRain", "lightOrb"].includes(e.id);
       if (e.variantesMago && !configurable)
         errors.push("variantesMago exige arrowRain ou lightOrb.");
@@ -257,7 +271,7 @@ export function playableErrors(card: Card): string[] {
           "MultiplosInimigos",
           "CampoAliado",
           "CampoInimigo",
-        ].includes(target ?? "")
+        ].includes(effectTarget ?? "")
       )
         errors.push(`Alvo incompatível com ${e.id}.`);
       if (e.id === "searchElemental" && target !== "Deck")
@@ -352,7 +366,7 @@ export function playableErrors(card: Card): string[] {
     if (h.alvoAutomatico === "Frontal" && card.tipo !== "Tropa")
       errors.push("Alvo frontal automático exige tropa.");
     if (h.efeitos?.length) {
-      checkEffects(h.efeitos, h.alvo);
+      checkEffects(h.efeitos, h.alvo, true);
       if (h.efeitos.some((e) => specialTargets[e.id]))
         errors.push(
           "Efeitos especiais de feitiços não são executáveis em habilidades.",

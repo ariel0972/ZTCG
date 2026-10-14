@@ -6,6 +6,8 @@ import { cardSchema, type Card } from "../src/types/card";
 import { Game } from "../src/game/engine";
 import { slotCards, type Instance } from "../src/game/state";
 import { playableErrors } from "../src/game/capabilities";
+import CardModel from "../src/db/models/Card";
+import { cleanCard } from "../src/services/catalog";
 const catalog = raw.map((c) => cardSchema.parse(c));
 function act(g: Game, user: string, cmd: object) {
   return g.execute(user, {
@@ -87,6 +89,136 @@ function ability(g: Game, id: string, name: string, targets: string[] = []) {
     targets,
   });
 }
+
+const shadows = {
+  id: "caminharnassombras",
+  nome: "Caminhando nas Sombras",
+  custoMana: 5,
+  alvo: "TodasTropasInimigas" as const,
+  efeitos: [
+    { id: "damage", valor: 2 },
+    {
+      id: "status",
+      alvo: "Proprio" as const,
+      status: "Esconder",
+      duracao: 2,
+      unidade: "turno" as const,
+    },
+  ],
+};
+
+test("efeitos mistos persistem e atingem inimigos e a própria fonte separadamente", () => {
+  const g = make(),
+    a = put(g, "020", 0, "p1", { habilidadesAtivas: [shadows] }),
+    ally = put(g, "023", 1),
+    enemy = put(g, "023", 2, "p2", { resistencia: [], fraqueza: [] });
+  const horse = put(g, "074", 1, "p2", { resistencia: [], fraqueza: [] });
+  const mounted = g.state.slots.find((s) => s.card?.id === horse)!;
+  mounted.rider = instance("021", "p2", { resistencia: [], fraqueza: [] });
+  const rider = mounted.rider.id;
+  const c = cardSchema.parse({
+      ...catalog.find((c) => c.numeroCatalogo === "020"),
+      habilidadesAtivas: [shadows],
+    }),
+    model = new CardModel(c);
+  assert.deepEqual(playableErrors(c), []);
+  assert.equal(model.validateSync(), undefined);
+  assert.deepEqual(
+    cleanCard(model.toObject()).habilidadesAtivas,
+    c.habilidadesAtivas,
+  );
+  ability(g, a, shadows.id);
+  assert.equal(get(g, enemy).hpAtual, 9);
+  assert.equal(get(g, horse).hpAtual, 7);
+  assert.equal(get(g, rider).hpAtual, 10);
+  assert.equal(get(g, a).hpAtual, 9);
+  assert.equal(get(g, ally).hpAtual, 11);
+  assert.ok(get(g, a).statuses.some((s) => s.nome === "Esconder"));
+  for (const id of [enemy, horse, rider, ally])
+    assert.equal(
+      get(g, id).statuses.some((s) => s.nome === "Esconder"),
+      false,
+    );
+  assert.equal(g.player("p1").mana, 15);
+  assert.equal(get(g, a).attacked, false);
+  assert.throws(() => ability(g, a, shadows.id), /utilizada/);
+});
+
+test("efeito Proprio usa o ocupante montado e funciona mesmo sem tropas inimigas", () => {
+  const g = make(),
+    horse = put(g, "074", 0),
+    s = g.state.slots.find((s) => s.card?.id === horse)!;
+  s.rider = instance("020", "p1", { habilidadesAtivas: [shadows] });
+  const rider = s.rider.id;
+  ability(g, rider, shadows.id);
+  assert.ok(get(g, rider).statuses.some((s) => s.nome === "Esconder"));
+  assert.equal(
+    get(g, horse).statuses.some((s) => s.nome === "Esconder"),
+    false,
+  );
+  assert.equal(g.player("p2").mage.hpAtual, g.player("p2").mage.hp);
+});
+
+test("Esconder em dois turnos cobre o próximo turno adversário de qualquer posição da rodada", () => {
+  for (const turn of [3, 4]) {
+    let g = make();
+    g.state.turn = turn;
+    const assassin = put(g, "020", 0, "p1", { habilidadesAtivas: [shadows] });
+    put(g, "023", 2, "p2");
+    ability(g, assassin, shadows.id);
+    g = Game.restore(JSON.parse(JSON.stringify(g.exportState())));
+    act(g, "p1", { type: "endTurn" });
+    assert.ok(get(g, assassin).statuses.some((s) => s.nome === "Esconder"));
+    assert.throws(
+      () =>
+        act(g, "p2", {
+          type: "attack",
+          slotId: "p2:front:2",
+          targetId: "p1:front:0",
+        }),
+      /escondid/i,
+    );
+    act(g, "p2", { type: "endTurn" });
+    assert.equal(
+      get(g, assassin).statuses.some((s) => s.nome === "Esconder"),
+      false,
+    );
+  }
+});
+
+test("alvo por efeito rejeita feitiços e efeitos sem alvo de carta", () => {
+  const assassin = catalog.find((c) => c.numeroCatalogo === "020")!;
+  const invalid = cardSchema.parse({
+    ...assassin,
+    habilidadesAtivas: [
+      { ...shadows, efeitos: [{ id: "draw", valor: 1, alvo: "Proprio" }] },
+    ],
+  });
+  assert.ok(
+    playableErrors(invalid).some((e) => e.includes("Proprio por efeito")),
+  );
+  const spell = cardSchema.parse({
+    ...catalog.find((c) => c.numeroCatalogo === "001"),
+    efeitos: [{ id: "damage", valor: 2, alvo: "Proprio" }],
+  });
+  assert.ok(
+    playableErrors(spell).some((e) => e.includes("Proprio por efeito")),
+  );
+  assert.equal(
+    cardSchema.safeParse({
+      ...assassin,
+      habilidadesAtivas: [
+        {
+          ...shadows,
+          efeitos: [
+            { id: "status", alvo: "Fonte", status: "Esconder", duracao: 1 },
+          ],
+        },
+      ],
+    }).success,
+    false,
+  );
+});
 test("novas habilidades declarativas são publicáveis; opções incompatíveis são rejeitadas", () => {
   for (const id of ["111", "075"])
     assert.deepEqual(

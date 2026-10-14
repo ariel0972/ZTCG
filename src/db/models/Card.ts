@@ -30,6 +30,7 @@ const spellVariant = new Schema(
 const effect = new Schema(
   {
     id: { type: String, required: true },
+    alvo: { type: String, enum: ["Proprio"] },
     valor: n,
     status: String,
     duracao: n,

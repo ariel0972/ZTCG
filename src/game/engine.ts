@@ -1599,13 +1599,18 @@ export class Game {
   private effects(
     ownerId: string,
     effects: Effect[],
-    ids: string[],
+    selection: string[],
     element?: Card["elemento"],
     source?: Instance,
     cause?: string,
   ) {
     const player = this.player(ownerId);
     for (const effect of effects) {
+      if (effect.alvo === "Proprio" && (!source || !this.targetSlot(source.id)))
+        this.fail(
+          "Efeito na própria carta exige uma habilidade de origem em campo.",
+        );
+      const ids = effect.alvo === "Proprio" ? [source!.id] : selection;
       switch (effect.id) {
         case "spendAttack":
           if (!source) this.fail("Consumir ataque exige a carta de origem.");

@@ -54,7 +54,7 @@ export function abilityDescription(ability) {
   );
 }
 function effectDescription(effect) {
-  return (
+  const description =
     {
       damage: `Causa ${effect.valor || 0} de dano.`,
       heal: `Cura ${effect.valor || 0} de vida.`,
@@ -70,8 +70,10 @@ function effectDescription(effect) {
       field: `Aplica ${effect.elemento || "um elemento"} ao campo.`,
       searchElemental:
         "Escolha um feitiço elemental do seu baralho para adicionar à mão.",
-    }[effect.id] || "Efeito ainda não definido no catálogo."
-  );
+    }[effect.id] || "Efeito ainda não definido no catálogo.";
+  return effect.alvo === "Proprio"
+    ? `${description} Alvo: a própria carta que usa a habilidade.`
+    : description;
 }
 export function passiveDescription(h) {
   if (h.descricao) return h.descricao;
