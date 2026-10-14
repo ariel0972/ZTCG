@@ -10,6 +10,20 @@ import type { Instance } from "../src/game/state";
 import { randomUUID } from "node:crypto";
 process.env.SECRET = "preview-only-012345678901234567890123456789";
 void fakeDatabase().then(async (db) => {
+  if (process.env.PREVIEW_DECK_SELECTOR === "1") {
+    const owner = "1".repeat(24),
+      base = db.decks.find((d) => d.userId === owner);
+    if (base) {
+      base.nome = "Chamas de Ignir";
+      base.mago = "016";
+      db.decks.push({
+        ...structuredClone(base),
+        _id: "9".repeat(24),
+        nome: "Maré de Farfun",
+        mago: "017",
+      });
+    }
+  }
   if (process.env.PREVIEW_RANKING === "1") {
     for (let n = 0; n < 8; n++) {
       const id = (n + 100).toString(16).padStart(24, "0");

@@ -4,6 +4,8 @@ import { passiveEventTriggers, passiveActionIds } from "./passives";
 import { canonicalStatus } from "./status";
 
 export const effectIds = [
+  "revealStealHand",
+  "bloodScent",
   "damage",
   "heal",
   "status",
@@ -125,6 +127,8 @@ export function playableErrors(card: Card): string[] {
     meteors: "MultiplosInimigos",
     zarcosTear: "Global",
     strongFlow: "Global",
+    revealStealHand: "Global",
+    bloodScent: "TodasTropasInimigas",
   };
   for (const effect of card.efeitos)
     if (specialTargets[effect.id]) {
@@ -273,7 +277,9 @@ export function playableErrors(card: Card): string[] {
         errors.push("Remoção definitiva exige carta em campo ou no cemitério.");
       if (
         e.id === "field" &&
-        !["CampoAliado", "CampoInimigo"].includes(target ?? "")
+        !["CampoAliado", "CampoInimigo", "TodasTropasInimigas"].includes(
+          target ?? "",
+        )
       )
         errors.push("Efeito de campo exige alvo CampoAliado ou CampoInimigo.");
       if (["mana", "draw"].includes(e.id) && target !== "Global")
@@ -351,10 +357,6 @@ export function playableErrors(card: Card): string[] {
         errors.push(
           "Efeitos especiais de feitiços não são executáveis em habilidades.",
         );
-      if (h.efeitos.some((e) => e.id === "field"))
-        errors.push(
-          "Aplicação elemental de campo está disponível apenas em feitiços.",
-        );
       if (!h.alvo) errors.push(`Defina alvo da habilidade ${h.id}.`);
     } else if (!(abilityIds as readonly string[]).includes(h.id))
       errors.push(`Habilidade ${h.id} não implementada.`);
@@ -403,11 +405,32 @@ export function playableErrors(card: Card): string[] {
         if (filter?.status && !statusIds.includes(filter.status))
           errors.push("Filtro de passiva usa status não implementado.");
       for (const effect of h.efeitos) {
+        if (effect.id === "attackLifesteal" && card.tipo !== "Armamento")
+          errors.push("Cura por dano de ataque exige Armamento.");
+        if (effect.id === "discardMana" && card.tipo !== "Feitico")
+          errors.push("Recuperação ao descartar exige Feitico.");
+        if (
+          effect.id === "dodgeImpact" &&
+          (card.tipo !== "Tropa" || h.escopo !== "proprio")
+        )
+          errors.push("Desvio exige Tropa e escopo proprio.");
         const allowed =
           h.gatilho === "continuous"
-            ? ["attackAura", "attackBonus", "manaRecovery", "blockOwnAttack"]
+            ? [
+                "attackAura",
+                "attackBonus",
+                "manaRecovery",
+                "blockOwnAttack",
+                "attackLifesteal",
+                "discardMana",
+              ]
             : h.gatilho === "onTargeted"
-              ? ["blockAttack", "reflectAttack", "interceptAttack"]
+              ? [
+                  "blockAttack",
+                  "reflectAttack",
+                  "interceptAttack",
+                  "dodgeImpact",
+                ]
               : (passiveIds as readonly string[]).filter(
                   (id) =>
                     ![
@@ -418,6 +441,9 @@ export function playableErrors(card: Card): string[] {
                       "reflectAttack",
                       "blockOwnAttack",
                       "interceptAttack",
+                      "dodgeImpact",
+                      "attackLifesteal",
+                      "discardMana",
                     ].includes(id),
                 );
         if (!allowed.includes(effect.id))

@@ -1334,7 +1334,8 @@ O Cavalo se move sem Cavaleiro; sua passiva de restrição bloqueia só o ataque
 Não há movimento separado do ocupante montado: primeiro desmonte.
 
 Ambos atacam, usam habilidades, recebem status e geram mana separadamente.
-Um armamento associado ao slot beneficia ambos, com bônus de ataque e vida.
+Um armamento associado ao slot beneficia somente o ocupante enquanto montado.
+A montaria ocupada não recebe bônus de ataque, vida nem cura do armamento.
 Estrutura do slot continua protegendo normalmente. Ataque básico atinge a montaria
 primeiro, e o excesso de dano passa ao ocupante como novo golpe, com suas próprias
 resistências, escudos e reduções. Feitiços e habilidades individuais podem escolher
@@ -1514,3 +1515,48 @@ EXEMPLO_JSON_INICIO 075 — Escudeiro
   ]
 }
 EXEMPLO_JSON_FIM
+
+
+Novas capacidades do catálogo:
+1) Golém: {"gatilho":"onTargeted","escopo":"proprio","efeitos":[{"id":"dodgeImpact"}]}.
+Somente tropas, uma aceitação por rodada. Oferece 20 s gratuitos, com turno
+pausado. Recusar/expirar não consome a passiva. Anula dano e efeitos daquele
+ataque, feitiço ou habilidade apenas no Golém. Áreas preservam os outros alvos;
+vários Goléns escolhem separadamente. Sangrando, Queimado e Envenenado não
+abrem janela. Feitiços de dano no fim da rodada abrem a janela normalmente.
+A resolução interrompida guarda uma base privada, decisões e resultados de
+sorteios no estado durável. Retoma deterministicamente, sem cobrar mana,
+repetir sorteios ou duplicar ataques. O snapshot público expõe só a pergunta,
+nunca a base privada. A troca de janela recebe seu próprio prazo de 20 s.
+2) Habilidades ativas aceitam esperaRodadas: inteiro 0–100. Omitido/0 mantém a
+regra de uma habilidade por rodada; 1: usar na 3 bloqueia a 4 e libera na 5.
+O histórico fica em abilityRounds na instância. Enchente usa custo 6,
+esperaRodadas:1, alvo TodasTropasInimigas, efeitos field/Agua e
+status/Incapacitado/duracao:1. field nessa seleção afeta todo o campo frontal;
+status afeta todas as tropas, incluindo montados, e não o mago.
+3) Feitiço Olho: alvo Global e efeitos [{"id":"revealStealHand","valor":1}].
+Revela a mão inteira ao conjurador na rodada atual, incluindo novas compras.
+Abre uma escolha de 20 s para transferir uma carta real, trocando seu dono;
+se o prazo termina, não transfere. A mão continua revelada pelo botão do campo.
+Efeito contínuo discardMana/valor:4 (somente Feitico) devolve mana quando essa
+carta é descartada da mão, inclusive Recuperar Energia. Conjurar não descarta.
+4) Armamento: passiva continuous/proprio, efeitos
+[{"id":"attackLifesteal","excedente":4}]. Cura a tropa equipada por vida
+realmente retirada por seus ataques básicos, inclusive retaliação e excedente
+na montaria; overkill, escudos e resistências não geram cura indevida. O teto
+é HP máximo com os bônus aplicáveis + excedente. Habilidade, feitiço e status
+não ativam. Enquanto montado, somente o ocupante recebe TODOS os benefícios
+de armamentos. Movimento/montagem/desmontagem e morte ajustam o bônus de HP.
+5) Cheiro: alvo TodasTropasInimigas, efeitos [{"id":"bloodScent","valor":2}].
+Soma valor ao dano do Sangrando já aplicado em tropas inimigas. Não aplica
+novo Sangrando nem renova sua duração; o padrão do status continua 3 rodadas.
+Não é um novo feitiço periódico de 3 rodadas. Cada conjuração reforça o status
+atual. Piranhas 041 aliadas ganham +1 no ataque básico contra tropas Sangrando
+até o fim da partida, sem acumular esse bônus por cópias.
+6) EscudoProtecao bloqueia os efeitos de feitiços, incluindo reações/status,
+retorno à mão e remoção direta; banish ignora essa proteção. Uma carga cobre
+o golpe e seus efeitos no protegido. Mantém 3 cargas e duração de 2 rodadas.
+As cartas 030, 037 e 045 foram liberadas para novas partidas; 026 recebeu os
+atributos da imagem. Partidas existentes preservam as definições já copiadas.
+Executar scripts/update-water-cards.ts sem --apply mostra o plano. Somente
+após publicar o motor novo, --apply salva backup e grava versões por comparação.

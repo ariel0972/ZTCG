@@ -268,27 +268,33 @@ export class DurableGame {
       }
       if (expired.length && now >= (room.recoveryUntil ?? 0))
         game.abandon(expired[0].id, "Abandono após desconexão.");
-      if (
-        (game.state.pendingSpell || game.state.pendingAttack) &&
-        now >= (room.responseDeadline ?? now)
-      ) {
-        if (game.state.pendingAttack) game.resolvePendingAttack();
+      if (game.responseKey() && now >= (room.responseDeadline ?? now)) {
+        if (game.state.pendingImpact || game.state.pendingHandChoice)
+          game.resolvePendingChoice();
+        else if (game.state.pendingAttack) game.resolvePendingAttack();
         else game.resolvePendingSpell();
-        room.deadline =
-          (room.responseDeadline ?? now) + (room.remainingTurnMs ?? TURN_MS);
-        delete room.responseDeadline;
-        delete room.remainingTurnMs;
+        if (game.responseKey()) room.responseDeadline = now + 20000;
+        else {
+          room.deadline =
+            (room.responseDeadline ?? now) + (room.remainingTurnMs ?? TURN_MS);
+          delete room.responseDeadline;
+          delete room.remainingTurnMs;
+        }
       }
       for (
         let n = 0;
         game.state.status === "ACTIVE" &&
-        !(game.state.pendingSpell || game.state.pendingAttack) &&
+        !game.responseKey() &&
         now >= room.deadline &&
         n < 10;
         n++
       ) {
         game.timeout();
         room.deadline += TURN_MS;
+        if (game.responseKey()) {
+          room.remainingTurnMs = TURN_MS;
+          room.responseDeadline = now + 20000;
+        }
       }
     }
     room.lastAdvancedAt = now;
@@ -310,25 +316,22 @@ export class DurableGame {
       stage = performance.now();
       const turn = game.state.turn,
         phase = game.state.phase,
-        responding = !!(game.state.pendingSpell || game.state.pendingAttack);
+        responding = game.responseKey();
       let response: unknown, error: unknown;
       try {
         response = game.execute(user, command);
       } catch (e) {
         error = e;
       }
-      if (game.state.turn !== turn || game.state.phase !== phase)
+      if (game.state.turn !== turn || game.state.phase !== phase) {
         room.deadline = this.now() + TURN_MS;
-      if (
-        !responding &&
-        (game.state.pendingSpell || game.state.pendingAttack)
-      ) {
-        room.remainingTurnMs = Math.max(0, room.deadline - this.now());
+        if (responding) room.remainingTurnMs = TURN_MS;
+      }
+      if (game.responseKey() && responding !== game.responseKey()) {
+        if (!responding)
+          room.remainingTurnMs = Math.max(0, room.deadline - this.now());
         room.responseDeadline = this.now() + 20000;
-      } else if (
-        responding &&
-        !(game.state.pendingSpell || game.state.pendingAttack)
-      ) {
+      } else if (responding && !game.responseKey()) {
         room.deadline = this.now() + (room.remainingTurnMs ?? TURN_MS);
         delete room.responseDeadline;
         delete room.remainingTurnMs;

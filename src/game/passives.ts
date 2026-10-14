@@ -20,6 +20,9 @@ export interface PassiveEvent {
   slotId?: string;
 }
 export const passiveActionIds = [
+  "dodgeImpact",
+  "attackLifesteal",
+  "discardMana",
   "counterAttack",
   "interceptAttack",
   "blockOwnAttack",
@@ -62,6 +65,12 @@ export function describePassiveActions(actions: PassiveAction[]) {
   return actions
     .map((a) => {
       switch (a.id) {
+        case "dodgeImpact":
+          return "Pode desviar de um golpe por rodada, anulando dano e efeitos";
+        case "attackLifesteal":
+          return `Ataques curam o dano efetivo, até ${a.excedente ?? 0} de sobrevida`;
+        case "discardMana":
+          return `Recupera ${a.valor} mana ao ser descartada da mão`;
         case "counterAttack":
           return "Retaliou com seu ataque básico";
         case "interceptAttack":
@@ -480,6 +489,14 @@ export function continuousPassiveActive(
 }
 export const passiveTemplates: { nome: string; passiva: DeclarativePassive }[] =
   [
+    {
+      nome: "Desviar opcionalmente de um golpe por rodada",
+      passiva: {
+        gatilho: "onTargeted",
+        escopo: "proprio",
+        efeitos: [{ id: "dodgeImpact" }],
+      },
+    },
     {
       nome: "Retaliar cada ataque básico contra o mago aliado",
       passiva: {

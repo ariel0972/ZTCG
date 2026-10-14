@@ -4,8 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Amigos · Zacornia</title>
+    <link rel="icon" href="/assets/icons/favicon.svg" />
     <link rel="stylesheet" href="/CSS/app.css" />
     <link rel="stylesheet" href="/CSS/social.css" />
+    <link rel="stylesheet" href="/CSS/deck-selector.css" />
     <script type="module" src="/JS/friends.js"></script>
   </head>
   <body>
@@ -23,9 +25,13 @@
       <h1>Amigos</h1>
       <p id="social-intro">Entre na sua conta para adicionar amigos.</p>
       <section id="social-controls" hidden>
-        <label class="social-deck-choice"
-          >Baralho para os convites<select id="social-deck"></select
-        ></label>
+        <div class="social-deck-choice">
+          <select
+            id="social-deck"
+            aria-label="Baralho para os convites"
+            hidden
+          ></select>
+        </div>
         <div
           id="social-tabs"
           class="social-tabs"

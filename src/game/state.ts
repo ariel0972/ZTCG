@@ -33,6 +33,8 @@ export interface Instance extends Card {
   fireDamageBonus?: number;
   passiveCounters?: Record<string, number>;
   reflectedAttackRound?: number;
+  dodgedRound?: number;
+  abilityRounds?: Record<string, number>;
   killedBy?: { ownerId: string; cardId: string };
 }
 export interface Slot {
@@ -53,6 +55,8 @@ export const troopPositions = (slots: Slot[]): Slot[] =>
     s.rider ? [s, { ...s, card: s.rider, rider: null, structure: null }] : [s],
   );
 export interface Player {
+  revealHandRound?: number;
+  piranhaBleedingBonus?: number;
   castCards?: string[];
   lastTroopAttacker?: { cardId: string; turn: number };
   roundSpells?: string[];
@@ -86,6 +90,16 @@ export interface Player {
   };
 }
 export interface State {
+  pendingImpact?: {
+    base: State;
+    operation:
+      | { user: string; command: unknown }
+      | { automatic: "timeout" | "spell" | "attack"; reflect?: boolean };
+    decisions: Record<string, boolean>;
+    randoms: number[];
+    request: { key: string; ownerId: string; cardId: string; source: string };
+  };
+  pendingHandChoice?: { ownerId: string; opponentId: string; source: string };
   pendingAttack?: {
     attackerOwnerId: string;
     attackerId: string;

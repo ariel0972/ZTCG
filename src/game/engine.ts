@@ -44,12 +44,253 @@ import {
   reactionDescriptions,
 } from "./reactions";
 export type { Status } from "./status";
+type Resolution = NonNullable<State["pendingImpact"]>;
+class ImpactChoice extends Error {
+  constructor(
+    readonly request: Resolution["request"],
+    readonly preview: State,
+  ) {
+    super("Resposta de desvio pendente.");
+  }
+}
 export class Game {
   public state: State;
   private deferMageDefeat = false;
   private processed = new Map<string, number>();
   private passiveDepth = 0;
   private passiveSteps = 0;
+  private resolution?: {
+    decisions: Record<string, boolean>;
+    randoms: number[];
+    randomIndex: number;
+    impactIndex: number;
+  };
+  private impact?: {
+    key: number;
+    kind: "attack" | "spell" | "ability";
+    name: string;
+    blocked: Map<string, boolean>;
+  };
+  private random() {
+    const r = this.resolution;
+    if (!r) return this.rng();
+    const index = r.randomIndex++;
+    return r.randoms[index] ?? (r.randoms[index] = this.rng());
+  }
+  private inImpact<T>(
+    kind: "attack" | "spell" | "ability",
+    name: string,
+    operation: () => T,
+  ): T {
+    const previous = this.impact;
+    this.impact = {
+      key: this.resolution ? this.resolution.impactIndex++ : 0,
+      kind,
+      name,
+      blocked: new Map(),
+    };
+    try {
+      return operation();
+    } finally {
+      this.impact = previous;
+    }
+  }
+  private impactAllowed(id: string, banishment = false): boolean {
+    const impact = this.impact;
+    if (!impact) return true;
+    const target = this.findCard(id) ?? this.targetSlot(id)?.card;
+    if (!target || target.hpAtual <= 0) return true;
+    const cached = impact.blocked.get(target.id);
+    // Banishment bypasses the spell shield, but never a chosen dodge.
+    if (cached !== undefined && !banishment) return !cached;
+    const key = `${impact.key}:${target.id}`;
+    const dodge = target.habilidadesPassivas
+      .map(normalizePassive)
+      .some(
+        (p) =>
+          p.gatilho === "onTargeted" &&
+          p.efeitos.some((e) => e.id === "dodgeImpact") &&
+          passiveMatches(
+            p,
+            target,
+            { ownerId: target.ownerId, cardId: target.id, card: target },
+            this.state.slots,
+          ),
+      );
+    const decision = this.resolution?.decisions[key];
+    if (dodge && target.dodgedRound !== this.state.round && this.resolution) {
+      if (decision === undefined)
+        throw new ImpactChoice(
+          {
+            key,
+            ownerId: target.ownerId,
+            cardId: target.id,
+            source: impact.name,
+          },
+          structuredClone(this.state),
+        );
+      if (decision) {
+        target.dodgedRound = this.state.round;
+        impact.blocked.set(target.id, true);
+        this.event(
+          "block",
+          target,
+          `${target.nome} desviou de ${impact.name}, anulando dano e efeitos do golpe.`,
+        );
+        return false;
+      }
+    }
+    if (decision === true) return false;
+    if (impact.kind === "spell" && !banishment) {
+      const shield = target.statuses.find(
+        (s) =>
+          s.nome === "EscudoProtecao" &&
+          s.turnosRestantes > 0 &&
+          (s.valor ?? 0) > 0,
+      );
+      if (shield) {
+        shield.valor!--;
+        if (!shield.valor)
+          target.statuses = target.statuses.filter((s) => s !== shield);
+        impact.blocked.set(target.id, true);
+        this.event(
+          "block",
+          target,
+          `${impact.name} foi bloqueado por ${shield.origin ?? "Escudo de Proteção"} em ${target.nome}.`,
+        );
+        return false;
+      }
+    }
+    if (!banishment) impact.blocked.set(target.id, false);
+    return true;
+  }
+  private runResolution(
+    operation: Resolution["operation"],
+    resume?: Resolution,
+    version = this.state.version,
+  ) {
+    if (this.resolution) return this.performResolution(operation);
+    const base = structuredClone(resume?.base ?? this.state);
+    this.resolution = {
+      decisions: { ...resume?.decisions },
+      randoms: [...(resume?.randoms ?? [])],
+      randomIndex: 0,
+      impactIndex: 0,
+    };
+    this.state = structuredClone(base);
+    for (const p of this.state.players) {
+      const mage = this.state.slots.find(
+        (s) => s.kind === "Mago" && s.ownerId === p.id,
+      )?.card;
+      if (mage) p.mage = mage;
+    }
+    try {
+      const result = this.performResolution(operation);
+      this.state.version = version + 1;
+      return result ?? { duplicate: false, version: this.state.version };
+    } catch (error) {
+      if (!(error instanceof ImpactChoice)) {
+        this.state = base;
+        throw error;
+      }
+      this.state = error.preview;
+      this.state.pendingImpact = {
+        base,
+        operation,
+        decisions: this.resolution.decisions,
+        randoms: this.resolution.randoms,
+        request: error.request,
+      };
+      this.state.version = version + 1;
+      return { duplicate: false, version: this.state.version };
+    } finally {
+      this.resolution = undefined;
+      this.impact = undefined;
+      this.deferMageDefeat = false;
+    }
+  }
+  private performResolution(operation: Resolution["operation"]) {
+    if ("user" in operation)
+      return this.executeOnce(operation.user, operation.command);
+    if (operation.automatic === "timeout") return this.timeoutOnce();
+    if (operation.automatic === "attack")
+      return this.resolvePendingAttackOnce(operation.reflect);
+    return this.resolvePendingSpellOnce();
+  }
+  responseKey() {
+    return this.state.pendingImpact
+      ? `dodge:${this.state.pendingImpact.request.key}`
+      : this.state.pendingHandChoice
+        ? `hand:${this.state.pendingHandChoice.ownerId}`
+        : this.state.pendingAttack
+          ? `attack:${this.state.pendingAttack.attackerId}`
+          : this.state.pendingSpell
+            ? `spell:${this.state.pendingSpell.card.id}`
+            : "";
+  }
+  resolvePendingChoice() {
+    if (this.state.pendingImpact)
+      this.respondDodge(this.state.pendingImpact.request.ownerId, false);
+    else if (this.state.pendingHandChoice) {
+      delete this.state.pendingHandChoice;
+      this.log(
+        "Olho da Verdade: tempo de escolha esgotado, nenhuma carta transferida.",
+      );
+      this.state.version++;
+    }
+  }
+  private respondDodge(user: string, dodge: boolean) {
+    const pending = this.state.pendingImpact;
+    if (!pending || pending.request.ownerId !== user)
+      this.fail("Não há desvio disponível para você.");
+    const current = this.state;
+    const resume = {
+      ...pending,
+      decisions: { ...pending.decisions, [pending.request.key]: dodge },
+    };
+    // Original receipts remain idempotent; only this persisted operation may be replayed.
+    const operation = pending.operation;
+    const key =
+      "user" in operation
+        ? `${operation.user}:${(operation.command as Command).actionId}`
+        : undefined;
+    const receipt = key ? this.processed.get(key) : undefined;
+    if (key) this.processed.delete(key);
+    try {
+      this.runResolution(operation, resume, current.version);
+    } catch (error) {
+      this.state = current;
+      throw error;
+    } finally {
+      if (key && receipt !== undefined) this.processed.set(key, receipt);
+    }
+  }
+  execute(user: string, raw: unknown) {
+    const cmd = commandSchema.parse(raw),
+      key = `${user}:${cmd.actionId}`;
+    this.player(user);
+    if (this.processed.has(key))
+      return { duplicate: true, version: this.processed.get(key)! };
+    if (cmd.version !== this.state.version)
+      throw new AppError(409, "Estado mudou. Tente novamente.", "STALE_STATE");
+    if (this.state.status !== "ACTIVE") this.fail("Esta partida já terminou.");
+    if (this.state.pendingImpact || this.state.pendingHandChoice) {
+      if (cmd.type === "surrender")
+        this.finish(this.opponent(user).id, "Desistência.");
+      else if (cmd.type === "respondDodge") this.respondDodge(user, cmd.dodge);
+      else if (cmd.type === "chooseHand") this.chooseHand(user, cmd.cardId);
+      else this.fail("Aguarde a resposta à ação pendente.");
+      if (cmd.type !== "respondDodge") this.state.version++;
+    } else {
+      if (["respondDodge", "chooseHand"].includes(cmd.type))
+        this.fail("Não há resposta disponível.");
+      this.runResolution({ user, command: cmd });
+    }
+    this.processed.set(key, this.state.version);
+    if (this.processed.size > 1000)
+      this.processed.delete(this.processed.keys().next().value!);
+    return { duplicate: false, version: this.state.version };
+  }
   exportState() {
     return structuredClone({
       format: 1 as const,
@@ -182,7 +423,7 @@ export class Game {
       turn: 1,
       round: 1,
       phase: "PREPARATION",
-      current: players[this.rng() < 0.5 ? 0 : 1].id,
+      current: players[this.random() < 0.5 ? 0 : 1].id,
       status: "ACTIVE",
       winner: null,
       reason: null,
@@ -198,7 +439,7 @@ export class Game {
   }
   private shuffle<T>(items: T[]): T[] {
     for (let i = items.length - 1; i > 0; i--) {
-      const j = Math.floor(this.rng() * (i + 1));
+      const j = Math.floor(this.random() * (i + 1));
       [items[i], items[j]] = [items[j], items[i]];
     }
     return items;
@@ -267,6 +508,8 @@ export class Game {
     this.state.status = "FINISHED";
     delete this.state.pendingSpell;
     delete this.state.pendingAttack;
+    delete this.state.pendingImpact;
+    delete this.state.pendingHandChoice;
     this.state.winner = winner;
     this.state.reason = reason;
     this.log(reason);
@@ -277,6 +520,9 @@ export class Game {
     this.state.version++;
   }
   public timeout() {
+    return this.runResolution({ automatic: "timeout" });
+  }
+  private timeoutOnce() {
     if (this.state.status !== "ACTIVE") return;
     const record = (p: Player) => {
       if (p.turnActions === 0) {
@@ -427,7 +673,9 @@ export class Game {
       `${p.nome} ${accept ? "comprou" : "recusou"} ${count} carta(s) extra(s) por reembaralhamento.`,
     );
   }
-  private weapons(slot: Slot) {
+  private weapons(slot: Slot, beneficiary?: Instance) {
+    if (beneficiary && slot.rider && slot.card?.id === beneficiary.id)
+      return [];
     const position =
       slot.kind === "Mago"
         ? ["back-left", "back-right"]
@@ -508,7 +756,7 @@ export class Game {
           ? slot.structure!
           : ((id === slot.rider?.id ? slot.rider : slot.card) ??
             this.player(slot.ownerId).mage);
-    if (target.hpAtual <= 0) return;
+    if (target.hpAtual <= 0 || !this.impactAllowed(target.id)) return;
     const origin =
       cause ??
       (attacker
@@ -588,6 +836,35 @@ export class Game {
         ? Math.max(0, remaining - hpBefore)
         : 0;
     target.hpAtual -= remaining;
+    if (attacker?.tipo === "Tropa" && attacker.hpAtual > 0) {
+      const position = this.targetSlot(attacker.id);
+      const lifesteal =
+        position &&
+        this.weapons(position, attacker)
+          .flatMap((w) =>
+            w.habilidadesPassivas
+              .map(normalizePassive)
+              .filter(
+                (p) =>
+                  p.gatilho === "continuous" &&
+                  passiveMatches(
+                    p,
+                    w,
+                    { ownerId: w.ownerId, cardId: w.id, card: w },
+                    this.state.slots,
+                  ),
+              )
+              .flatMap((p) => p.efeitos),
+          )
+          .find((e) => e.id === "attackLifesteal");
+      if (lifesteal?.id === "attackLifesteal")
+        this.heal(
+          attacker,
+          Math.min(Math.max(0, hpBefore), remaining),
+          lifesteal.excedente ?? 0,
+          attacker,
+        );
+    }
     this.reportDamage(
       target,
       remaining,
@@ -681,12 +958,12 @@ export class Game {
       this.fail("Este alvo não possui vida para curar.");
     const slot = this.targetSlot(card.id);
     const bonus = slot
-      ? this.weapons(slot).reduce((n, w) => n + (w.bonusHp ?? 0), 0)
+      ? this.weapons(slot, card).reduce((n, w) => n + (w.bonusHp ?? 0), 0)
       : 0;
     const previous = card.hpAtual;
     card.hpAtual = Math.max(
       card.hpAtual,
-      Math.min((card.hp ?? 0) + (excess ?? bonus), card.hpAtual + value),
+      Math.min((card.hp ?? 0) + bonus + (excess ?? 0), card.hpAtual + value),
     );
     if (card.hpAtual > 0) delete card.killedBy;
     const healed = card.hpAtual > previous;
@@ -783,8 +1060,14 @@ export class Game {
         )) {
           const killedBy = dead.killedBy;
           this.event("death", dead);
-          if (slot.rider?.id === dead.id) slot.rider = null;
-          else {
+          if (slot.rider?.id === dead.id) {
+            slot.rider = null;
+            if (slot.card && slot.card.hpAtual > 0)
+              slot.card.hpAtual += this.weapons(slot).reduce(
+                (n, w) => n + (w.bonusHp ?? 0),
+                0,
+              );
+          } else {
             slot.card = slot.rider ?? null;
             slot.rider = null;
           }
@@ -931,7 +1214,7 @@ export class Game {
         (k) => k !== "Esconder",
       );
       source.statuses = source.statuses.filter((s) => s.nome !== "Esconder");
-      if (hasStatus(source.statuses, ["Cego"]) && this.rng() < 0.5) {
+      if (hasStatus(source.statuses, ["Cego"]) && this.random() < 0.5) {
         this.log(`${source.nome} errou a retaliação por cegueira.`);
         return true;
       }
@@ -1177,10 +1460,10 @@ export class Game {
   private relocateTroops(from: Slot, to: Slot) {
     const before = this.weapons(from).reduce((n, w) => n + (w.bonusHp ?? 0), 0);
     const after = this.weapons(to).reduce((n, w) => n + (w.bonusHp ?? 0), 0);
-    if (from.card) from.card.hpAtual += after - before;
-    if (from.rider) from.rider.hpAtual += after - before;
-    if (to.card) to.card.hpAtual += before - after;
-    if (to.rider) to.rider.hpAtual += before - after;
+    const leaving = from.rider ?? from.card,
+      arriving = to.rider ?? to.card;
+    if (leaving) leaving.hpAtual += after - before;
+    if (arriving) arriving.hpAtual += before - after;
     [from.card, to.card] = [to.card, from.card];
     [from.structure, to.structure] = [to.structure, from.structure];
     [from.rider, to.rider] = [to.rider, from.rider];
@@ -1199,6 +1482,49 @@ export class Game {
     card.attacked = true;
     this.player(user).counters.attacks++;
     this.player(user).combatStarted = true;
+  }
+  private chooseHand(user: string, cardId?: string) {
+    const choice = this.state.pendingHandChoice;
+    if (!choice || choice.ownerId !== user)
+      this.fail("Não há escolha de carta disponível para você.");
+    if (cardId) {
+      const enemy = this.player(choice.opponentId),
+        index = enemy.hand.findIndex((c) => c.id === cardId);
+      if (index < 0) this.fail("Escolha uma carta da mão adversária.");
+      const stolen = enemy.hand.splice(index, 1)[0];
+      stolen.ownerId = user;
+      this.player(user).hand.push(stolen);
+      this.log(
+        `${this.player(user).nome} transferiu ${stolen.nome} para sua mão com ${choice.source}.`,
+      );
+    }
+    delete this.state.pendingHandChoice;
+  }
+  private discardFromHand(player: Player, index: number) {
+    const card = player.hand.splice(index, 1)[0];
+    player.graveyard.push(card);
+    for (const passive of card.habilidadesPassivas.map(normalizePassive)) {
+      if (
+        passive.gatilho !== "continuous" ||
+        !passiveMatches(
+          passive,
+          card,
+          { ownerId: player.id, cardId: card.id, card },
+          this.state.slots,
+        )
+      )
+        continue;
+      for (const effect of passive.efeitos)
+        if (effect.id === "discardMana") {
+          player.mana = Math.min(20, player.mana + effect.valor);
+          this.event(
+            "passive",
+            card,
+            `Recuperou ${effect.valor} mana ao ser descartada da mão.`,
+          );
+        }
+    }
+    return card;
   }
   private mount(user: string, fromId: string, toId: string) {
     const from = this.ownSlot(fromId, user),
@@ -1224,6 +1550,7 @@ export class Game {
       ),
       newBonus = this.weapons(to).reduce((n, w) => n + (w.bonusHp ?? 0), 0);
     rider.hpAtual += newBonus - oldBonus;
+    if (to.card) to.card.hpAtual -= newBonus;
     from.card = null;
     to.rider = rider;
     if (from.structure) {
@@ -1261,6 +1588,7 @@ export class Game {
       after = this.weapons(to).reduce((n, w) => n + (w.bonusHp ?? 0), 0);
     rider.hpAtual += after - before;
     from.rider = null;
+    if (from.card) from.card.hpAtual += before;
     to.card = rider;
     this.spendMountAttack(user, rider);
     this.log(
@@ -1327,13 +1655,15 @@ export class Game {
           for (const id of ids) {
             const card = this.findCard(id) ?? this.targetSlot(id)?.card;
             if (!card) this.fail("Não é possível curar este alvo.");
-            this.heal(card, effect.valor!, undefined, source ?? player.mage);
+            if (this.impactAllowed(card.id))
+              this.heal(card, effect.valor!, undefined, source ?? player.mage);
           }
           break;
         case "status":
           for (const id of ids) {
             const card = this.findCard(id) ?? this.targetSlot(id)?.card;
             if (!card) this.fail("Status exige uma carta.");
+            if (!this.impactAllowed(card.id)) continue;
             const applied = applyStatus(
               card.statuses,
               effect.status!,
@@ -1416,14 +1746,21 @@ export class Game {
     const slot = this.targetSlot(id);
     let card = this.findCard(id) ?? slot?.card ?? null;
     if (slot && card) {
+      if (!this.impactAllowed(card.id, kind === "banish")) return;
       if (card.tipo === "Mago")
         this.fail("Remoção definitiva não pode remover o mago.");
       if (slot.structure?.id === card.id) slot.structure = null;
-      else if (slot.rider?.id === card.id) slot.rider = null;
-      else {
+      else if (slot.rider?.id === card.id) {
+        slot.rider = null;
+        if (slot.card && slot.card.hpAtual > 0)
+          slot.card.hpAtual += this.weapons(slot).reduce(
+            (n, w) => n + (w.bonusHp ?? 0),
+            0,
+          );
+      } else {
         if (card.tipo === "Armamento")
           for (const beneficiary of this.weaponBeneficiaries(slot))
-            for (const troop of [beneficiary.card, beneficiary.rider])
+            for (const troop of [beneficiary.rider ?? beneficiary.card])
               if (troop) troop.hpAtual -= card.bonusHp ?? 0;
         if (card.tipo === "Tropa" && !slot.rider)
           for (const weapon of this.weapons(slot)) {
@@ -1457,6 +1794,7 @@ export class Game {
         id === slot.structure?.id
           ? slot.structure
           : (slot.structure ?? this.findCard(id) ?? slot.card);
+      if (card && !this.impactAllowed(card.id)) continue;
       const existing =
         slot.terrain?.nome === "Lama"
           ? "Lama"
@@ -1683,10 +2021,15 @@ export class Game {
       player.hand.splice(index, 1);
       this.event("summon", card);
       if (card.tipo === "Estrutura") slot.structure = card;
-      else if (card.tipo === "Tropa" && slot.card) slot.rider = card;
-      else slot.card = card;
+      else if (card.tipo === "Tropa" && slot.card) {
+        slot.card.hpAtual -= this.weapons(slot).reduce(
+          (n, w) => n + (w.bonusHp ?? 0),
+          0,
+        );
+        slot.rider = card;
+      } else slot.card = card;
       if (card.tipo === "Tropa") {
-        card.hpAtual += this.weapons(slot).reduce(
+        card.hpAtual += this.weapons(slot, card).reduce(
           (n, w) => n + (w.bonusHp ?? 0),
           0,
         );
@@ -1703,7 +2046,7 @@ export class Game {
       }
       if (card.tipo === "Armamento") {
         for (const beneficiary of this.weaponBeneficiaries(slot))
-          for (const troop of [beneficiary.card, beneficiary.rider])
+          for (const troop of [beneficiary.rider ?? beneficiary.card])
             if (troop) troop.hpAtual += card.bonusHp ?? 0;
         this.trigger("onEquip", { ownerId: user, cardId: card.id });
       }
@@ -1723,6 +2066,16 @@ export class Game {
     );
   }
   private resolveSpell(
+    user: string,
+    card: Instance,
+    ids: string[],
+    bonus: number,
+  ) {
+    return this.inImpact("spell", card.nome, () =>
+      this.resolveSpellOnce(user, card, ids, bonus),
+    );
+  }
+  private resolveSpellOnce(
     user: string,
     card: Instance,
     ids: string[],
@@ -1875,6 +2228,8 @@ export class Game {
         "meteors",
         "zarcosTear",
         "strongFlow",
+        "revealStealHand",
+        "bloodScent",
       ].includes(e.id),
     );
     if (!effect) return false;
@@ -1933,7 +2288,7 @@ export class Game {
       for (const id of targets) {
         const s = this.targetSlot(id),
           target = this.findCard(id) ?? s?.card;
-        if (target) {
+        if (target && this.impactAllowed(target.id)) {
           const previous = target.statuses.find(
             (s) => canonicalStatus(s.nome) === canonicalStatus(name),
           );
@@ -1972,6 +2327,31 @@ export class Game {
       }
     };
     switch (effect.id) {
+      case "revealStealHand":
+        player.revealHandRound = this.state.round;
+        if (enemy.hand.length)
+          this.state.pendingHandChoice = {
+            ownerId: user,
+            opponentId: enemy.id,
+            source: card.nome,
+          };
+        else this.log(`${card.nome}: a mão adversária está vazia.`);
+        break;
+      case "bloodScent":
+        for (const id of this.enemyTargets(user)) {
+          const target = this.findCard(id)!;
+          const bleeding = target.statuses.find(
+            (s) =>
+              canonicalStatus(s.nome) === "Sangrando" && s.turnosRestantes > 0,
+          );
+          if (bleeding && this.impactAllowed(id))
+            bleeding.valor = (bleeding.valor ?? 1) + (effect.valor ?? 2);
+        }
+        player.piranhaBleedingBonus = Math.max(
+          player.piranhaBleedingBonus ?? 0,
+          1,
+        );
+        break;
       case "stoneVolley":
         let nextColumn = 0;
         for (let i = 0; i < 5 && this.state.status === "ACTIVE"; i++) {
@@ -1982,7 +2362,9 @@ export class Game {
             troops.find((id) => this.targetSlot(id)!.column >= nextColumn) ??
             troops[0];
           if (target) nextColumn = this.targetSlot(target)!.column + 1;
-          hit([target ?? enemy.mage.id], 1);
+          this.inImpact("spell", card.nome, () =>
+            hit([target ?? enemy.mage.id], 1),
+          );
           this.resolve();
         }
         break;
@@ -1995,14 +2377,20 @@ export class Game {
         )
           this.fail("Furacão exige uma tropa inimiga.");
         if (card.elemento) this.react(user, ids, card.elemento);
-        if (slot.structure) {
+        if (slot.structure && this.impactAllowed(slot.structure.id)) {
           slot.structure.hpAtual = 0;
           this.resolve();
         }
         const troop = this.findCard(ids[0]) ?? slot.card;
-        if (troop) {
-          if (slot.rider?.id === troop.id) slot.rider = null;
-          else {
+        if (troop && this.impactAllowed(troop.id)) {
+          if (slot.rider?.id === troop.id) {
+            slot.rider = null;
+            if (slot.card && slot.card.hpAtual > 0)
+              slot.card.hpAtual += this.weapons(slot).reduce(
+                (n, w) => n + (w.bonusHp ?? 0),
+                0,
+              );
+          } else {
             slot.card = slot.rider ?? null;
             slot.rider = null;
           }
@@ -2151,7 +2539,6 @@ export class Game {
           spell.kind === "tornado"
             ? [this.opponent(spell.ownerId).mage.id]
             : this.enemyTargets(spell.ownerId, true);
-        if (spell.element) this.react(spell.ownerId, targets, spell.element);
         const name =
           spell.card?.nome ??
           (spell.kind === "tornado"
@@ -2159,17 +2546,20 @@ export class Game {
             : spell.kind === "arrowRain"
               ? "Chuva de Flechas"
               : "Furacão de Areia");
-        for (const id of targets)
-          this.damage(
-            id,
-            spell.damage,
-            undefined,
-            false,
-            spell.element,
-            undefined,
-            `${name} (${this.player(spell.ownerId).nome}, fim da rodada)`,
-            spell.ownerId,
-          );
+        this.inImpact("spell", name, () => {
+          if (spell.element) this.react(spell.ownerId, targets, spell.element);
+          for (const id of targets)
+            this.damage(
+              id,
+              spell.damage,
+              undefined,
+              false,
+              spell.element,
+              undefined,
+              `${name} (${this.player(spell.ownerId).nome}, fim da rodada)`,
+              spell.ownerId,
+            );
+        });
         spell.rounds--;
         this.log(`${name} causou dano no fim da rodada.`);
         this.resolve();
@@ -2183,6 +2573,10 @@ export class Game {
     this.resolve();
   }
   resolvePendingSpell() {
+    if (this.state.pendingSpell)
+      return this.runResolution({ automatic: "spell" });
+  }
+  private resolvePendingSpellOnce() {
     const pending = this.state.pendingSpell;
     if (!pending || this.state.status !== "ACTIVE") return;
     delete this.state.pendingSpell;
@@ -2422,7 +2816,7 @@ export class Game {
       (s) => !s.requerStatus || this.has(card, s.requerStatus),
     );
     if (this.has(card, "Cegueira") || this.has(card, "Cego")) {
-      if (this.rng() < 0.5) {
+      if (this.random() < 0.5) {
         if (target.card)
           this.trigger("onAttacked", {
             ownerId: target.card.ownerId,
@@ -2481,9 +2875,17 @@ export class Game {
         .reduce((sum, s) => sum + (s.valor ?? 0), 0) +
       adjacentAttackBonus(card, this.state.slots) +
       targetAttackBonus(card, defender, this.state.slots) +
+      (card.numeroCatalogo === "041" &&
+      defender.tipo === "Tropa" &&
+      this.has(defender, "Sangrando")
+        ? (this.player(card.ownerId).piranhaBleedingBonus ?? 0)
+        : 0) +
       (card.tipo === "Estrutura"
         ? 0
-        : this.weapons(slot).reduce((sum, c) => sum + (c.bonusAtaque ?? 0), 0))
+        : this.weapons(slot, card).reduce(
+            (sum, c) => sum + (c.bonusAtaque ?? 0),
+            0,
+          ))
     );
   }
   private basicAttackDefender(target: Slot): Instance {
@@ -2524,6 +2926,27 @@ export class Game {
     );
   }
   private completeAttack(
+    card: Instance,
+    target: Slot,
+    damage: number,
+    element?: Card["elemento"],
+    reflect = false,
+    reactionCard?: Instance,
+    interception?: { cardId: string; valor: number; origin: string },
+  ) {
+    return this.inImpact("attack", `Ataque de ${card.nome}`, () =>
+      this.completeAttackOnce(
+        card,
+        target,
+        damage,
+        element,
+        reflect,
+        reactionCard,
+        interception,
+      ),
+    );
+  }
+  private completeAttackOnce(
     card: Instance,
     target: Slot,
     damage: number,
@@ -2582,6 +3005,10 @@ export class Game {
     this.log(`${card.nome} atacou a coluna ${target.column + 1}.`);
   }
   resolvePendingAttack(reflect = false) {
+    if (this.state.pendingAttack)
+      return this.runResolution({ automatic: "attack", reflect });
+  }
+  private resolvePendingAttackOnce(reflect = false) {
     const pending = this.state.pendingAttack;
     if (!pending || this.state.status !== "ACTIVE") return;
     const card = this.findCard(pending.attackerId);
@@ -2621,6 +3048,14 @@ export class Game {
     this.resolvePendingAttack(reflect);
   }
   private ability(user: string, cmd: Extract<Command, { type: "ability" }>) {
+    return this.inImpact("ability", `Habilidade ${cmd.abilityId}`, () =>
+      this.abilityOnce(user, cmd),
+    );
+  }
+  private abilityOnce(
+    user: string,
+    cmd: Extract<Command, { type: "ability" }>,
+  ) {
     const p = this.player(user),
       slot = this.ownSlot(cmd.slotId, user),
       card =
@@ -2637,6 +3072,14 @@ export class Game {
       );
     const ability = card.habilidadesAtivas.find((h) => h.id === cmd.abilityId);
     if (!ability) this.fail("Esta carta não possui a habilidade.");
+    if (
+      ability.esperaRodadas &&
+      card.abilityRounds?.[ability.id] !== undefined &&
+      this.state.round - card.abilityRounds[ability.id] <= ability.esperaRodadas
+    )
+      this.fail(
+        "Esta habilidade ainda aguarda uma rodada completa entre usos.",
+      );
     if (this.openingBlocked())
       this.fail(
         "Habilidades bloqueadas na preparação e no primeiro turno de cada jogador.",
@@ -2689,6 +3132,25 @@ export class Game {
           this.fail("O alvo não corresponde ao filtro desta habilidade.");
       }
       this.spend(p, ability.custoMana);
+      if (ability.efeitos.some((e) => e.id === "field")) {
+        const fieldOwner = ["CampoInimigo", "TodasTropasInimigas"].includes(
+          ability.alvo ?? "",
+        )
+          ? this.opponent(user).id
+          : user;
+        const field = this.state.slots.filter(
+          (s) => s.ownerId === fieldOwner && s.kind === "Tropa",
+        );
+        for (const effect of ability.efeitos.filter((e) => e.id === "field"))
+          this.react(
+            user,
+            field.map((s) => s.id),
+            effect.elemento ?? card.elemento ?? "Neutro",
+          );
+        targets = field.flatMap((s) =>
+          [s.card, s.rider].filter((c): c is Instance => !!c).map((c) => c.id),
+        );
+      }
       this.effects(
         user,
         ability.efeitos,
@@ -2753,8 +3215,7 @@ export class Game {
           );
           if (i < 0) this.fail("Escolha um feitiço da sua mão.");
           this.spend(p, ability.custoMana);
-          const discarded = p.hand.splice(i, 1)[0];
-          p.graveyard.push(discarded);
+          const discarded = this.discardFromHand(p, i);
           p.mana = Math.min(20, p.mana + 3);
           this.log(
             `${card.nome} sacrificou ${discarded.nome} da mão e recuperou 3 mana.`,
@@ -2841,6 +3302,7 @@ export class Game {
       }
     }
     card.usedAbility = true;
+    (card.abilityRounds ??= {})[ability.id] = this.state.round;
     this.event("ability", card, ability.nome);
     this.log(`${card.nome} usou ${ability.nome}.`);
   }
@@ -2851,10 +3313,19 @@ export class Game {
   ) {
     return Object.fromEntries(
       (card?.habilidadesAtivas ?? [])
-        .filter((h) => h.efeitos?.some((e) => e.id === "spendAttack"))
+        .filter(
+          (h) =>
+            h.esperaRodadas || h.efeitos?.some((e) => e.id === "spendAttack"),
+        )
         .map((h) => [
           h.id,
-          this.attackSourceError(user, slot, card ?? null) ?? "",
+          h.esperaRodadas &&
+          card?.abilityRounds?.[h.id] !== undefined &&
+          this.state.round - card.abilityRounds[h.id] <= h.esperaRodadas
+            ? "Aguarda uma rodada completa entre usos."
+            : h.efeitos?.some((e) => e.id === "spendAttack")
+              ? this.attackSourceError(user, slot, card ?? null)
+              : "",
         ]),
     );
   }
@@ -3003,7 +3474,7 @@ export class Game {
     if (roundEnded) this.state.round++;
     this.beginTurn();
   }
-  execute(user: string, raw: unknown) {
+  private executeOnce(user: string, raw: unknown) {
     this.player(user);
     const cmd = commandSchema.parse(raw),
       key = `${user}:${cmd.actionId}`;
@@ -3156,6 +3627,8 @@ export class Game {
       events: this.state.events ?? [],
       reactions: reactionDescriptions,
       ongoingSpells: this.state.ongoingSpells,
+      pendingImpact: this.state.pendingImpact?.request,
+      pendingHandChoice: this.state.pendingHandChoice,
       pendingSpell: this.state.pendingSpell,
       pendingAttack: this.state.pendingAttack,
       canRespond:
@@ -3250,6 +3723,10 @@ export class Game {
         graveyard: p.graveyard,
         banished: p.banished,
         forgotten: p.forgotten,
+        ...(p.id !== user &&
+        this.player(user).revealHandRound === this.state.round
+          ? { revealedHand: p.hand }
+          : {}),
         ...(p.id === user
           ? {
               hand: p.hand.map((c) => {

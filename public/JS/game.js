@@ -30,6 +30,8 @@ import {
 import { createMatchResult } from "./match-result.js";
 import { createCardBacks } from "./card-backs.js";
 import { createOngoingSpells } from "./ongoing-spells.js";
+import { createDeckSelector } from "./deck-selector.js";
+let deckSelector;
 const battleEvents = createBattleEvents(document.body, {
   getViewerId: () => user?.id,
 });
@@ -160,6 +162,8 @@ function myTurn() {
     !state?.paused &&
     !state?.pendingSpell &&
     !state?.pendingAttack &&
+    !state?.pendingImpact &&
+    !state?.pendingHandChoice &&
     state?.status === "ACTIVE" &&
     (state.phase === "PREPARATION"
       ? !myPlayer().preparation.ready
@@ -1175,7 +1179,64 @@ function hud(id, player) {
 function render() {
   document.body.classList.toggle("in-match", !!state && !!user);
   responsePanel.replaceChildren();
-  responsePanel.hidden = !state?.pendingSpell && !state?.pendingAttack;
+  responsePanel.hidden =
+    !state?.pendingSpell &&
+    !state?.pendingAttack &&
+    !state?.pendingImpact &&
+    !state?.pendingHandChoice;
+  if (state?.pendingImpact && user) {
+    selected = null;
+    targets = [];
+    const request = state.pendingImpact,
+      card = state.slots
+        .flatMap((s) => [s.card, s.rider, s.structure])
+        .find((c) => c?.id === request.cardId);
+    responsePanel.append(
+      node("h2", `${card?.nome || "Carta"}: desviar?`),
+      node(
+        "p",
+        `${request.source}. Anula o dano e os efeitos deste golpe. Uma vez por rodada, gratuito; resposta em 20 segundos e turno pausado.`,
+      ),
+    );
+    if (request.ownerId === user.id)
+      for (const [text, dodge] of [
+        ["Desviar do golpe", true],
+        ["Receber golpe", false],
+      ]) {
+        const button = node("button", text, dodge ? "primary" : "quiet");
+        button.disabled = pending || state.paused || !connected;
+        button.onclick = () => command({ type: "respondDodge", dodge });
+        responsePanel.append(button);
+      }
+    else responsePanel.append(node("p", "Aguardando a escolha do oponente."));
+  }
+  if (state?.pendingHandChoice && user) {
+    selected = null;
+    targets = [];
+    const choice = state.pendingHandChoice;
+    responsePanel.append(node("h2", `${choice.source}: escolha uma carta`));
+    if (choice.ownerId === user.id) {
+      responsePanel.append(
+        node(
+          "p",
+          "Transfira uma carta da mão adversária para sua mão. Resposta em 20 segundos; turno pausado.",
+        ),
+      );
+      const cards = node("div", "", "revealed-hand-cards");
+      for (const card of state.players.find((p) => p.id === choice.opponentId)
+        ?.revealedHand || []) {
+        const tile = cardTile(card, () =>
+          command({ type: "chooseHand", cardId: card.id }),
+        );
+        tile.disabled = pending || state.paused || !connected;
+        cards.append(tile);
+      }
+      responsePanel.append(cards);
+    } else
+      responsePanel.append(
+        node("p", "O oponente está escolhendo uma carta da sua mão."),
+      );
+  }
   if (state?.pendingAttack && user) {
     selected = null;
     targets = [];
@@ -1235,6 +1296,18 @@ function render() {
   const me = myPlayer(),
     enemy = state.players.find((p) => p.id !== user.id);
   ongoingSpells.update(state, user.id);
+  document.getElementById("reveal-opponent-hand")?.remove();
+  if (enemy.revealedHand) {
+    const reveal = node(
+      "button",
+      `Ver mão adversária · ${enemy.revealedHand.length} cartas`,
+      "quiet",
+    );
+    reveal.id = "reveal-opponent-hand";
+    reveal.onclick = () =>
+      zone("Mão adversária · revelada nesta rodada", enemy.revealedHand);
+    $("match-title").after(reveal);
+  }
   if (state.status === "FINISHED") {
     selected = null;
     targets = [];
@@ -1458,10 +1531,11 @@ function updateLobby() {
   $("join").disabled = !connected || queued || !ready;
   $("cancel").hidden = !queued;
   $("lobby-deck").disabled = queued;
+  deckSelector?.sync();
   $("lobby-validation").textContent = queued
     ? "Buscando outro duelista… Você pode cancelar a qualquer momento."
     : ready
-      ? "Deck pronto. A validação final será feita pelo servidor."
+      ? "Baralho selecionado. Pronto para procurar um oponente."
       : "Escolha um baralho com 40 cartas publicadas e um mago publicado.";
 }
 $("lobby-deck").onchange = updateLobby;
@@ -1487,7 +1561,10 @@ setInterval(() => {
     $("turn-clock").textContent = connected
       ? state.paused
         ? "Pausado · aguardando reconexão"
-        : state.pendingSpell || state.pendingAttack
+        : state.pendingSpell ||
+            state.pendingAttack ||
+            state.pendingImpact ||
+            state.pendingHandChoice
           ? `Resposta: ${Math.max(0, Math.ceil((state.responseDeadline - Date.now() - clockOffset) / 1000))}s · turno pausado`
           : `${Math.max(0, Math.ceil((state.deadline - Date.now() - clockOffset) / 1000))}s restantes`
       : "Reconectando…";
@@ -1504,16 +1581,17 @@ async function load() {
     const [data, cardData] = await Promise.all([api("/decks"), api("/cards")]);
     decks = data.decks;
     catalog = cardData.cards;
-    $("lobby-deck").replaceChildren(
-      ...decks.map((d) => {
-        const option = node("option", `${d.nome} · ${d.cartas.length}/40`);
-        option.value = d._id;
-        return option;
-      }),
-    );
     const requested = new URLSearchParams(location.search).get("deck");
-    if (decks.some((d) => d._id === requested))
-      $("lobby-deck").value = requested;
+    deckSelector = createDeckSelector($("lobby-deck"), {
+      userId: user.id,
+      catalog,
+    });
+    deckSelector.setDecks(decks, requested);
+    if (requested) {
+      const address = new URL(location.href);
+      address.searchParams.delete("deck");
+      history.replaceState(null, "", address);
+    }
     transport = gameTransport();
     transport.on("connect", () => {
       connected = true;

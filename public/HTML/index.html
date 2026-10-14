@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="/CSS/app.css" />
     <link rel="stylesheet" href="/CSS/battle.css" />
     <link rel="stylesheet" href="/CSS/battle-mobile.css" />
+    <link rel="stylesheet" href="/CSS/deck-selector.css" />
     <script type="module" src="/JS/game.js"></script>
   </head>
   <body class="match-page">
@@ -20,28 +21,43 @@
       <div id="account" class="account"></div>
     </header>
     <main class="page">
-      <section id="lobby" class="lobby surface">
-        <p class="eyebrow">PARTIDAS ONLINE</p>
-        <h1>Prepare seu baralho</h1>
-        <p class="muted">
-          Encontre outro duelista e jogue com o baralho salvo na sua conta.
-        </p>
-        <label>Baralho<select id="lobby-deck"></select></label>
-        <p id="lobby-validation" class="hint"></p>
-        <div class="toolbar">
-          <button id="join" class="primary">Procurar oponente</button
-          ><button id="cancel" hidden>Cancelar busca</button
-          ><a href="/">Editar baralhos</a>
+      <section id="lobby" class="lobby">
+        <div class="lobby-intro">
+          <p class="eyebrow">PARTIDAS ONLINE</p>
+          <h1>Seu próximo duelo começa aqui.</h1>
+          <p class="muted">
+            Escolha um baralho e encontre seu oponente. Sua última escolha fica
+            pronta para a próxima partida.
+          </p>
+          <a class="lobby-friends-link" href="/HTML/friends.html"
+            >Jogar com amigos ↗</a
+          >
         </div>
-        <p id="connection" role="status" class="muted">Conectando…</p>
-        <p class="hint">
-          Preparação simultânea com cinco cartas e 5 de mana inicial. A mana do
-          campo é recuperada após a preparação. Ataques, habilidades e feitiços
-          de dano ficam bloqueados também no primeiro turno de cada jogador.
-          Tempo de preparação e turno: 2 minutos. Três turnos consecutivos sem
-          ação causam derrota por inatividade. Em caso de desconexão, você tem
-          90 segundos para retornar.
-        </p>
+        <div class="lobby-setup surface">
+          <select
+            id="lobby-deck"
+            aria-label="Baralho para jogar"
+            hidden
+          ></select>
+          <p id="lobby-validation" class="hint"></p>
+          <div class="toolbar">
+            <button id="join" class="primary">Procurar oponente</button
+            ><button id="cancel" hidden>Cancelar busca</button
+            ><a href="/">Editar baralhos</a>
+          </div>
+          <p id="connection" role="status" class="muted">Conectando…</p>
+          <details class="lobby-rules">
+            <summary>Como funciona a partida?</summary>
+            <p class="hint">
+              Preparação simultânea com cinco cartas e 5 de mana inicial. A mana
+              do campo é recuperada após a preparação. Ataques, habilidades e
+              feitiços de dano ficam bloqueados também no primeiro turno de cada
+              jogador. Tempo de preparação e turno: 2 minutos. Três turnos
+              consecutivos sem ação causam derrota por inatividade. Em caso de
+              desconexão, você tem 90 segundos para retornar.
+            </p>
+          </details>
+        </div>
       </section>
       <section id="match" hidden>
         <div class="match-top">

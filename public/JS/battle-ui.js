@@ -44,7 +44,7 @@ export function attackValue(card, slot, slots = []) {
   return (
     (card.ataque || 0) +
     (card.bonusAtaquePassivo || 0) +
-    slots
+    (slot?.rider && slot.card?.id === card.id ? [] : slots)
       .filter(
         (s) =>
           s.ownerId === slot?.ownerId &&

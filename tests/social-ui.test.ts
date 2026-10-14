@@ -115,6 +115,8 @@ for (const outage of ["none", "decks", "invites"])
       /^import[\s\S]*?from ".*?";\s*/gm,
       "",
     );
+    const selectorModule = "../public/JS/deck-selector.js";
+    const { createDeckSelector } = await import(selectorModule);
     new Function(
       "document",
       "window",
@@ -130,6 +132,7 @@ for (const outage of ["none", "decks", "invites"])
       "friendshipButtons",
       "createSocialTabs",
       "setInterval",
+      "createDeckSelector",
       source,
     )(
       doc,
@@ -146,6 +149,7 @@ for (const outage of ["none", "decks", "invites"])
       helpers.friendshipButtons,
       helpers.createSocialTabs,
       () => 0,
+      createDeckSelector,
     );
     await tick();
     await tick();

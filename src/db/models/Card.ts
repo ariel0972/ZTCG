@@ -48,6 +48,7 @@ const active = new Schema(
     nome: { type: String, required: true },
     descricao: { type: String, maxlength: 2000 },
     custoMana: { ...n, required: true },
+    esperaRodadas: { type: Number, min: 0, max: 100 },
     alvo: { type: String, enum: targets },
     alvoAutomatico: { type: String, enum: ["Proprio", "Frontal"] },
     maxAlvos: { type: Number, min: 1, max: 20 },

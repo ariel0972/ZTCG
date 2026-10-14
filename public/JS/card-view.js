@@ -95,7 +95,7 @@ export function passiveDescription(h) {
         onSacrifice: "Ao sacrificar",
         onStatusApplied: "Ao aplicar status",
         continuous: "Enquanto a condição for válida",
-        onTargeted: "Ao ser alvo de ataque básico",
+        onTargeted: "Ao ser alvo",
       }[h.gatilho] || "Passiva";
     const scope = {
       proprio: "da própria carta",
@@ -111,6 +111,10 @@ export function passiveDescription(h) {
             heal: `cura ${e.valor} de vida`,
             growAttack: `ganha +${e.valor} de ataque básico acumulável`,
             manaRecovery: `recuperação do mago passa a ${e.valor} mana`,
+            dodgeImpact:
+              "pode desviar de dano e efeitos de um golpe por rodada, com escolha gratuita em 20 segundos",
+            attackLifesteal: `ataques básicos curam o dano efetivo, até ${e.excedente ?? 0} de sobrevida`,
+            discardMana: `recupera ${e.valor} mana ao ser descartada da mão`,
             reflectAttack: `pode devolver um ataque básico${e.esperaRodadas ? `; aguarda ${e.esperaRodadas} rodada(s) completa(s) entre usos` : " por rodada"}; resposta opcional em 20 segundos, sem custo`,
             growMaxHp: `ganha ${e.valor} de vida máxima`,
             status: `aplica ${e.status}`,

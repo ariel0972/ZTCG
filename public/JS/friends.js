@@ -1,4 +1,5 @@
 import { api, navbar, message, node, profilePath } from "./auth.js";
+import { createDeckSelector } from "./deck-selector.js";
 import {
   splitRelations,
   filterFriends,
@@ -239,6 +240,10 @@ async function init() {
   $("social-intro").textContent =
     "Encontre seus amigos, acompanhe pedidos e combine a próxima partida.";
   $("social-controls").hidden = false;
+  const deckSelector = createDeckSelector($("social-deck"), {
+    userId: user.id,
+    label: "Baralho para os convites",
+  });
   const timer = setInterval(() => {
     if (!document.hidden) void refresh().catch((e) => message(e.message, true));
   }, 5000);
@@ -250,13 +255,12 @@ async function init() {
     refresh().catch((e) => message(e.message, true)),
     api("/decks")
       .then((data) => {
-        for (const d of data.decks) {
-          const option = node("option", d.nome);
-          option.value = d._id;
-          $("social-deck").append(option);
-        }
+        deckSelector.setDecks(data.decks);
       })
       .catch((e) => message(e.message, true)),
+    api("/cards")
+      .then((data) => deckSelector.setCatalog(data.cards))
+      .catch(() => {}),
   ]);
 }
 void init();

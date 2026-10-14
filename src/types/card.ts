@@ -102,6 +102,7 @@ export const activeSchema = z
     id: identifier,
     nome: z.string().trim().min(1).max(100),
     custoMana: number,
+    esperaRodadas: z.number().int().min(0).max(100).optional(),
     descricao: z.string().max(2000).optional(),
     alvo: z.enum(targets).optional(),
     alvoAutomatico: z.enum(["Proprio", "Frontal"]).optional(),
@@ -147,6 +148,11 @@ export const passiveFilterSchema = z
 const cardAction = { alvo: z.enum(passiveCardTargets), valor: number };
 const playerAction = { jogador: z.enum(["aliado", "inimigo"]), valor: number };
 export const passiveActionSchema = z.discriminatedUnion("id", [
+  z.object({ id: z.literal("dodgeImpact") }).strict(),
+  z
+    .object({ id: z.literal("attackLifesteal"), excedente: number.optional() })
+    .strict(),
+  z.object({ id: z.literal("discardMana"), valor: number }).strict(),
   z
     .object({
       id: z.literal("counterAttack"),

@@ -1,5 +1,7 @@
 /* Presentation uses DOM/CSS: no WebGL context or continuous render loop. */
 .match-page {
+  min-height: 100dvh;
+  background-attachment: fixed;
   background: radial-gradient(
     ellipse at 50% 35%,
     #233a40 0,
@@ -7,6 +9,74 @@
     #080e16 100%
   );
   color: #e8edf0;
+}
+.match-page .lobby {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 1fr);
+  align-items: center;
+  gap: clamp(24px, 5vw, 72px);
+  width: min(1100px, 100%);
+  max-width: 1100px;
+  margin: clamp(36px, 10vh, 120px) auto;
+  padding: 20px;
+}
+.lobby-intro h1 {
+  font-size: clamp(30px, 4vw, 48px);
+  line-height: 1.12;
+  max-width: 500px;
+  margin: 20px 0;
+}
+.lobby-intro > .muted {
+  font-size: 16px;
+  line-height: 1.8;
+  max-width: 420px;
+}
+.lobby-friends-link {
+  display: inline-block;
+  margin-top: 22px;
+  color: #e3c68d;
+}
+.lobby-setup {
+  padding: clamp(18px, 3vw, 30px);
+  border-radius: 22px;
+  background: #14232be8;
+}
+.lobby-setup .toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+}
+.lobby-setup #join {
+  flex: 1;
+  min-height: 46px;
+}
+.lobby-setup #connection {
+  font-size: 12px;
+}
+.lobby-rules {
+  border-top: 1px solid #65808c44;
+  padding-top: 16px;
+  margin-top: 20px;
+}
+.lobby-rules summary {
+  cursor: pointer;
+  color: #b8ced7;
+  font-size: 12px;
+}
+@media (max-width: 760px) {
+  .match-page .lobby {
+    grid-template-columns: 1fr;
+    margin: 24px auto;
+    padding: 4px;
+    gap: 24px;
+  }
+  .lobby-intro h1 {
+    max-width: 440px;
+  }
+  .lobby-friends-link {
+    margin-top: 6px;
+  }
 }
 .match-page .page {
   max-width: 1400px;
@@ -2003,4 +2073,13 @@
   .battle-effect__label {
     transform: translateX(-50%);
   }
+}
+
+.revealed-hand-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 140px));
+  gap: 10px;
+  max-height: 45dvh;
+  overflow: auto;
+  margin-top: 12px;
 }

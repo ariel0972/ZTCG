@@ -372,7 +372,7 @@ test("retaliação respeita incapacidades e a estrutura do atacante", () => {
   }
 });
 
-test("armamento aplica vida e ataque às duas tropas; movimento ajusta ambos", () => {
+test("armamento aplica vida e ataque somente ao ocupante; movimento ajusta o beneficiário", () => {
   const g = make(),
     s = mounted(g);
   const weapon = instance("001", "p1", {
@@ -390,7 +390,7 @@ test("armamento aplica vida e ataque às duas tropas; movimento ajusta ambos", (
     slotId: "p1:arm:front-left",
     targets: [],
   });
-  assert.equal(slot(g, s.id).card!.hpAtual, 12);
+  assert.equal(slot(g, s.id).card!.hpAtual, 9);
   assert.equal(slot(g, s.id).rider!.hpAtual, 15);
   slot(g, "p2:front:2").card = instance("020", "p2", {
     hp: 30,
@@ -404,7 +404,7 @@ test("armamento aplica vida e ataque às duas tropas; movimento ajusta ambos", (
     source: "rider",
     targetId: "p2:front:2",
   });
-  assert.equal(slot(g, "p2:front:2").card!.hpAtual, 19);
+  assert.equal(slot(g, "p2:front:2").card!.hpAtual, 21);
   act(g, { type: "move", slotId: s.id, destinationId: "p1:front:1" });
   assert.equal(slot(g, "p1:front:1").card!.hpAtual, 9);
   assert.equal(slot(g, "p1:front:1").rider!.hpAtual, 12);

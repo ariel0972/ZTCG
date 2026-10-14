@@ -536,10 +536,10 @@
     "nome": "Escudo Protetor",
     "tipo": "Feitico",
     "custoMana": 4,
-    "descricao": "Protege um aliado dos próximos 3 golpes de dano, bloqueando cada golpe por completo. Após o terceiro golpe, quebra. Expira após 2 rodadas.",
+    "descricao": "Protege um aliado dos próximos 3 golpes. Também bloqueia os efeitos de feitiços, incluindo status e retorno à mão, exceto banimento. Expira após 2 rodadas.",
     "imgURL": "/assets/Cards/Escudo de Proteção.png",
     "publicado": true,
-    "versao": 2,
+    "versao": 3,
     "alvo": "UnicoAliado",
     "elemento": "Neutro",
     "efeitos": [
@@ -603,23 +603,49 @@
     "numeroCatalogo": "030",
     "nome": "Olho da Verdade",
     "tipo": "Feitico",
-    "custoMana": 2,
-    "descricao": "",
+    "custoMana": 4,
+    "descricao": "Veja a mão adversária durante esta rodada, incluindo novas compras, e transfira uma carta escolhida para sua mão. Se este feitiço for descartado da mão, recupere 4 mana; conjurá-lo não conta como descarte.",
     "imgURL": "/assets/Cards/Olho da Verdade.png",
-    "publicado": false,
-    "versao": 1,
-    "alvo": "UnicoInimigo"
+    "publicado": true,
+    "versao": 2,
+    "alvo": "Global",
+    "elemento": "Neutro",
+    "efeitos": [
+      {
+        "id": "revealStealHand",
+        "valor": 1
+      }
+    ],
+    "habilidadesPassivas": [
+      {
+        "gatilho": "continuous",
+        "escopo": "proprio",
+        "efeitos": [
+          {
+            "id": "discardMana",
+            "valor": 4
+          }
+        ]
+      }
+    ]
   },
   {
     "numeroCatalogo": "045",
     "nome": "Cheiro de Sangue",
     "tipo": "Feitico",
-    "custoMana": 2,
-    "descricao": "",
+    "custoMana": 4,
+    "descricao": "Aumenta em 2 o dano por rodada do Sangrando já aplicado nas tropas inimigas, preservando sua duração restante. Piranhas aliadas causam +1 de dano de ataque básico contra tropas Sangrando até o fim da partida; esse bônus não acumula entre cópias.",
     "imgURL": "/assets/Cards/Cheiro de Sangue.png",
-    "publicado": false,
-    "versao": 1,
-    "alvo": "UnicoInimigo"
+    "publicado": true,
+    "versao": 2,
+    "alvo": "TodasTropasInimigas",
+    "elemento": "Neutro",
+    "efeitos": [
+      {
+        "id": "bloodScent",
+        "valor": 2
+      }
+    ]
   },
   {
     "numeroCatalogo": "046",
@@ -1126,12 +1152,25 @@
     "nome": "Espada dos Mil Mortos",
     "tipo": "Armamento",
     "custoMana": 6,
-    "descricao": "",
+    "descricao": "Ataques básicos da tropa equipada curam a vida efetivamente retirada dos inimigos, incluindo retaliações e dano excedente em montarias. Permite até 4 de sobrevida. Em uma montaria ocupada, somente quem monta recebe os benefícios.",
     "imgURL": "/assets/Cards/Espada dos Mil Mortos.png",
-    "publicado": false,
-    "versao": 1,
+    "publicado": true,
+    "versao": 2,
     "bonusAtaque": 2,
-    "bonusHp": 1
+    "bonusHp": 0,
+    "elemento": "Neutro",
+    "habilidadesPassivas": [
+      {
+        "gatilho": "continuous",
+        "escopo": "proprio",
+        "efeitos": [
+          {
+            "id": "attackLifesteal",
+            "excedente": 4
+          }
+        ]
+      }
+    ]
   },
   {
     "numeroCatalogo": "038",
@@ -2088,15 +2127,51 @@
     "numeroCatalogo": "026",
     "nome": "Golém de água",
     "tipo": "Tropa",
-    "custoMana": 4,
-    "descricao": "",
+    "custoMana": 7,
+    "descricao": "Uma vez por rodada, pode desviar gratuitamente de um ataque, feitiço ou habilidade, anulando o dano e os efeitos do golpe nele. A escolha tem 20 segundos. Não evita dano periódico de status.",
     "imgURL": "/assets/Cards/Golem de água.png",
     "publicado": true,
-    "versao": 1,
-    "hp": 1,
-    "ataque": 2,
-    "manaGerada": 1,
-    "direcaoAtaque": "Frente"
+    "versao": 2,
+    "hp": 15,
+    "ataque": 4,
+    "manaGerada": 3,
+    "direcaoAtaque": "Universal",
+    "habilidadesPassivas": [
+      {
+        "gatilho": "onTargeted",
+        "escopo": "proprio",
+        "efeitos": [
+          {
+            "id": "dodgeImpact"
+          }
+        ]
+      }
+    ],
+    "habilidadesAtivas": [
+      {
+        "id": "enchente",
+        "nome": "Enchente",
+        "custoMana": 6,
+        "esperaRodadas": 1,
+        "descricao": "Aplica Água ao campo inimigo e incapacita todas as tropas inimigas por 1 rodada. Aguarda uma rodada completa entre usos.",
+        "alvo": "TodasTropasInimigas",
+        "efeitos": [
+          {
+            "id": "field",
+            "elemento": "Agua"
+          },
+          {
+            "id": "status",
+            "status": "Incapacitado",
+            "duracao": 1
+          }
+        ]
+      }
+    ],
+    "elemento": "Agua",
+    "resistencia": ["Fogo"],
+    "fraqueza": ["Terra"],
+    "subtipo": "Invocação"
   },
   {
     "numeroCatalogo": "041",

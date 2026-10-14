@@ -307,7 +307,7 @@ Efeitos gerais: damage, heal, growMaxHp, status; mana/draw/recover; contador
 spellDamageBonus (mago, elemento, contador, aCada, valor); move/summonFromDeck
 (morte de tropa aliada e slotEvento).
 Alvos: fonte, magoAliado, magoInimigo, cartaEvento, atacante e alvoAtaque. jogador é aliado/inimigo relativo à fonte.
-heal. excedente limita cura acima do HP base; sem excedente usa HP com armamentos.
+heal. excedente limita cura acima do HP máximo com os armamentos aplicáveis.
 continuous aceita attackBonus/attackAura; onTargeted aceita blockAttack.
 Aura usa filtro/valor/porVizinho/fonteRecebe.
 Restrição usa filtro obrigatório e/ou qualquerDe: campos do filtro são E; entradas de qualquerDe são OU.
@@ -1150,3 +1150,65 @@ mantêm sua definição a cada dois, sem reescrever partidas em andamento.
 O contador e a badge de bônus refletem a frequência configurada.
 Sincronização: tsx scripts/update-configurable-spells.ts mostra o plano.
 --apply grava backup e altera somente os campos listados, depois do deploy.
+
+
+ATUALIZAÇÃO — BARALHO SELECIONADO E CARTAS DA ÁGUA (14/10/2026)
+- public/JS/deck-selector.js — Seletor compartilhado de baralho com prévia do mago, modal acessível e preferência por conta neste navegador.
+- public/CSS/deck-selector.css — Menu e seletor responsivos nas páginas de jogar e amigos.
+- tests/deck-selector.test.ts — Persistência por conta, troca entre páginas, prioridade do link, baralho excluído, fila e armazenamento indisponível.
+- tests/water-golem.test.ts — Desvio, retomada serializada sem novos sorteios, custos/idempotência, cronômetro durável, Enchente, escudo, revelação/roubo, descarte, espada e sangramento.
+- scripts/update-water-cards.ts — Plano e sincronização de 006/026/030/037/045 após o deploy, backup e verificação de versão; preserva campos não listados.
+O seletor mantém a última escolha válida na chave zacornia:selected-deck:ID.
+A preferência é local ao navegador e separada por conta. O parâmetro ?deck=ID
+válido tem prioridade. Se o escolhido for excluído, escolhe um baralho completo
+ou o primeiro disponível. Os mesmos IDs de seleção continuam atendendo à fila
+e aos convites; o servidor continua validando o baralho antes de criar partidas.
+PREVIEW_DECK_SELECTOR=1 adiciona dois baralhos fictícios ao tests/preview.ts.
+
+Novas capacidades do catálogo:
+1) Golém: {"gatilho":"onTargeted","escopo":"proprio","efeitos":[{"id":"dodgeImpact"}]}.
+Somente tropas, uma aceitação por rodada. Oferece 20 s gratuitos, com turno
+pausado. Recusar/expirar não consome a passiva. Anula dano e efeitos daquele
+ataque, feitiço ou habilidade apenas no Golém. Áreas preservam os outros alvos;
+vários Goléns escolhem separadamente. Sangrando, Queimado e Envenenado não
+abrem janela. Feitiços de dano no fim da rodada abrem a janela normalmente.
+A resolução interrompida guarda uma base privada, decisões e resultados de
+sorteios no estado durável. Retoma deterministicamente, sem cobrar mana,
+repetir sorteios ou duplicar ataques. O snapshot público expõe só a pergunta,
+nunca a base privada. A troca de janela recebe seu próprio prazo de 20 s.
+2) Habilidades ativas aceitam esperaRodadas: inteiro 0–100. Omitido/0 mantém a
+regra de uma habilidade por rodada; 1: usar na 3 bloqueia a 4 e libera na 5.
+O histórico fica em abilityRounds na instância. Enchente usa custo 6,
+esperaRodadas:1, alvo TodasTropasInimigas, efeitos field/Agua e
+status/Incapacitado/duracao:1. field nessa seleção afeta todo o campo frontal;
+status afeta todas as tropas, incluindo montados, e não o mago.
+3) Feitiço Olho: alvo Global e efeitos [{"id":"revealStealHand","valor":1}].
+Revela a mão inteira ao conjurador na rodada atual, incluindo novas compras.
+Abre uma escolha de 20 s para transferir uma carta real, trocando seu dono;
+se o prazo termina, não transfere. A mão continua revelada pelo botão do campo.
+Efeito contínuo discardMana/valor:4 (somente Feitico) devolve mana quando essa
+carta é descartada da mão, inclusive Recuperar Energia. Conjurar não descarta.
+4) Armamento: passiva continuous/proprio, efeitos
+[{"id":"attackLifesteal","excedente":4}]. Cura a tropa equipada por vida
+realmente retirada por seus ataques básicos, inclusive retaliação e excedente
+na montaria; overkill, escudos e resistências não geram cura indevida. O teto
+é HP máximo com os bônus aplicáveis + excedente. Habilidade, feitiço e status
+não ativam. Enquanto montado, somente o ocupante recebe TODOS os benefícios
+de armamentos. Movimento/montagem/desmontagem e morte ajustam o bônus de HP.
+5) Cheiro: alvo TodasTropasInimigas, efeitos [{"id":"bloodScent","valor":2}].
+Soma valor ao dano do Sangrando já aplicado em tropas inimigas. Não aplica
+novo Sangrando nem renova sua duração; o padrão do status continua 3 rodadas.
+Não é um novo feitiço periódico de 3 rodadas. Cada conjuração reforça o status
+atual. Piranhas 041 aliadas ganham +1 no ataque básico contra tropas Sangrando
+até o fim da partida, sem acumular esse bônus por cópias.
+6) EscudoProtecao bloqueia os efeitos de feitiços, incluindo reações/status,
+retorno à mão e remoção direta; banish ignora essa proteção. Uma carga cobre
+o golpe e seus efeitos no protegido. Mantém 3 cargas e duração de 2 rodadas.
+As cartas 030, 037 e 045 foram liberadas para novas partidas; 026 recebeu os
+atributos da imagem. Partidas existentes preservam as definições já copiadas.
+Executar scripts/update-water-cards.ts sem --apply mostra o plano. Somente
+após publicar o motor novo, --apply salva backup e grava versões por comparação.
+
+Ícones de navegação: app.css define máscaras vetoriais para Ranking (troféu)
+e Regras (livro), com ordem consistente no menu. Amigos, recuperação e troca
+de senha passaram a declarar o mesmo favicon.svg das demais páginas.

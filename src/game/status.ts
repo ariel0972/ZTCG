@@ -46,7 +46,11 @@ export function applyStatus(
     } else
       statuses.push({ nome, valor: 1, turnosRestantes: 2, unidade: "rodada" });
   } else if (nome === "Sangrando") {
-    if (existing) existing.valor = Math.min(5, (existing.valor ?? 1) + 1);
+    if (existing)
+      existing.valor = Math.max(
+        existing.valor ?? 1,
+        Math.min(5, (existing.valor ?? 1) + 1),
+      );
     else
       statuses.push({ nome, valor: 1, turnosRestantes: 3, unidade: "rodada" });
   } else if (nome === "Congelado") {

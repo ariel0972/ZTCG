@@ -1,0 +1,125 @@
+.deck-selection {
+  width: 100%;
+  max-width: 560px;
+}
+.deck-selection-trigger {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  padding: 18px;
+  text-align: left;
+  border-radius: 16px;
+  border-color: #6a7f895e;
+  background: linear-gradient(115deg, #223942, #15232e);
+}
+.deck-selection-trigger > img {
+  width: 66px;
+  height: 88px;
+  object-fit: cover;
+  object-position: top;
+  border-radius: 9px;
+  flex-shrink: 0;
+}
+.deck-selection-info {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+.deck-selection-info strong {
+  font-size: 22px;
+  overflow-wrap: anywhere;
+}
+.deck-selection-info small {
+  color: #b4c9d1;
+  line-height: 1.5;
+}
+.deck-selection-change {
+  color: #e3c68d;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.deck-selection-dialog {
+  width: min(640px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 22px;
+}
+.deck-selection-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  position: sticky;
+  top: -22px;
+  padding: 12px 0;
+  margin-top: -12px;
+  background: var(--panel);
+  z-index: 1;
+}
+.deck-selection-heading h2 {
+  margin: 0;
+  font-size: 21px;
+}
+.deck-selection-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+}
+.deck-selection-option {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  text-align: left;
+  border-radius: 12px;
+}
+.deck-selection-option[data-selected="true"] {
+  background: #243c48;
+  border-color: #d3b57b;
+}
+.deck-selection-option img {
+  width: 44px;
+  height: 58px;
+  object-fit: cover;
+  object-position: top;
+  border-radius: 5px;
+}
+.deck-selection-option > span:not(.deck-selection-check) {
+  display: grid;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.deck-selection-option small {
+  color: var(--muted);
+}
+.deck-selection-check {
+  color: #e3c68d;
+  font-size: 20px;
+}
+@media (max-width: 600px) {
+  .deck-selection-trigger {
+    gap: 12px;
+    padding: 14px;
+  }
+  .deck-selection-trigger > img {
+    width: 49px;
+    height: 68px;
+  }
+  .deck-selection-info strong {
+    font-size: 19px;
+  }
+  .deck-selection-change {
+    font-size: 11px;
+  }
+  .deck-selection-dialog {
+    padding: 16px;
+  }
+  .deck-selection-heading {
+    top: -16px;
+  }
+}
