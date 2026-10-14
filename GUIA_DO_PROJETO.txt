@@ -1,4 +1,42 @@
 ZTCG — GUIA DO PROJETO, ARQUITETURA E PRÓXIMOS PASSOS
+Chat e espectadores — 14/10/2026:
+- src/game/social.ts — Autorização por amizade aceita, chat de 24 horas,
+  índices TTL, limite por conta, mensagens idempotentes e presença independente.
+- src/routes/matchSocialRoutes.ts — Rotas autenticadas de conversa, presença,
+  atividade de amigos e transmissão pública das partidas.
+- public/HTML/watch.html — Sala de espectador sem controles de jogada ou mãos.
+- public/JS/watch.js — Campo público, inspeção de cartas e atualizações ao vivo.
+- public/JS/match-chat.js — Chat recolhível de texto e emojis; no máximo 50
+  mensagens na tela, contador de espectadores e recuperação de conexão.
+- public/CSS/match-social.css — Layout responsivo da conversa e do espectador.
+- tests/match-social.test.ts — Privacidade, amizade de qualquer participante,
+  revogação, TTL, limites, presença, HTTP/SSE e texto seguro no navegador.
+Amigos mostram Jogando/Online/Offline; Assistir aceita amizade com qualquer
+participante. Mãos, cartas reveladas por Olho da Verdade e ordem dos decks
+nunca são entregues ao espectador. Apenas jogadores podem enviar comandos.
+Chat e espectadores usam coleções separadas: MatchChat, MatchChatGate,
+MatchViewer e SitePresence. Não alteram revisão, relógio ou presença de combate.
+As mensagens expiram 24 horas após envio. A leitura filtra vencidas mesmo
+antes da limpeza TTL do MongoDB; carrega apenas as 50 mais recentes. Texto
+limitado a 300 caracteres Unicode, intervalo mínimo de 1,5 segundo por conta,
+UUID evita duplicação em reenvios. Conteúdo é renderizado com textContent.
+Dados sociais viajam como deltas no SSE já usado pelos jogadores; não repetem
+o campo quando só o chat muda. Espectador usa SSE público e consulta projetada
+de revisão; revalida amizade em até 10 segundos e nas mutações. A saída ou
+expiração de 45 segundos encerra a presença; várias abas contam uma pessoa.
+Presença no site: renovação a cada 30 segundos, tolerância de 90 segundos.
+Atividade de amigos atualizada em 15 segundos apenas na página de amigos.
+O chat é carregado sob demanda na partida. A sala de espectador não busca
+catálogo completo nem decks privados; imagens só das cartas públicas exibidas.
+Menu de emojis sobreposto, sem deslocar a conversa; fecha ao clicar fora ou
+pressionar Escape. Envio mostra progresso e confirmação, anima mensagens novas
+e toca um som curto somente após confirmação do servidor. Som pode ser
+silenciado; só a preferência é salva localmente. Respeita movimento reduzido.
+Histórico aberto ocupa toda a largura no celular, fonte de 14 px e área de
+rolagem de até 65% da altura da tela, sem cobrir o campo.
+Para conferir sem dados reais: PREVIEW_SOCIAL=1, PREVIEW_MECHANICS=1,
+PREVIEW_MATCH_SOCIAL=1, PREVIEW_REACTIONS=1 com npm run demo.
+
 Extensão de montaria — 10/10/2026:
 - tests/mounted-passives.test.ts — Montaria, ataque, mana, overflow, armamentos,
   alvos individuais/área, morte, retaliação, interceptação e persistência.

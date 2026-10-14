@@ -37,6 +37,8 @@ export interface DurableRoom {
   rematchId?: string;
 }
 export interface DurableStore {
+  roomInfo(id: string): Promise<RoomInfo | null>;
+  activeRooms(users: string[]): Promise<RoomInfo[]>;
   roomRevision?(id: string): Promise<number | null>;
   lobby(): Promise<{ revision: number; data: Lobby }>;
   saveLobby(revision: number, data: Lobby): Promise<boolean>;
@@ -46,6 +48,20 @@ export interface DurableStore {
   touch(user: string, now: number): Promise<void>;
   presence(users: string[]): Promise<Record<string, number>>;
   pending(limit: number): Promise<DurableRoom[]>;
+}
+export interface RoomInfo {
+  id: string;
+  players: { id: string; nome: string }[];
+  status: string;
+  finishedAt?: number;
+}
+export function roomInfo(room: DurableRoom): RoomInfo {
+  return {
+    id: room.id,
+    players: room.entries.map(({ id, nome }) => ({ id, nome })),
+    status: room.game.state.status,
+    finishedAt: room.finishedAt,
+  };
 }
 const lobbyModel = model(
   "GameLobby",
@@ -75,6 +91,40 @@ export const emptyLobby = (): Lobby => ({
   receipts: {},
 });
 export class MongoGameStore implements DurableStore {
+  async roomInfo(id: string) {
+    const doc = await roomModel
+      .findById(id)
+      .select({
+        "data.id": 1,
+        "data.entries.id": 1,
+        "data.entries.nome": 1,
+        "data.game.state.status": 1,
+        "data.finishedAt": 1,
+      })
+      .lean();
+    return doc ? roomInfo(doc.data as DurableRoom) : null;
+  }
+  async activeRooms(users: string[]) {
+    if (!users.length) return [];
+    const lobby = await lobbyModel
+      .findById("main")
+      .select({ "data.active": 1 })
+      .lean();
+    const active =
+      (lobby?.data as { active?: Record<string, string> } | undefined)
+        ?.active ?? {};
+    const ids = [...new Set(users.map((u) => active[u]).filter(Boolean))];
+    const docs = await roomModel
+      .find({ _id: { $in: ids }, "data.game.state.status": "ACTIVE" })
+      .select({
+        "data.id": 1,
+        "data.entries.id": 1,
+        "data.entries.nome": 1,
+        "data.game.state.status": 1,
+      })
+      .lean();
+    return docs.map((d) => roomInfo(d.data as DurableRoom));
+  }
   async roomRevision(id: string) {
     const doc = await roomModel.findById(id).select({ revision: 1 }).lean();
     return doc?.revision ?? null;

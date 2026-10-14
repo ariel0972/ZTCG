@@ -22,11 +22,14 @@ import { rateLimit } from "./middlewares/rateLimit";
 import { DurableGame } from "./game/durable";
 import { gameRoutes } from "./routes/gameRoutes";
 import { friendRoutes } from "./routes/friendRoutes";
+import { matchSocialRoutes } from "./routes/matchSocialRoutes";
+import { MatchSocial } from "./game/social";
 import { requestLog, log } from "./lib/observability";
 export function createApp(
   origins: string[] = [],
   connect = dbConnect,
   game = new DurableGame(),
+  social = new MatchSocial(game),
 ) {
   const app = express();
   app.disable("x-powered-by");
@@ -103,7 +106,8 @@ export function createApp(
   });
   app.use("/auth", userRoutes);
   app.use("/rankings", rankingRoutes);
-  app.use("/game", gameRoutes(game));
+  app.use("/game", gameRoutes(game, social));
+  app.use("/rooms", matchSocialRoutes(social));
   app.use("/friends", friendRoutes(game));
   app.use(
     "/profiles",

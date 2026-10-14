@@ -5,7 +5,8 @@ import { checkToken } from "../middlewares/checkToken";
 import { AuthRequest } from "../types";
 import User from "../db/models/user";
 import { log } from "../lib/observability";
-export function gameRoutes(game: DurableGame) {
+import { MatchSocial } from "../game/social";
+export function gameRoutes(game: DurableGame, social: MatchSocial) {
   const router = Router();
   router.use(checkToken);
   // checkToken already checks account existence and session revocation.
@@ -19,6 +20,9 @@ export function gameRoutes(game: DurableGame) {
       snapshot = initial,
       lastRead = Date.now();
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let socialAt = 0,
+      socialKey = "",
+      socialPending = false;
     const finish = () => {
       closed = true;
       clearTimeout(timer);
@@ -75,6 +79,40 @@ export function gameRoutes(game: DurableGame) {
           if (previous !== next) write();
           else res.write(": heartbeat\n\n");
         }
+        if (
+          !closed &&
+          snapshot.match &&
+          !socialPending &&
+          Date.now() - socialAt >= 3000
+        ) {
+          // Social traffic never blocks or writes the combat room.
+          socialAt = Date.now();
+          socialPending = true;
+          void social
+            .snapshot(snapshot.match.id)
+            .then((state) => {
+              const key = JSON.stringify([state.messages, state.viewers]);
+              if (
+                !closed &&
+                state.matchId === snapshot.match?.id &&
+                key !== socialKey
+              ) {
+                if (res.writableLength > 200000) {
+                  finish();
+                  return;
+                }
+                res.write(`data: ${JSON.stringify({ social: state })}\n\n`);
+                socialKey = key;
+              }
+            })
+            .catch(() => {
+              log("match_social_unavailable", {}, "warn");
+            })
+            .finally(() => {
+              socialPending = false;
+            });
+        }
+        if (closed) return;
         timer = setTimeout(
           tick,
           snapshot.match?.status === "ACTIVE" ? 750 : 2000,

@@ -12,6 +12,8 @@ let user,
   searchResults = [],
   lastRelations,
   lastInvites;
+let activities = new Map(),
+  activityAt = 0;
 const $ = (id) => document.getElementById(id);
 createSocialTabs($("social-tabs"));
 function requestedTab() {
@@ -85,7 +87,32 @@ function friendshipActions(player) {
 function row(player, invite = false) {
   const entry = node("article", "", "social-row"),
     actions = node("div", "", "social-actions");
-  entry.append(person(player));
+  const identity = person(player),
+    activity = activities.get(player.id);
+  entry.append(identity);
+  if (invite) {
+    const badge = node(
+      "small",
+      activity?.activity === "playing"
+        ? "● Jogando"
+        : activity?.activity === "online"
+          ? "● Online"
+          : activity
+            ? "○ Offline"
+            : "Verificando presença…",
+      "friend-activity",
+    );
+    badge.dataset.activity = activity?.activity || "unknown";
+    const name = identity.querySelector("a"),
+      text = node("div");
+    name.replaceWith(text);
+    text.append(name, badge);
+    if (activity?.matchId) {
+      const watch = node("a", "Assistir", "watch-link");
+      watch.href = `/HTML/watch.html?match=${encodeURIComponent(activity.matchId)}`;
+      actions.append(watch);
+    }
+  }
   if (invite)
     actions.append(
       button("Convidar para jogar", async () => {
@@ -206,6 +233,16 @@ async function refresh(force = false) {
         }
       }),
     ]);
+    if (force || Date.now() - activityAt >= 15000) {
+      activityAt = Date.now();
+      try {
+        const data = await api("/rooms/friends");
+        activities = new Map(data.friends.map((friend) => [friend.id, friend]));
+        renderFriends();
+      } catch {
+        /* Friendship and invitation controls stay usable. */
+      }
+    }
     for (const result of [friends, invites])
       if (result.status === "rejected") throw result.reason;
   })();

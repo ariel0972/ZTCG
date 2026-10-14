@@ -3,12 +3,27 @@ import {
   DurableStore,
   emptyLobby,
   Lobby,
+  roomInfo,
 } from "../../src/game/store";
 function serializedClone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value));
 }
 // Shared by independent coordinators; deliberately no production import.
 export class MemoryDurableStore implements DurableStore {
+  async roomInfo(id: string) {
+    const room = this.rooms.get(id);
+    return room ? roomInfo(room) : null;
+  }
+  async activeRooms(users: string[]) {
+    return [...this.rooms.values()]
+      .filter(
+        (r) =>
+          r.game.state.status === "ACTIVE" &&
+          r.entries.some((e) => users.includes(e.id)) &&
+          this.data.active[r.entries[0].id] === r.id,
+      )
+      .map(roomInfo);
+  }
   private data = emptyLobby();
   private revision = 0;
   readonly rooms = new Map<string, DurableRoom>();

@@ -3626,6 +3626,12 @@ export class Game {
   }
   snapshot(user: string) {
     this.player(user);
+    return this.snapshotFor(user);
+  }
+  spectatorSnapshot() {
+    return this.snapshotFor();
+  }
+  private snapshotFor(user?: string) {
     return structuredClone({
       id: this.id,
       openingBlocked: this.openingBlocked(),
@@ -3637,6 +3643,7 @@ export class Game {
       pendingSpell: this.state.pendingSpell,
       pendingAttack: this.state.pendingAttack,
       canRespond:
+        !!user &&
         !!this.state.pendingSpell &&
         this.state.pendingSpell.casterId !== user &&
         this.canRespondWithWater(user),
@@ -3728,7 +3735,8 @@ export class Game {
         graveyard: p.graveyard,
         banished: p.banished,
         forgotten: p.forgotten,
-        ...(p.id !== user &&
+        ...(user &&
+        p.id !== user &&
         this.player(user).revealHandRound === this.state.round
           ? { revealedHand: p.hand }
           : {}),

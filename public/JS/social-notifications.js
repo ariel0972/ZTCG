@@ -260,9 +260,16 @@ export function createSocialNotifications({
       }
     }
   }
+  let presenceAt = 0;
   async function poll() {
     if (busy || closed) return;
     busy = true;
+    if (Date.now() - presenceAt >= 30000) {
+      presenceAt = Date.now();
+      void api("/rooms/presence", { method: "POST", body: "{}" }).catch(
+        () => {},
+      );
+    }
     try {
       const [friends, invitations] = await Promise.all([
         api("/friends"),

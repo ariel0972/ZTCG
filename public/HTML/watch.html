@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Assistir partida · Zacornia</title>
+    <link rel="icon" href="/assets/icons/favicon.svg" />
+    <link rel="stylesheet" href="/CSS/app.css" />
+    <link rel="stylesheet" href="/CSS/battle.css" />
+    <link rel="stylesheet" href="/CSS/battle-mobile.css" />
+    <link rel="stylesheet" href="/CSS/match-social.css" />
+    <script type="module" src="/JS/watch.js"></script>
+  </head>
+  <body class="match-page spectator-page">
+    <header class="topbar">
+      <a class="brand" href="/">ZACORNIA <small>TRADING CARD GAME</small></a>
+      <nav aria-label="Principal">
+        <a href="/HTML/friends.html">Amigos</a
+        ><a href="/HTML/index.html">Jogar</a>
+      </nav>
+      <div id="account" class="account"></div>
+    </header>
+    <main class="page">
+      <div class="match-top">
+        <div>
+          <p class="eyebrow">ASSISTINDO AO VIVO</p>
+          <h1 id="watch-title">Carregando partida…</h1>
+        </div>
+        <div class="toolbar">
+          <span class="watch-mode">Espectador · mãos ocultas</span
+          ><a href="/HTML/friends.html" class="watch-link">Voltar aos amigos</a>
+        </div>
+      </div>
+      <p id="watch-status" class="match-connection" role="status">
+        Conectando à sala…
+      </p>
+      <section id="watch-field" hidden aria-label="Campo público da partida">
+        <div class="battle-arena">
+          <div id="enemy-hud" class="player-hud enemy-hud"></div>
+          <div class="battle-board">
+            <div class="board-center">
+              <div id="enemy-back" class="board-row rear-row"></div>
+              <div id="enemy-front" class="board-row front-row"></div>
+              <div class="arena-divider"><span>✧</span></div>
+              <div class="player-field">
+                <div class="player-rows">
+                  <div id="my-front" class="board-row front-row"></div>
+                  <div id="my-back" class="board-row rear-row"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="my-hud" class="player-hud my-hud"></div>
+        </div>
+        <div
+          id="watch-effects"
+          class="spectator-effects"
+          aria-label="Feitiços contínuos"
+        ></div>
+        <details class="match-history">
+          <summary>Histórico da partida</summary>
+          <div id="watch-log" class="battle-log"></div>
+        </details>
+      </section>
+      <section
+        id="match-social"
+        class="match-social"
+        aria-label="Conversa e espectadores"
+        hidden
+      ></section>
+      <p id="message" role="status"></p>
+    </main>
+  </body>
+</html>

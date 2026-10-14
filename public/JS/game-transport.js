@@ -4,6 +4,9 @@ export function gameTransport({
   request = api,
   fetchStream = fetch,
   getToken = token,
+  statePath = "/game/state",
+  streamPath = "/game/stream",
+  readOnly = false,
 } = {}) {
   const listeners = new Map();
   let connected = false,
@@ -23,6 +26,16 @@ export function gameTransport({
   }
   function publish(data) {
     if (closed) return;
+    if (data.accessDenied) {
+      emit("access_denied", data);
+      closed = true;
+      controller?.abort();
+      return;
+    }
+    if (data.social) {
+      emit("match:social", data.social);
+      return;
+    }
     const match = data.match;
     if (
       match &&
@@ -58,7 +71,7 @@ export function gameTransport({
   function poll() {
     if (pendingPoll) return pendingPoll;
     const generation = mutation;
-    pendingPoll = request("/game/state")
+    pendingPoll = request(statePath)
       .then((data) => {
         if (generation === mutation) publish(data);
       })
@@ -72,7 +85,7 @@ export function gameTransport({
     controller = new AbortController();
     let watchdog = setTimeout(() => controller?.abort(), 12000);
     try {
-      const response = await fetchStream("/game/stream", {
+      const response = await fetchStream(streamPath, {
         headers: { Authorization: `Bearer ${getToken()}` },
         signal: controller.signal,
       });
@@ -115,6 +128,11 @@ export function gameTransport({
           emit("disconnect");
         }
         emit("connect_error", failure);
+        if (readOnly && [403, 404].includes(failure.status)) {
+          emit("access_denied", { content: failure.message });
+          closed = true;
+          return;
+        }
       }
       // HTTP fallback also refreshes an expired session before reconnecting.
       timer = setTimeout(
@@ -134,6 +152,13 @@ export function gameTransport({
       listeners.set(event, [...(listeners.get(event) || []), fn]);
     },
     emit(event, data, ack = () => {}) {
+      if (readOnly) {
+        ack(null, {
+          success: false,
+          content: "Você está assistindo à partida.",
+        });
+        return;
+      }
       const body = JSON.stringify({
         event,
         data,

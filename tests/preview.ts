@@ -8,6 +8,7 @@ import { fakeDatabase } from "./support/database";
 import { Game } from "../src/game/engine";
 import type { Instance } from "../src/game/state";
 import { randomUUID } from "node:crypto";
+import { MatchSocial } from "../src/game/social";
 process.env.SECRET = "preview-only-012345678901234567890123456789";
 void fakeDatabase().then(async (db) => {
   if (process.env.PREVIEW_DECK_SELECTOR === "1") {
@@ -307,7 +308,30 @@ void fakeDatabase().then(async (db) => {
     await store.touch(enemy.ownerId, Date.now() + 3600000);
     await store.touch(owner, Date.now() + 3600000);
   }
-  const server = createServer(createApp([], async () => mongoose, service));
+  const social = new MatchSocial(service);
+  if (process.env.PREVIEW_MATCH_SOCIAL === "1") {
+    const room = [...store.rooms.values()][0];
+    if (room) {
+      await social.send(
+        room.id,
+        "1".repeat(24),
+        "Duelista 1",
+        randomUUID(),
+        "Bem-vindos à partida! 👋",
+      );
+      await social.send(
+        room.id,
+        "3".repeat(24),
+        "Duelista 3",
+        randomUUID(),
+        "Boa partida para vocês! 🔥",
+      );
+      await social.watch(room.id, "3".repeat(24), "Duelista 3", randomUUID());
+    }
+  }
+  const server = createServer(
+    createApp([], async () => mongoose, service, social),
+  );
   server.listen(3187, "127.0.0.1", () =>
     console.log(
       "PREVIA_ISOLADA http://127.0.0.1:3187 (p1@test.local / teste-ztcg-123)",

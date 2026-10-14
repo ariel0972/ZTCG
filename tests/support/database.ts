@@ -10,6 +10,7 @@ import { Card, cardSchema } from "../../src/types/card";
 import initial from "../../src/data/catalog.json";
 import bcrypt from "bcrypt";
 import { playerNameKey } from "../../src/services/player-name";
+import { socialModels } from "../../src/game/social";
 export async function fakeDatabase() {
   const users: any[] = [],
     decks: any[] = [],
@@ -44,6 +45,7 @@ export async function fakeDatabase() {
                 return v.some((item: any) => equal(actual, item));
               if (op === "$ne") return !equal(actual, v);
               if (op === "$gt") return actual > v;
+              if (op === "$lte") return actual <= v;
               if (op === "$regex")
                 return new RegExp(v, value.$options).test(actual);
               return op === "$options";
@@ -193,14 +195,27 @@ export async function fakeDatabase() {
     for (const [k, v] of Object.entries(change.$inc ?? {}))
       row[k] = (row[k] ?? 0) + Number(v);
     for (const k of Object.keys(change.$unset ?? {})) delete row[k];
+    for (const [k, v] of Object.entries(change.$max ?? {}))
+      if (row[k] === undefined || row[k] < (v as any)) row[k] = v;
   }
   for (const [model, rows] of [
     [User, users],
     [Friendship, friendships],
     [Invitation, invitations],
+    ...Object.values(socialModels).map((model) => [model, []] as [any, any[]]),
   ] as [any, any[]][]) {
-    patch(model, "updateOne", (filter, change) => {
-      const row = find(rows, filter)[0];
+    if (Object.values(socialModels).includes(model))
+      patch(model, "findById", (id) =>
+        query(document(find(rows, { _id: id })[0])),
+      );
+    patch(model, "updateOne", (filter, change, opts = {}) => {
+      let row = find(rows, filter)[0];
+      if (!row && opts.upsert) {
+        if (filter._id && rows.some((r) => r._id === filter._id))
+          throw Object.assign(new Error("duplicate"), { code: 11000 });
+        row = { _id: filter._id, ...change.$setOnInsert };
+        rows.push(row);
+      }
       if (row) update(row, change);
       return query({ matchedCount: row ? 1 : 0 });
     });
@@ -208,6 +223,8 @@ export async function fakeDatabase() {
       let row = find(rows, filter)[0];
       const before = row ? structuredClone(row) : null;
       if (!row && opts.upsert) {
+        if (filter._id && rows.some((r) => r._id === filter._id))
+          throw Object.assign(new Error("duplicate"), { code: 11000 });
         row = { ...filter, ...change.$setOnInsert };
         rows.push(row);
       }
@@ -223,6 +240,8 @@ export async function fakeDatabase() {
       );
       patch(model, "exists", (filter) => query(find(rows, filter)[0] ?? null));
       patch(model, "create", (data) => {
+        if (data._id && rows.some((r) => r._id === data._id))
+          throw Object.assign(new Error("duplicate"), { code: 11000 });
         const row = { status: "pending", ...data };
         rows.push(row);
         return query(document(row));

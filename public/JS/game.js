@@ -1570,6 +1570,20 @@ setInterval(() => {
       : "Reconectando…";
   else $("turn-clock").textContent = state ? "Encerrado" : "";
 }, 500);
+let matchChat, chatLoading;
+async function ensureChat(data) {
+  if (!matchChat) {
+    chatLoading ||= import("./match-chat.js").then(({ createMatchChat }) => {
+      matchChat = createMatchChat({
+        host: $("match-social"),
+        indicatorHost: $("match-watchers"),
+        user,
+      });
+    });
+    await chatLoading;
+  }
+  matchChat.setMatch(data.id);
+}
 async function load() {
   if (!token()) {
     location.href = "/HTML/login.html";
@@ -1625,6 +1639,7 @@ async function load() {
       updateLobby();
     });
     transport.on("match:state", (data) => {
+      void ensureChat(data);
       clockOffset = (data.serverNow ?? Date.now()) - Date.now();
       if (state?.id !== data.id) {
         selected = null;
@@ -1655,6 +1670,11 @@ async function load() {
           "O oponente quer uma revanche. Clique em Revanche para aceitar.",
         );
     });
+    transport.on("match:social", async (data) => {
+      if (state?.id !== data.matchId) return;
+      await ensureChat(state);
+      matchChat.update(data);
+    });
     transport.on("game:error", (data) =>
       message(
         data.content +
@@ -1677,6 +1697,7 @@ async function load() {
 void load();
 
 window.addEventListener("pagehide", () => {
+  matchChat?.close();
   transport?.close();
   battleEvents.close();
   handNavigation.close();

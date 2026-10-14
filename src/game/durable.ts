@@ -375,6 +375,22 @@ export class DurableGame {
       serverNow: this.now(),
     };
   }
+  // Spectators never refresh combat presence or mutate the game clock.
+  async spectatorState(id: string) {
+    const room = await this.store.room(id);
+    if (!room) throw new AppError(404, "Partida não encontrada.");
+    return {
+      success: true,
+      match: {
+        ...Game.restore(room.game).spectatorSnapshot(),
+        revision: room.revision,
+        deadline: room.deadline,
+        responseDeadline: room.responseDeadline,
+        paused: room.pausedAt !== undefined,
+        serverNow: this.now(),
+      },
+    };
+  }
   async state(user: string, heartbeat = true) {
     // Resolve expiration using previous heartbeats, then acknowledge this client's return.
     const { data } = await this.store.lobby(),

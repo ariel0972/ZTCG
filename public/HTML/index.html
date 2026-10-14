@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="/CSS/battle.css" />
     <link rel="stylesheet" href="/CSS/battle-mobile.css" />
     <link rel="stylesheet" href="/CSS/deck-selector.css" />
+    <link rel="stylesheet" href="/CSS/match-social.css" />
     <script type="module" src="/JS/game.js"></script>
   </head>
   <body class="match-page">
@@ -64,6 +65,7 @@
           <div>
             <p class="eyebrow">CAMPO DE BATALHA</p>
             <h1 id="match-title">Partida</h1>
+            <span id="match-watchers"></span>
           </div>
           <div class="toolbar">
             <button id="view-result" hidden>Ver resultado</button>
@@ -208,6 +210,11 @@
             </div>
           </section>
         </div>
+        <section
+          id="match-social"
+          class="match-social"
+          aria-label="Conversa e espectadores"
+        ></section>
         <div class="battle-footer">
           <div class="toolbar">
             <span id="footer-zones" hidden
