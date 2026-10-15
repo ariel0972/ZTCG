@@ -3,6 +3,8 @@ import { gameTransport } from "./game-transport.js";
 import { createCardInspector } from "./card-inspection.js";
 import { cardFace } from "./battle-ui.js";
 import { createMatchChat } from "./match-chat.js";
+import { createBattleEvents } from "./battle-events.js";
+import { createFieldMenu, publicFieldNotice } from "./field-overlays.js";
 
 const $ = (id) => document.getElementById(id);
 const id = new URLSearchParams(location.search).get("match");
@@ -13,6 +15,15 @@ let transport,
 const inspector = createCardInspector({
   reactions: () => state?.reactions || {},
 });
+const battleEvents = createBattleEvents(document.body, {
+  getViewerId: () => state?.players[0]?.id,
+  noticeDurationMs: 8000,
+});
+const noticeContent = node("section");
+const fieldNotice = createFieldMenu(document.querySelector(".battle-board"), {
+  label: "Turno pausado",
+  content: noticeContent,
+});
 function deny(text) {
   stopped = true;
   $("watch-status").textContent = text || "Esta sala não está disponível.";
@@ -20,11 +31,14 @@ function deny(text) {
   $("match-social").hidden = true;
   transport?.close();
   chat?.close();
+  battleEvents.close();
+  fieldNotice.close();
   document.body.classList.remove("in-match");
 }
 function slotView(slot) {
   const wrapper = node("div", "", "board-slot spectator-slot");
   wrapper.dataset.kind = slot.kind;
+  wrapper.dataset.slotId = slot.id;
   if (slot.terrain) wrapper.dataset.terrain = slot.terrain.nome;
   for (const [card, cls] of [
     [slot.card, ""],
@@ -114,11 +128,18 @@ function render(data) {
       ? "Partida encerrada. O chat permanece disponível por até 24 horas."
       : state.paused
         ? "Partida pausada · aguardando reconexão"
-        : "Ao vivo · clique em uma carta para ver os detalhes";
+        : `Ao vivo · Azul: ${first.nome} · Vermelho: ${second.nome}`;
   board(second, "enemy-front", "enemy-back", true);
   board(first, "my-front", "my-back");
   hud(second, "enemy-hud");
   hud(first, "my-hud");
+  const notice = publicFieldNotice(state);
+  noticeContent.replaceChildren(...(notice ? [node("p", notice.message)] : []));
+  fieldNotice.update({
+    visible: !!notice,
+    key: notice?.key,
+    label: notice?.label,
+  });
   $("watch-log").replaceChildren(
     ...state.log
       .slice(-50)
@@ -150,6 +171,7 @@ function render(data) {
       return b;
     }),
   );
+  battleEvents.update(data);
 }
 async function load() {
   if (!id || !/^[a-f\d-]{36}$/i.test(id)) {
@@ -185,6 +207,8 @@ void load().catch((error) => deny(error.message));
 window.addEventListener("pagehide", () => {
   transport?.close();
   chat?.close();
+  battleEvents.close();
+  fieldNotice.close();
 });
 window.addEventListener("pageshow", (event) => {
   if (event.persisted) location.reload();

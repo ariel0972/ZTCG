@@ -1,0 +1,80 @@
+.battle-board {
+  position: relative;
+}
+.field-menu {
+  position: absolute;
+  z-index: 90;
+  top: 10px;
+  right: 10px;
+  width: min(430px, calc(100% - 20px));
+  max-width: calc(100% - 20px);
+  border: 1px solid #c7ad76;
+  border-radius: 12px;
+  background: #11232bf5;
+  color: #e6edf0;
+  box-shadow: 0 12px 32px #0008;
+}
+.field-menu:not([open]) {
+  width: fit-content;
+}
+.field-menu summary {
+  padding: 10px 14px;
+  cursor: pointer;
+  color: #efcd89;
+  font-size: 13px;
+  font-weight: 600;
+}
+.field-menu-content {
+  padding: 0 14px 14px;
+  max-height: min(52dvh, 360px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.field-menu-content h2 {
+  margin: 4px 0 10px;
+  font-size: 16px;
+  line-height: 1.4;
+}
+.field-menu-content p {
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 7px 0;
+}
+.field-menu .spell-response,
+.match-page .field-menu .preparation-controls {
+  display: block;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+.match-page .field-menu .preparation-controls .hint {
+  display: block;
+  font-size: 12px;
+}
+.field-menu .spell-response button,
+.match-page .field-menu .preparation-controls button {
+  padding: 8px 10px;
+  min-height: 36px;
+  margin: 4px 4px 4px 0;
+  font-size: 12px;
+}
+.match-page .field-menu .preparation-controls #bonus-draw-controls {
+  display: block;
+}
+.field-menu .revealed-hand-cards {
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+}
+@media (max-width: 600px) {
+  .field-menu {
+    top: 6px;
+    right: 6px;
+    max-width: calc(100% - 12px);
+    width: min(340px, calc(100% - 12px));
+  }
+  .field-menu-content {
+    max-height: min(48dvh, 300px);
+    padding: 0 11px 11px;
+  }
+}

@@ -301,6 +301,10 @@ void fakeDatabase().then(async (db) => {
         return spell;
       });
     }
+    if (process.env.PREVIEW_FEEDBACK === "1") {
+      game.player(owner).mana = 10;
+      game.player(owner).hand.unshift(instance("040", owner));
+    }
     room.game = game.exportState();
     room.deadline =
       Date.now() + (process.env.PREVIEW_REACTIONS === "1" ? 1200000 : 120000);

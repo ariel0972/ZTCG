@@ -577,10 +577,9 @@ export class Game {
       for (const action of rule.efeitos)
         if (action.id === "manaRecovery") recovery = action.valor;
     }
-    player.mana = Math.min(
-      20,
-      player.mana +
-        recovery +
+    this.gainMana(
+      player,
+      recovery +
         this.state.slots
           .filter((s) => s.ownerId === player.id)
           .flatMap(slotCards)
@@ -590,6 +589,21 @@ export class Game {
             0,
           ),
     );
+  }
+  private gainMana(player: Player, amount: number) {
+    const before = player.mana;
+    player.mana = Math.min(20, player.mana + amount);
+    const recovered = player.mana - before;
+    if (recovered > 0)
+      this.event("mana", player.mage, undefined, {
+        mana: { amount: recovered },
+        slotId: this.state.slots.find(
+          (s) => s.ownerId === player.id && s.kind === "Mago",
+        )?.id,
+        originOwnerId: player.id,
+        summary: `${player.nome} recuperou ${recovered} de mana.`,
+      });
+    return recovered;
   }
   private causesDamage(
     effects: Effect[] = [],
@@ -1009,7 +1023,7 @@ export class Game {
     message?: string,
     details?: Pick<
       BattleEvent,
-      "slotId" | "reaction" | "damage" | "originOwnerId" | "summary"
+      "slotId" | "reaction" | "damage" | "mana" | "originOwnerId" | "summary"
     >,
   ) {
     this.state.eventSequence = (this.state.eventSequence ?? 0) + 1;
@@ -1236,7 +1250,7 @@ export class Game {
       if (!action.valor) return false;
       if (action.id === "mana") {
         const before = player.mana;
-        player.mana = Math.min(20, player.mana + action.valor);
+        this.gainMana(player, action.valor);
         return player.mana !== before;
       }
       if (action.id === "draw") {
@@ -1516,11 +1530,11 @@ export class Game {
         continue;
       for (const effect of passive.efeitos)
         if (effect.id === "discardMana") {
-          player.mana = Math.min(20, player.mana + effect.valor);
+          const recovered = this.gainMana(player, effect.valor);
           this.event(
             "passive",
             card,
-            `Recuperou ${effect.valor} mana ao ser descartada da mão.`,
+            `Recuperou ${recovered} mana ao ser descartada da mão.`,
           );
         }
     }
@@ -1693,7 +1707,7 @@ export class Game {
           this.draw(player, effect.valor!);
           break;
         case "mana":
-          player.mana = Math.min(20, player.mana + effect.valor!);
+          this.gainMana(player, effect.valor!);
           break;
         case "searchElemental": {
           const i = player.deck.findIndex(
@@ -1890,7 +1904,7 @@ export class Game {
           );
         break;
       case "Zarconizado":
-        this.player(ownerId).mana = Math.min(20, this.player(ownerId).mana + 2);
+        this.gainMana(this.player(ownerId), 2);
         break;
       case "Florescer":
         if (!card) break;
@@ -2516,7 +2530,7 @@ export class Game {
         hit(ids, 2);
         break;
       case "zarcosTear":
-        player.mana = Math.min(20, player.mana + 3);
+        this.gainMana(player, 3);
         if (!player.zarcosTriggered?.includes(card.id))
           (player.zarcosWatchers ??= []).push({
             cardId: card.id,
@@ -3221,9 +3235,9 @@ export class Game {
           if (i < 0) this.fail("Escolha um feitiço da sua mão.");
           this.spend(p, ability.custoMana);
           const discarded = this.discardFromHand(p, i);
-          p.mana = Math.min(20, p.mana + 3);
+          const recovered = this.gainMana(p, 3);
           this.log(
-            `${card.nome} sacrificou ${discarded.nome} da mão e recuperou 3 mana.`,
+            `${card.nome} sacrificou ${discarded.nome} da mão e recuperou ${recovered} mana.`,
           );
           break;
         }

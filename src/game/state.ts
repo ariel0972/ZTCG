@@ -17,6 +17,7 @@ export interface BattleEvent {
   slotId?: string;
   reaction?: ReactionName;
   damage?: BattleDamage;
+  mana?: { amount: number };
 }
 
 export interface Instance extends Card {

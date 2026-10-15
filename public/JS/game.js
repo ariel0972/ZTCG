@@ -31,6 +31,7 @@ import { createMatchResult } from "./match-result.js";
 import { createCardBacks } from "./card-backs.js";
 import { createOngoingSpells } from "./ongoing-spells.js";
 import { createDeckSelector } from "./deck-selector.js";
+import { createFieldMenu } from "./field-overlays.js";
 let deckSelector;
 const battleEvents = createBattleEvents(document.body, {
   getViewerId: () => user?.id,
@@ -74,7 +75,16 @@ const ongoingSpells = createOngoingSpells(
   $("enemy-ongoing-spells"),
 );
 responsePanel.setAttribute("aria-live", "polite");
-$("match-title").after(responsePanel);
+const responseMenu = createFieldMenu($("battle-board"), {
+  label: "Turno pausado",
+  content: responsePanel,
+  revealOnOpen: true,
+});
+const preparationMenu = createFieldMenu($("battle-board"), {
+  label: "Preparação · Mulligan",
+  content: $("preparation-controls"),
+  revealOnOpen: true,
+});
 const reactionsDialog = node("dialog", "", "reaction-guide");
 reactionsDialog.setAttribute("aria-label", "Reações elementais");
 const reactionsClose = node("button", "Fechar", "quiet");
@@ -1183,7 +1193,13 @@ function render() {
     !state?.pendingSpell &&
     !state?.pendingAttack &&
     !state?.pendingImpact &&
-    !state?.pendingHandChoice;
+    !state?.pendingHandChoice &&
+    !state?.paused;
+  if (state?.paused)
+    responsePanel.append(
+      node("h2", "Partida pausada"),
+      node("p", "Aguardando a reconexão dos jogadores."),
+    );
   if (state?.pendingImpact && user) {
     selected = null;
     targets = [];
@@ -1381,6 +1397,17 @@ function render() {
     `O oponente reembaralhou. Você tem ${me.preparation.bonusDraws} compra(s) extra(s) opcional(is), uma por reembaralhamento.`;
   for (const id of ["accept-bonus", "decline-bonus"])
     $(id).disabled = pending || !connected;
+  responseMenu.update({
+    visible: state.status === "ACTIVE" && !responsePanel.hidden,
+    key: `${state.id}:${state.responseDeadline ?? "reconnect"}`,
+  });
+  preparationMenu.update({
+    visible:
+      !$("preparation-controls").hidden &&
+      responsePanel.hidden &&
+      (!me.preparation.ready || !!me.preparation.bonusDraws),
+    key: `${state.id}:${me.preparation.bonusDraws || 0}`,
+  });
   renderBoard(me.id, "my-front", "my-back");
   renderBoard(enemy.id, "enemy-front", "enemy-back", true);
   const nextHandKey = JSON.stringify([

@@ -1,4 +1,23 @@
 ZTCG — GUIA DO PROJETO, ARQUITETURA E PRÓXIMOS PASSOS
+Feedback do campo — 15/10/2026:
+- public/JS/field-overlays.js — Menus recolhíveis no campo e avisos públicos
+  de preparação/pausa; mantém controles privados fora do modo espectador.
+- public/CSS/field-overlays.css — Sobreposição responsiva sem ocupar espaço
+  acima do campo; permite recolher para organizar/inspecionar as cartas.
+- tests/field-overlays.test.ts — Controles preservados, nova decisão reabre
+  o menu e avisos para espectadores sem informações privadas.
+O espectador usa o mesmo fluxo visual de eventos dos jogadores: ações,
+danos, bloqueios e reações, incluindo alvos mortos e terrenos em slots vazios.
+Avisos de espectador duram pelo menos 8 segundos, até seis na tela, com fila
+limitada e saída gradual. Azul identifica o jogador de baixo; vermelho, o de
+cima. A entrada na sala não reproduz eventos antigos; reconexão não duplica.
+Recuperação de mana gera evento público persistido com ganho efetivo, limitado
+a 20. Início do turno, feitiços, habilidades, descartes, passivas e Zarconizado
+usam o mesmo cálculo. O indicador azul +X mana aparece sobre o mago e respeita
+movimento reduzido. Custos não são confundidos com recuperação.
+PREVIEW_FEEDBACK=1, junto à prévia de mecânicas e reações, adiciona mana
+reduzida e Lágrima de Zarcos para conferir o ganho visual com contas fictícias.
+
 Chat e espectadores — 14/10/2026:
 - src/game/social.ts — Autorização por amizade aceita, chat de 24 horas,
   índices TTL, limite por conta, mensagens idempotentes e presença independente.

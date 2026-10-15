@@ -207,6 +207,119 @@ function browserFixture() {
     });
   return dom;
 }
+
+test("recuperação de mana anuncia só o ganho efetivo e persiste para espectadores", () => {
+  const { g } = fixture(),
+    p = g.player("p1");
+  p.mana = 18;
+  (g as any).effects("p1", [{ id: "mana", valor: 5 }], []);
+  const event = g.state.events!.at(-1)!;
+  assert.equal(p.mana, 20);
+  assert.equal(event.kind, "mana");
+  assert.deepEqual(event.mana, { amount: 2 });
+  assert.equal(event.card.id, p.mage.id);
+  assert.equal(event.originOwnerId, p.id);
+  const count = g.state.events!.length;
+  (g as any).effects("p1", [{ id: "mana", valor: 5 }], []);
+  assert.equal(g.state.events!.length, count);
+  p.mana = 0;
+  (g as any).recoverMana(p);
+  assert.ok(p.mana > 0);
+  assert.equal(g.state.events!.at(-1)!.mana!.amount, p.mana);
+  const restored = Game.restore(JSON.parse(JSON.stringify(g.exportState())));
+  assert.deepEqual(
+    restored.spectatorSnapshot().events,
+    g.snapshot("p1").events,
+  );
+});
+
+test("mana usa indicador azul separado do dano e ignora ganhos nulos", async () => {
+  const modulePath = "../public/JS/battle-effects.js",
+    { createBattleEffects } = await import(modulePath);
+  const dom = browserFixture(),
+    view = createBattleEffects(dom.window.document.body);
+  try {
+    view.show({ kind: "mana", card: { id: "c" }, mana: { amount: 4 } });
+    const indicator = dom.window.document.querySelector(
+      ".battle-effect--mana",
+    )!;
+    assert.match(indicator.textContent!, /\+4 mana/);
+    assert.equal(indicator.getAttribute("data-kind"), "mana");
+    assert.equal(
+      (indicator as HTMLElement).style.getPropertyValue("--effect-color"),
+      "#7cd8ff",
+    );
+    view.show({ kind: "mana", card: { id: "c" }, mana: { amount: 0 } });
+    assert.equal(
+      dom.window.document.querySelectorAll(".battle-effect").length,
+      1,
+    );
+  } finally {
+    view.close();
+    dom.window.close();
+  }
+});
+
+test("avisos de espectador duram oito segundos sem repetir o histórico na entrada ou reconexão", async (t) => {
+  const modulePath = "../public/JS/battle-events.js",
+    { createBattleEvents } = await import(modulePath);
+  const dom = browserFixture(),
+    old = Object.getOwnPropertyDescriptor(globalThis, "document");
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: dom.window.document,
+  });
+  t.mock.timers.enable({ apis: ["Date", "setTimeout"], now: 100000 });
+  const view = createBattleEvents(dom.window.document.body, {
+    getViewerId: () => "p1",
+    noticeDurationMs: 8000,
+  });
+  const event = {
+    sequence: 1,
+    kind: "damage",
+    card: { id: "c", nome: "Alvo", ownerId: "p2" },
+    originOwnerId: "p1",
+    damage: { amount: 3 },
+  };
+  try {
+    view.update({ id: "match", events: [event] });
+    assert.equal(
+      dom.window.document.querySelectorAll(".battle-event").length,
+      0,
+    );
+    view.update({ id: "match", events: [event, { ...event, sequence: 2 }] });
+    view.update({ id: "match", events: [event, { ...event, sequence: 2 }] });
+    assert.equal(
+      dom.window.document.querySelectorAll(".battle-event").length,
+      1,
+    );
+    assert.equal(
+      dom.window.document.querySelectorAll(".battle-effect").length,
+      1,
+    );
+    t.mock.timers.tick(7999);
+    assert.equal(
+      dom.window.document.querySelectorAll(".battle-event--leaving").length,
+      0,
+    );
+    t.mock.timers.tick(1);
+    assert.equal(
+      dom.window.document.querySelectorAll(".battle-event--leaving").length,
+      1,
+    );
+    t.mock.timers.tick(650);
+    assert.equal(
+      dom.window.document.querySelectorAll(".battle-event").length,
+      0,
+    );
+  } finally {
+    view.close();
+    t.mock.timers.reset();
+    if (old) Object.defineProperty(globalThis, "document", old);
+    else delete (globalThis as any).document;
+    dom.window.close();
+  }
+});
 test("animações cobrem reações, sobrevivem à morte do alvo e respeitam movimento reduzido", async () => {
   const path = "../public/JS/battle-effects.js";
   const { createBattleEffects } = await import(path);

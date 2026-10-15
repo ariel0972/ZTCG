@@ -2,7 +2,7 @@
 import { createBattleEffects } from "./battle-effects.js";
 export function createBattleEvents(
   host = document.body,
-  { getViewerId = () => undefined } = {},
+  { getViewerId = () => undefined, noticeDurationMs = 3200 } = {},
 ) {
   const effects = createBattleEffects(host);
   const panel = document.createElement("section");
@@ -38,6 +38,7 @@ export function createBattleEvents(
     damage: "Dano recebido",
     notice: "Aviso",
     mount: "Montaria",
+    mana: "Mana recuperada",
     elementalReaction: "Reação elemental",
   };
   function show(event) {
@@ -68,7 +69,10 @@ export function createBattleEvents(
     item.append(text);
     panel.append(item);
     const now = Date.now();
-    lastFadeAt = Math.min(now + 5950, Math.max(now + 3200, lastFadeAt + 550));
+    lastFadeAt = Math.min(
+      now + noticeDurationMs + 2750,
+      Math.max(now + noticeDurationMs, lastFadeAt + 550),
+    );
     const fade = setTimeout(
       () => item.classList.add("battle-event--leaving"),
       lastFadeAt - now,
@@ -84,6 +88,7 @@ export function createBattleEvents(
       event.kind !== "damage" &&
       event.kind !== "elementalReaction" &&
       event.kind !== "block" &&
+      event.kind !== "mana" &&
       !globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches
     ) {
       face.animate?.(
