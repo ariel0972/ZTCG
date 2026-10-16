@@ -80,10 +80,10 @@ test("catálogo: 20 pedidos fazem uma leitura, cópias isoladas e edição inval
 test("HTTP: ranking reutiliza consultas e assets versionados/ETag não acessam o banco", async () => {
   const db = await fakeDatabase();
   let connections = 0,
-    aggregates = 0;
-  const original = User.aggregate;
-  (User as any).aggregate = (...args: any[]) => {
-    aggregates++;
+    reads = 0;
+  const original = User.find;
+  (User as any).find = (...args: any[]) => {
+    reads++;
     return (original as any)(...args);
   };
   const server = createServer(
@@ -121,11 +121,11 @@ test("HTTP: ranking reutiliza consultas e assets versionados/ETag não acessam o
       assert.equal(response.status, 200);
       await response.json();
     }
-    assert.equal(aggregates, 1);
+    assert.equal(reads, 2);
     const invalid = await fetch(base + "/rankings?mode=invalid");
     assert.equal(invalid.status, 422);
     await invalid.text();
-    assert.equal(aggregates, 1);
+    assert.equal(reads, 2);
     const cards = await fetch(base + "/cards");
     assert.match(cards.headers.get("cache-control")!, /public, max-age=60/);
     await cards.text();

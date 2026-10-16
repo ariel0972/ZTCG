@@ -11,6 +11,7 @@ import { ownedDeck } from "../services/decks";
 import Match from "../db/models/match";
 import { AppError } from "../lib/errors";
 import { log } from "../lib/observability";
+import { projectMatchRankings } from "../services/ranking-projections";
 import { invalidateRankings } from "../services/ranking-cache";
 export const TURN_MS = 120_000,
   LEASE_MS = 15_000,
@@ -39,6 +40,9 @@ export class DurableGame {
           },
         },
         { upsert: true, writeConcern: { w: "majority", wtimeout: 5000 } },
+      );
+      await projectMatchRankings(
+        room.entries.map((e) => ({ userId: e.id, deckId: e.deckId })),
       );
     },
   ) {}

@@ -7,6 +7,13 @@ export interface IUser extends Document {
   email: string;
   senha: string;
   avatarURL: string;
+  ranking?: {
+    partidas: number;
+    vitorias: number;
+    rate: number;
+    stats: Record<string, any>;
+    updatedAt: Date;
+  };
   nivel: number;
   vitorias: number;
   partidas: number;
@@ -22,6 +29,7 @@ const userSchema = new Schema<IUser>({
   email: { type: String, required: true, unique: true },
   senha: { type: String, required: true, select: false },
   avatarURL: { type: String, default: "/assets/avatar.png" },
+  ranking: { type: Schema.Types.Mixed, select: false },
   nivel: { type: Number, default: 1 },
   vitorias: { type: Number, default: 0 },
   partidas: { type: Number, default: 0 },
@@ -39,6 +47,21 @@ userSchema.index(
   },
 );
 
+userSchema.index(
+  { "ranking.vitorias": -1, "ranking.rate": -1, _id: 1 },
+  {
+    name: "ranking_wins",
+    partialFilterExpression: { "ranking.partidas": { $gte: 1 } },
+  },
+);
+userSchema.index(
+  { "ranking.rate": -1, "ranking.vitorias": -1, _id: 1 },
+  {
+    name: "ranking_rate",
+    partialFilterExpression: { "ranking.partidas": { $gte: 10 } },
+  },
+);
+userSchema.index({ "ranking.partidas": 1 }, { name: "ranking_count" });
 const User: Model<IUser> = mongoose.model<IUser>("UserTCG", userSchema);
 
 export default User;

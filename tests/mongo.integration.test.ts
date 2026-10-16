@@ -7,6 +7,16 @@ import { cardSchema } from "../src/types/card";
 import { DurableGame } from "../src/game/durable";
 import { MongoGameStore } from "../src/game/store";
 import { Game } from "../src/game/engine";
+import User from "../src/db/models/user";
+import Deck from "../src/db/models/decks";
+import Match from "../src/db/models/match";
+import {
+  rebuildRankings,
+  createRankingIndexes,
+  projectMatchRankings,
+} from "../src/services/ranking-projections";
+import { storeAvatar, avatarBytes } from "../src/services/avatars";
+import sharp from "sharp";
 test(
   "MongoDB real isolado: CAS, reinício, idempotência e projeção recuperável",
   {
@@ -116,6 +126,64 @@ test(
           .countDocuments(),
         1,
       );
+      const userId = "1".repeat(24),
+        deckId = "4".repeat(24);
+      await User.create({
+        _id: userId,
+        nome: "Projection test",
+        email: "projection@test.local",
+        senha: "test",
+      });
+      await Deck.create({
+        _id: deckId,
+        userId,
+        nome: "Public test",
+        publico: true,
+      });
+      for (let i = 0; i < 12; i++)
+        await Match.create({
+          matchId: `projection-${i}`,
+          players: [{ userId, deckId }],
+          winner: userId,
+          reason: "Mago derrotado.",
+          finishedAt: new Date(2026, 0, 1, 0, i),
+        });
+      await rebuildRankings();
+      const projected = await User.findById(userId).select("+ranking").lean();
+      assert.equal(projected!.ranking!.partidas, 12);
+      const xp = projected!.ranking!.stats.xp;
+      await Promise.all([
+        projectMatchRankings([{ userId, deckId }]),
+        projectMatchRankings([{ userId, deckId }]),
+      ]);
+      assert.equal(
+        (await User.findById(userId).select("+ranking").lean())!.ranking!.stats
+          .xp,
+        xp,
+      );
+      assert.equal(
+        (await Deck.findById(deckId).select("+ranking").lean())!.ranking!
+          .partidas,
+        12,
+      );
+      await createRankingIndexes();
+      const plan: any = await User.find({ "ranking.partidas": { $gte: 1 } })
+        .sort({ "ranking.vitorias": -1, "ranking.rate": -1, _id: 1 })
+        .limit(3)
+        .hint("ranking_wins")
+        .explain("executionStats");
+      assert.equal(plan.executionStats.nReturned, 1);
+      assert.ok(
+        JSON.stringify(plan.queryPlanner.winningPlan).includes("ranking_wins"),
+      );
+      const png = await sharp({
+        create: { width: 400, height: 400, channels: 3, background: "red" },
+      })
+        .png()
+        .toBuffer();
+      const url = await storeAvatar(png);
+      const bytes = await avatarBytes(url.split("/").pop()!.split(".")[0]);
+      assert.equal((await sharp(bytes!).metadata()).width, 192);
     } finally {
       // The name was checked and the database was empty before this test created it.
       if (safeToDrop) await mongoose.connection.db!.dropDatabase();

@@ -1,4 +1,5 @@
 import { profileRoutes } from "./routes/profileRoutes";
+import { avatarRoutes } from "./routes/avatarRoutes";
 import { rankingRoutes } from "./routes/rankingRoutes";
 import { reactionDescriptions } from "./game/reactions";
 import { experienceRules } from "./services/experience";
@@ -120,6 +121,7 @@ export function createApp(
       );
     }
   });
+  app.use("/avatars", avatarRoutes);
   app.use("/auth", userRoutes);
   app.use("/rankings", rankingRoutes);
   app.use("/game", gameRoutes(game, social));

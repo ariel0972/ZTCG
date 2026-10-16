@@ -11,6 +11,7 @@ import initial from "../../src/data/catalog.json";
 import bcrypt from "bcrypt";
 import { playerNameKey } from "../../src/services/player-name";
 import { socialModels } from "../../src/game/social";
+import Avatar from "../../src/db/models/avatar";
 import { invalidateCatalog } from "../../src/services/catalog";
 import { invalidateRankings } from "../../src/services/ranking-cache";
 export async function fakeDatabase() {
@@ -36,7 +37,9 @@ export async function fakeDatabase() {
                 ? value.$in.some((id: any) => equal(p.userId, id))
                 : equal(p.userId, value),
             );
-          const actual = row[key];
+          const actual = key
+            .split(".")
+            .reduce((v: any, k: string) => v?.[k], row);
           if (
             value &&
             typeof value === "object" &&
@@ -49,6 +52,9 @@ export async function fakeDatabase() {
                 return v.some((item: any) => equal(actual, item));
               if (op === "$ne") return !equal(actual, v);
               if (op === "$gt") return actual > v;
+              if (op === "$gte") return actual >= v;
+              if (op === "$elemMatch")
+                return actual?.some((entry: any) => matches(entry, v));
               if (op === "$lte") return actual <= v;
               if (op === "$regex")
                 return new RegExp(v, value.$options).test(actual);
@@ -76,8 +82,10 @@ export async function fakeDatabase() {
         if (Array.isArray(value))
           value = [...value].sort((a, b) => {
             for (const [key, direction] of Object.entries(sort)) {
-              const av = a[key],
-                bv = b[key];
+              const av = key
+                  .split(".")
+                  .reduce((v: any, k: string) => v?.[k], a),
+                bv = key.split(".").reduce((v: any, k: string) => v?.[k], b);
               if (av < bv) return -Number(direction);
               if (av > bv) return Number(direction);
             }
@@ -109,83 +117,6 @@ export async function fakeDatabase() {
   patch(User, "find", (filter = {}) =>
     query(find(users, filter).map(document)),
   );
-  // Isolated ranking aggregation: no real database is contacted in UI/API tests.
-  patch(User, "aggregate", (pipeline) => {
-    const minimum =
-      pipeline.find((s: any) => s.$match)?.$match?.partidas?.$gte ?? 0;
-    const order = pipeline.find((s: any) => s.$sort).$sort;
-    const facet = pipeline.find((s: any) => s.$facet).$facet;
-    const rows = users
-      .map((u) => {
-        const played = find(matches, { "players.userId": u._id });
-        const vitorias = played.filter((m) => equal(m.winner, u._id)).length;
-        return {
-          ...u,
-          partidas: played.length,
-          vitorias,
-          rate: played.length ? vitorias / played.length : 0,
-        };
-      })
-      .filter((u) => u.partidas >= minimum)
-      .sort((a, b) => {
-        for (const [key, direction] of Object.entries(order)) {
-          if (a[key] < b[key]) return -Number(direction);
-          if (a[key] > b[key]) return Number(direction);
-        }
-        return 0;
-      });
-    const skip = facet.players[0].$skip;
-    return Promise.resolve([
-      {
-        podium: rows.slice(0, 3),
-        players: rows.slice(skip, skip + facet.players[1].$limit),
-        total: [{ count: rows.length }],
-      },
-    ]);
-  });
-  patch(Deck, "aggregate", (pipeline) => {
-    const minimum = pipeline.find((s: any) => s.$match?.partidas)?.$match
-      .partidas.$gte;
-    const facet = pipeline.find((s: any) => s.$facet).$facet;
-    const order = pipeline.find((s: any) => s.$sort).$sort;
-    const rows = decks
-      .filter((d) => d.publico === true)
-      .flatMap((d) => {
-        const owner = users.find((u) => equal(u._id, d.userId));
-        if (!owner) return [];
-        const played = matches.filter((m) =>
-          m.players?.some(
-            (p: any) => equal(p.deckId, d._id) && equal(p.userId, d.userId),
-          ),
-        );
-        const wins = played.filter((m) => equal(m.winner, d.userId)).length;
-        return [
-          {
-            ...d,
-            owner,
-            partidas: played.length,
-            vitorias: wins,
-            rate: played.length ? wins / played.length : 0,
-          },
-        ];
-      })
-      .filter((d) => d.partidas >= minimum)
-      .sort((a, b) => {
-        for (const [key, direction] of Object.entries(order)) {
-          if (a[key] < b[key]) return -Number(direction);
-          if (a[key] > b[key]) return Number(direction);
-        }
-        return 0;
-      });
-    const skip = facet.decks[0].$skip;
-    return Promise.resolve([
-      {
-        podium: rows.slice(0, 3),
-        decks: rows.slice(skip, skip + facet.decks[1].$limit),
-        total: [{ count: rows.length }],
-      },
-    ]);
-  });
   function update(row: any, change: any) {
     if (
       change.$set?.nomeKey &&
@@ -204,14 +135,19 @@ export async function fakeDatabase() {
   }
   for (const [model, rows] of [
     [User, users],
+    [Deck, decks],
+    [Avatar, []],
     [Friendship, friendships],
     [Invitation, invitations],
     ...Object.values(socialModels).map((model) => [model, []] as [any, any[]]),
   ] as [any, any[]][]) {
-    if (Object.values(socialModels).includes(model))
+    if (model === Avatar || Object.values(socialModels).includes(model))
       patch(model, "findById", (id) =>
         query(document(find(rows, { _id: id })[0])),
       );
+    patch(model, "countDocuments", (filter: any) =>
+      query(find(rows, filter).length),
+    );
     patch(model, "updateOne", (filter, change, opts = {}) => {
       let row = find(rows, filter)[0];
       if (!row && opts.upsert) {

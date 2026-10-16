@@ -314,12 +314,12 @@ $("profile-form").onsubmit = async (e) => {
         !["image/png", "image/jpeg", "image/webp"].includes(file.type)
       )
         throw new Error("Use PNG, JPG ou WebP de até 200 KB.");
-      avatarURL = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
+      const upload = await api("/auth/avatar", {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
       });
+      avatarURL = upload.avatarURL;
     }
     const result = await api("/auth/user/edit", {
       method: "PUT",

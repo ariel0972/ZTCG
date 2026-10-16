@@ -4,6 +4,7 @@ import { createServer } from "node:http";
 import mongoose from "mongoose";
 import { createApp } from "../src/application";
 import { fakeDatabase } from "./support/database";
+import { rebuildRankings } from "../src/services/ranking-projections";
 import { invalidateRankings } from "../src/services/ranking-cache";
 test("rankings públicos usam histórico real, desempates, mínimo de 10 e paginação sem expor a conta", async () => {
   const db = await fakeDatabase();
@@ -35,6 +36,7 @@ test("rankings públicos usam histórico real, desempates, mínimo de 10 e pagin
   player(5, 1, 1);
   for (let n = 6; n <= 27; n++) player(n, 0, 1);
   player(28, 0, 0);
+  await rebuildRankings(true);
   const server = createServer(createApp([], async () => mongoose));
   await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
   const base = `http://127.0.0.1:${(server.address() as any).port}`;
@@ -96,6 +98,7 @@ test("rankings públicos usam histórico real, desempates, mínimo de 10 e pagin
     assert.equal(rules.experience.thresholds[30].xp, 82100);
     assert.equal(rules.experience.titles.at(-1).max, null);
     db.matches.length = 0;
+    await rebuildRankings(true);
     invalidateRankings();
     assert.equal((await read("/rankings?mode=rate")).total, 0);
     db.users.length = 0;
@@ -157,6 +160,7 @@ test("baralhos públicos: mínimo por deck, dono correto, desempates, histórico
     ],
     winner: owner,
   });
+  await rebuildRankings(true);
   const server = createServer(createApp([], async () => mongoose));
   await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
   const base = `http://127.0.0.1:${(server.address() as any).port}`;
@@ -205,6 +209,7 @@ test("baralhos públicos: mínimo por deck, dono correto, desempates, histórico
     assert.equal(hidden.total, 26);
     assert.ok(![...hidden.podium, ...hidden.decks].some((d) => d.id === id(1)));
     db.matches.length = 0;
+    await rebuildRankings(true);
     invalidateRankings();
     assert.deepEqual((await read()).podium, []);
     assert.deepEqual((await read()).decks, []);

@@ -1,4 +1,5 @@
-import { Router } from "express";
+import express, { Router } from "express";
+import { storeAvatar, storeLegacyAvatar } from "../services/avatars";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -75,7 +76,7 @@ router.post("/refresh", rateLimit(30), async (req, res) => {
       !/^[a-f\d]{24}$/i.test(payload.id)
     )
       throw new Error();
-    const user = await User.findById(payload.id);
+    const user = await User.findById(payload.id).select("+ranking");
     if (!user || (payload.sv ?? 0) !== (user.sessionVersion ?? 0))
       throw new Error();
     res.setHeader("Cache-Control", "no-store");
@@ -119,7 +120,7 @@ const register = credentials
     message: "As senhas são diferentes.",
   });
 export async function publicUser(user: any) {
-  const stats = await profileStats(String(user._id));
+  const stats = user.ranking?.stats ?? (await profileStats(String(user._id)));
   return {
     id: String(user._id),
     _id: String(user._id),
@@ -159,7 +160,7 @@ router.post("/registrar", rateLimit(10), async (req, res) => {
 });
 router.post("/logar", rateLimit(20), async (req, res) => {
   const input = credentials.strict().parse(req.body),
-    user = await User.findOne({ email: input.email }).select("+senha");
+    user = await User.findOne({ email: input.email }).select("+senha +ranking");
   if (!user || !(await bcrypt.compare(input.senha, user.senha)))
     throw new AppError(401, "Email ou senha incorretos.", "UNAUTHORIZED");
   const token = issueSession(user, res);
@@ -172,10 +173,24 @@ router.post("/logar", rateLimit(20), async (req, res) => {
   });
 });
 router.get("/me", checkToken, async (req: AuthRequest, res) => {
-  const user = await User.findById(req.userId);
+  const user = await User.findById(req.userId).select("+ranking");
   if (!user) throw new AppError(401, "Conta não encontrada.");
   res.json({ success: true, user: await publicUser(user) });
 });
+router.post(
+  "/avatar",
+  checkToken,
+  rateLimit(12),
+  express.raw({
+    type: ["image/png", "image/jpeg", "image/webp"],
+    limit: "200kb",
+  }),
+  async (req, res) => {
+    if (!Buffer.isBuffer(req.body))
+      throw new AppError(422, "Envie uma imagem PNG, JPG ou WebP.");
+    res.json({ success: true, avatarURL: await storeAvatar(req.body) });
+  },
+);
 router.put("/user/edit", checkToken, async (req: AuthRequest, res) => {
   const input = z
     .object({
@@ -186,6 +201,7 @@ router.put("/user/edit", checkToken, async (req: AuthRequest, res) => {
         .refine(
           (v) =>
             /^\/assets\/(?!.*\.\.)[^\\]+$/.test(v) ||
+            /^\/avatars\/[a-f\d]{64}\.webp$/.test(v) ||
             /^https:\/\//.test(v) ||
             /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(v),
           "Imagem inválida.",
@@ -193,6 +209,8 @@ router.put("/user/edit", checkToken, async (req: AuthRequest, res) => {
     })
     .strict()
     .parse(req.body);
+  if (input.avatarURL.startsWith("data:"))
+    input.avatarURL = await storeLegacyAvatar(input.avatarURL);
   const nomeKey = playerNameKey(input.nome);
   if (await User.exists({ nomeKey, _id: { $ne: req.userId } }))
     throw new AppError(

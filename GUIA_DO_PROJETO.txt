@@ -1,4 +1,54 @@
 ZTCG — GUIA DO PROJETO, ARQUITETURA E PRÓXIMOS PASSOS
+Conclusão das otimizações P0 — 16/10/2026:
+- scripts/measure-ranking.ts — Pares de leituras públicas MISS/HIT por modo,
+  bytes/TTFB, hashes de estatísticas sem dados pessoais e verificação de imagens.
+  Grava somente métricas em backups/ e não faz carga concorrente em produção.
+- src/services/ranking-projections.ts — Projeções persistidas de jogadores e
+  decks, reconstrução do histórico por participante após resultado e CAS por
+  quantidade de partidas para evitar gravações antigas. Reprocessamento idempotente.
+- src/db/models/avatar.ts — Miniaturas binárias por hash, com originais separados
+  dos documentos das contas; originais não são selecionados por padrão.
+- src/services/avatars.ts — Validação de PNG/JPEG/WebP, limite 200 KB/16 milhões
+  de pixels, rotação e miniatura WebP de até 192 px sem EXIF, armazenamento idempotente.
+- src/routes/avatarRoutes.ts — Imagens por SHA-256 com ETag, cache CDN de um ano
+  immutable e cache local limitado; não inclui imagens nos JSONs das contas.
+- scripts/migrate-read-optimizations.ts — Simula ou aplica migrações com backup,
+  índices aditivos, reconstrução do ranking e comparação da URL antiga na gravação.
+  Valida cada nova imagem pelo endpoint publicado antes de substituir a URL.
+- tests/read-optimizations.test.ts — Imagens inválidas, upload autenticado,
+  hash/cache/304, ausência de consultas ao histórico na leitura do ranking e CAS.
+As descrições anteriores de P0 parcial/pendente registram a situação anterior.
+O ranking agora consulta projeções indexadas, com pódio de três e página de 20;
+nenhuma consulta de ranking agrega Match ou recalcula XP. Decks continuam sem
+cache HTTP para respeitar publicação. Índices ranking_* cobrem ordenação e contagem.
+As projeções são reconstruídas SOMENTE para jogadores/decks de uma partida ao
+persistir resultado, preservando ordenação cronológica, desempates e sequências.
+Falha de projeção mantém resultSaved=false e o fluxo durável repete o trabalho.
+Jogadas ativas não executam esse trabalho. A manutenção existente recupera falhas.
+/ auth/me reutiliza o XP persistido quando disponível; o perfil detalhado mantém
+histórico/XP individual para listar os prêmios. Não se confunde isso com o ranking.
+Upload novo usa corpo binário em POST /auth/avatar. Clientes antigos enviando
+base64 são normalizados no servidor; nenhum upload novo persiste data URI na conta.
+Exemplos de migração (MONGO_URL da base alvo, sem URI na linha de comando):
+npx tsx scripts/migrate-read-optimizations.ts --rankings (simulação)
+npx tsx scripts/migrate-read-optimizations.ts --rankings --apply
+npx tsx scripts/migrate-read-optimizations.ts --avatars (simulação)
+npx tsx scripts/migrate-read-optimizations.ts --avatars --apply
+Executar --avatars --apply depois de publicar a nova rota. PUBLIC_APP_URL aponta
+para o domínio a verificar. Backups em backups/read-optimization-*.json ficam
+ignorados no Git. Não apagar AvatarImage nem originais durante essa migração.
+Validação antes da publicação: 255 testes passaram com MongoDB 8 real; nenhum
+ignorado. Verificação na base existente confirmou igualdade das estatísticas dos
+três modos com o ranking anterior, zero leituras Match nas consultas da API e
+plano ranking_wins examinando oito chaves/oito documentos para oito jogadores.
+Baseline pública em 16/10/2026: wins MISS 6.228 ms, 522.840 bytes; HIT 38 ms.
+Rate MISS 3.951 ms/361.090 bytes, HIT 13 ms. Decks 60–63 ms/1.371 bytes.
+São poucas amostras, incluindo rede e condições de cache, não p95/p99 de partidas.
+Simulação de avatares: dez registros, 906.198 bytes em strings data URI para
+68.238 bytes de WebP independentes. As medições pós-deploy usam o mesmo script.
+Backups/medições locais ficam em backups/read-performance-*.json e
+backups/read-projection-verification.json, ignorados no Git para preservar dados.
+
 Conferência da auditoria e integração MongoDB — 16/10/2026:
 A auditoria "Auditar desempenho do ZTCG" (13/10, base ed3b950) define duas P0:
 F1, ranking: parcialmente atendida. Cache público curto por modo/página de
