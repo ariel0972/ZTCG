@@ -1,4 +1,4 @@
-import type { Card } from "../types/card";
+import type { Card, Effect } from "../types/card";
 import type { Status } from "./status";
 import type { ReactionName } from "./reactions";
 
@@ -32,6 +32,13 @@ export interface Instance extends Card {
   appliedElement?: string;
   statuses: Status[];
   scheduledStatuses?: { round: number; status: Status }[];
+  scheduledHeals?: {
+    round: number;
+    amount: number;
+    sourceId?: string;
+    ownerId: string;
+    origin: string;
+  }[];
   fireSpellsCast?: number;
   fireDamageBonus?: number;
   passiveCounters?: Record<string, number>;
@@ -92,7 +99,19 @@ export interface Player {
     unique: number;
   };
 }
+export interface AttackField {
+  id: string;
+  ownerId: string;
+  affectedOwnerId: string;
+  rounds: number;
+  damage: number;
+  element?: Card["elemento"];
+  piercing?: boolean;
+  reactions: NonNullable<Effect["reacoesElemento"]>;
+  card: Pick<Instance, "id" | "ownerId" | "numeroCatalogo" | "nome" | "imgURL">;
+}
 export interface State {
+  fieldEffects?: AttackField[];
   pendingImpact?: {
     base: State;
     operation:
@@ -126,6 +145,7 @@ export interface State {
     card: Instance;
     targets: string[];
     bonus: number;
+    actionBonus?: number;
     destinationId?: string;
   };
   version: number;

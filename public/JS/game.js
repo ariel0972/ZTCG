@@ -419,6 +419,7 @@ function damageAction(effects = [], id = "") {
       (e) =>
         [
           "damage",
+          "attackField",
           "stoneVolley",
           "tornado",
           "arrowRain",
@@ -1250,7 +1251,7 @@ function render() {
       node("h2", `${card?.nome || "Carta"}: desviar?`),
       node(
         "p",
-        `${request.source}. Anula o dano e os efeitos deste golpe. Uma vez por rodada, gratuito; resposta em 20 segundos e turno pausado.`,
+        `${request.source}. Anula o dano e os efeitos deste golpe. Gratuito; resposta em 20 segundos e turno pausado. Respeita a espera da passiva.`,
       ),
     );
     if (request.ownerId === user.id)
@@ -1330,19 +1331,24 @@ function render() {
       ),
     );
     if (state.pendingSpell.casterId !== user.id) {
-      const card = myPlayer().hand.find((c) => c.numeroCatalogo === "002");
-      const cancel = node(
-        "button",
-        "Cancelar com Jato d'água · 3 mana",
-        "primary",
-      );
-      cancel.disabled =
-        pending || !state.canRespond || state.paused || !connected;
-      cancel.onclick = () => command({ type: "respondSpell", cardId: card.id });
+      for (const card of myPlayer().hand.filter((c) =>
+        state.responseCards?.includes(c.id),
+      )) {
+        const cancel = node(
+          "button",
+          `Cancelar com ${card.nome} · ${card.custoMana} mana`,
+          "primary",
+        );
+        cancel.disabled =
+          pending || !state.canRespond || state.paused || !connected;
+        cancel.onclick = () =>
+          command({ type: "respondSpell", cardId: card.id });
+        responsePanel.append(cancel);
+      }
       const pass = node("button", "Não responder", "quiet");
       pass.disabled = pending || state.paused || !connected;
       pass.onclick = () => command({ type: "respondSpell" });
-      responsePanel.append(cancel, pass);
+      responsePanel.append(pass);
     }
   }
   if (!state || !user) return;

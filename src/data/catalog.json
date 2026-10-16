@@ -48,25 +48,55 @@
   },
   {
     "numeroCatalogo": "031",
-    "nome": "Barreira Ignea",
+    "nome": "Barreira Ígnea",
     "tipo": "Feitico",
-    "custoMana": 2,
-    "descricao": "",
+    "custoMana": 6,
+    "descricao": "Somente magos de Fogo podem conjurar. Cria uma barreira no campo inimigo por 3 rodadas: depois de cada ataque, causa 2 de dano a quem atacou. O elemento do ataque modifica esse golpe: Água divide o dano por 2, Ar dobra e Terra remove a barreira. Feitiços de Água e Ar de qualquer jogador alteram o dano da barreira pelo restante da duração; Terra a remove automaticamente. As fraquezas, resistências e proteções normais também são aplicadas.",
     "imgURL": "/assets/Cards/Barreira Ígnea.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
-    "alvo": "UnicoInimigo"
+    "alvo": "Global",
+    "elemento": "Fogo",
+    "requerElementoMago": "Fogo",
+    "efeitos": [
+      {
+        "id": "attackField",
+        "valor": 2,
+        "duracao": 3,
+        "reacoesElemento": [
+          {
+            "elemento": "Agua",
+            "multiplicador": 0.5
+          },
+          {
+            "elemento": "Ar",
+            "multiplicador": 2
+          },
+          {
+            "elemento": "Terra",
+            "remover": true
+          }
+        ]
+      }
+    ]
   },
   {
     "numeroCatalogo": "035",
     "nome": "Tornado de Fogo",
     "tipo": "Feitico",
-    "custoMana": 2,
-    "descricao": "",
+    "custoMana": 6,
+    "descricao": "Causa 4 de dano a todas as tropas inimigas. Segue a regra geral de cancelamento por feitiços de Água com Reação.",
     "imgURL": "/assets/Cards/Tornado de fogo.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
-    "alvo": "UnicoInimigo"
+    "alvo": "TodasTropasInimigas",
+    "elemento": "Fogo",
+    "efeitos": [
+      {
+        "id": "damage",
+        "valor": 4
+      }
+    ]
   },
   {
     "numeroCatalogo": "085",
@@ -105,12 +135,29 @@
     "numeroCatalogo": "104",
     "nome": "Cauterizar",
     "tipo": "Feitico",
-    "custoMana": 2,
-    "descricao": "",
+    "custoMana": 3,
+    "descricao": "Causa 1 de dano diretamente a uma tropa ou mago aliado, ignorando estruturas. No início da próxima rodada, cura o alvo em 3 vezes a vida efetivamente perdida por esse dano. Se o dano inicial eliminar uma tropa, recupera 5 de mana. Escudos, reduções, fraquezas e resistências são respeitados.",
     "imgURL": "/assets/Cards/Cauterizar.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
-    "alvo": "UnicoInimigo"
+    "alvo": "UnicoAliado",
+    "elemento": "Fogo",
+    "tiposAlvo": ["Tropa", "Mago"],
+    "efeitos": [
+      {
+        "id": "damage",
+        "valor": 1,
+        "perfurante": true,
+        "curaPosterior": {
+          "multiplicador": 3,
+          "rodadas": 1
+        },
+        "recompensaAoEliminar": {
+          "mana": 5,
+          "tipo": "Tropa"
+        }
+      }
+    ]
   },
   {
     "numeroCatalogo": "002",
@@ -130,7 +177,8 @@
         "valor": 4
       }
     ],
-    "maxAlvos": 1
+    "maxAlvos": 1,
+    "palavrasChave": ["Reação"]
   },
   {
     "numeroCatalogo": "032",
@@ -307,7 +355,7 @@
     "nome": "Furacão de Areia",
     "tipo": "Feitico",
     "custoMana": 4,
-    "descricao": "Aplica Cego por 2 rodadas. Causa 2 de dano a todos os inimigos no fim de cada rodada, durante 2 rodadas. Com Mago de Ar, rouba a carta do topo do baralho inimigo.",
+    "descricao": "Aplica Cego por 1 rodada e causa 2 de dano a todos os inimigos no fim dessa rodada. Com Mago de Ar, rouba a carta do topo do baralho inimigo.",
     "imgURL": "/assets/Cards/Furacão de Areia.png",
     "publicado": true,
     "versao": 2,
@@ -316,7 +364,8 @@
     "efeitos": [
       {
         "id": "sandstorm",
-        "valor": 2
+        "valor": 2,
+        "duracao": 1
       }
     ],
     "maxAlvos": 1
@@ -1224,13 +1273,47 @@
     "numeroCatalogo": "047",
     "nome": "Pele de Luokis",
     "tipo": "Armamento",
-    "custoMana": 6,
-    "descricao": "",
+    "custoMana": 7,
+    "descricao": "Concede +5 de vida e +3 de ataque. Os ataques básicos de quem recebe os bônus deste armamento são de Água. Uma vez por rodada, pode congelar gratuitamente uma tropa inimiga por 2 rodadas.",
     "imgURL": "/assets/Cards/Pele de Luokis.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
-    "bonusAtaque": 2,
-    "bonusHp": 1
+    "bonusAtaque": 3,
+    "bonusHp": 5,
+    "elemento": "Neutro",
+    "habilidadesPassivas": [
+      {
+        "gatilho": "continuous",
+        "escopo": "proprio",
+        "descricao": "Os ataques básicos de quem recebe os bônus deste armamento passam a ser de Água.",
+        "efeitos": [
+          {
+            "id": "attackElement",
+            "elemento": "Agua"
+          }
+        ]
+      }
+    ],
+    "habilidadesAtivas": [
+      {
+        "id": "congelarTropa",
+        "nome": "Congelar",
+        "custoMana": 0,
+        "alvo": "UnicoInimigo",
+        "filtroAlvo": {
+          "tipo": "Tropa"
+        },
+        "descricao": "Congela uma tropa inimiga por 2 rodadas. Uma vez por rodada, sem custo de mana.",
+        "efeitos": [
+          {
+            "id": "status",
+            "status": "Congelado",
+            "duracao": 2,
+            "unidade": "rodada"
+          }
+        ]
+      }
+    ]
   },
   {
     "numeroCatalogo": "048",
@@ -2164,7 +2247,7 @@
     "nome": "Golém de água",
     "tipo": "Tropa",
     "custoMana": 7,
-    "descricao": "Uma vez por rodada, pode desviar gratuitamente de um ataque, feitiço ou habilidade, anulando o dano e os efeitos do golpe nele. A escolha tem 20 segundos. Não evita dano periódico de status.",
+    "descricao": "Pode desviar gratuitamente de um ataque, feitiço ou habilidade, anulando dano e efeitos do golpe nele. Após desviar, aguarda uma rodada completa antes de poder desviar novamente. Recusar não inicia a espera. A escolha tem 20 segundos. Não evita dano periódico de status.",
     "imgURL": "/assets/Cards/Golem de água.png",
     "publicado": true,
     "versao": 2,
@@ -2178,7 +2261,8 @@
         "escopo": "proprio",
         "efeitos": [
           {
-            "id": "dodgeImpact"
+            "id": "dodgeImpact",
+            "esperaRodadas": 1
           }
         ]
       }
@@ -2433,11 +2517,19 @@
     "resistencia": ["Ar"],
     "habilidadesAtivas": [
       {
-        "id": "recuperarEnergia",
-        "nome": "Recuperar Energia",
-        "custoMana": 0,
-        "alvo": "Mao",
-        "descricao": "Escolha um feitiço da sua mão para sacrificar ao cemitério e recuperar 3 de mana, até o teto de 20. Consome a habilidade do mago na rodada."
+        "id": "imbuirEmChamas",
+        "nome": "Imbuir em chamas",
+        "custoMana": 3,
+        "alvo": "Global",
+        "descricao": "Até o fim do turno, a próxima ação de ataque, habilidade ou feitiço que causar dano recebe +1 de dano.",
+        "efeitos": [
+          {
+            "id": "nextActionDamage",
+            "valor": 1,
+            "duracao": 1,
+            "unidade": "turno"
+          }
+        ]
       }
     ],
     "habilidadesPassivas": [

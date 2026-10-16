@@ -2083,3 +2083,41 @@
   overflow: auto;
   margin-top: 12px;
 }
+
+.arena-divider.has-field-effects {
+  height: auto;
+  min-height: 48px;
+}
+.arena-divider.has-field-effects > span {
+  display: none;
+}
+.active-field-effects {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+.active-field-effects .field-effect-card {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  min-height: 38px;
+  padding: 4px 8px;
+  border: 1px solid #e69850;
+  background: #342219;
+  color: #ffe0b7;
+}
+.active-field-effects .field-effect-card img {
+  width: 23px;
+  height: 32px;
+  object-fit: contain;
+}
+.active-field-effects .field-effect-card .ongoing-spell-counter {
+  position: static;
+  min-width: 18px;
+}
+.active-field-effects .field-effect-card small {
+  max-width: 130px;
+  white-space: normal;
+}

@@ -34,6 +34,8 @@ export function applyStatus(
 ) {
   const nome = canonicalStatus(name);
   const existing = statuses.find((s) => canonicalStatus(s.nome) === nome);
+  const previousFreeze =
+    nome === "Congelado" && existing ? { ...existing } : undefined;
   if (nome === "Envenenado") {
     if (existing)
       existing.turnosRestantes = Math.min(5, existing.turnosRestantes + 1);
@@ -77,14 +79,21 @@ export function applyStatus(
       ? statuses.filter((s) => s.nome === nome).at(-1)!
       : statuses.find((s) => s.nome === nome)!;
   if (nome === "Interceptar") delete applied.protegidoId;
-  if (
-    unit &&
-    !["Envenenado", "Queimado", "Sangrando", "Congelado"].includes(nome)
-  ) {
+  if (unit && !["Envenenado", "Queimado", "Sangrando"].includes(nome)) {
     applied.unidade = unit;
     applied.turnosRestantes = duration;
     if (unit === "turno") applied.expiraNoTurno = turn + duration - 1;
     else delete applied.expiraNoTurno;
+  }
+  if (previousFreeze) {
+    const expires = (s: Status) =>
+      s.unidade === "turno"
+        ? (s.expiraNoTurno ?? turn + s.turnosRestantes - 1)
+        : turn + (turn % 2) + 2 * (s.turnosRestantes - 1);
+    if (expires(previousFreeze) > expires(applied)) {
+      Object.assign(applied, previousFreeze);
+      if (previousFreeze.unidade !== "turno") delete applied.expiraNoTurno;
+    }
   }
   return applied;
 }

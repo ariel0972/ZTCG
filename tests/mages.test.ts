@@ -156,6 +156,14 @@ test("Recuperar Energia exige um feitiço próprio e usa a habilidade sem conjur
   const g = make(),
     troop = instance("021", "p1"),
     spell = instance("002", "p1");
+  g.player("p1").mage.habilidadesAtivas = [
+    {
+      id: "recuperarEnergia",
+      nome: "Recuperar Energia",
+      custoMana: 0,
+      alvo: "Mao",
+    },
+  ];
   g.player("p1").hand.push(troop, spell);
   g.player("p1").mana = 18;
   const cmd = {

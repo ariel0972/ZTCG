@@ -7,6 +7,8 @@ export const effectIds = [
   "revealStealHand",
   "bloodScent",
   "damage",
+  "nextActionDamage",
+  "attackField",
   "displace",
   "heal",
   "status",
@@ -65,6 +67,7 @@ const keywordIds = [
   "Herança",
   "Flanquear",
   "Montaria",
+  "Reação",
 ];
 const statusIds = [
   "BonusAtaque",
@@ -76,6 +79,7 @@ const statusIds = [
   "Incapacitado",
   "SemAtaque",
   "Campo livre",
+  "Dano da próxima ação",
   "Atordoamento",
   "Atordoado",
   "Congelado",
@@ -98,6 +102,13 @@ const statusIds = [
 ];
 export function playableErrors(card: Card): string[] {
   const errors: string[] = [];
+  if (card.requerElementoMago && card.tipo !== "Feitico")
+    errors.push("Restrição de elemento do mago exige Feitico.");
+  if (
+    card.palavrasChave.includes("Reação") &&
+    (card.tipo !== "Feitico" || card.elemento !== "Agua")
+  )
+    errors.push("Reação exige feitiço de Água.");
   if (
     (card.montaria || card.palavrasChave.includes("Montaria")) &&
     card.tipo !== "Tropa"
@@ -159,6 +170,21 @@ export function playableErrors(card: Card): string[] {
         );
       const effectTarget = e.alvo === "Proprio" ? "UnicoAliado" : target;
       const configurable = ["arrowRain", "lightOrb"].includes(e.id);
+      if (
+        ["sandstorm", "nextActionDamage"].includes(e.id) &&
+        e.duracao !== undefined &&
+        e.duracao < 1
+      )
+        errors.push("Duração do efeito precisa ser positiva.");
+      if (
+        e.id === "nextActionDamage" &&
+        (target !== "Global" ||
+          !e.valor ||
+          (e.unidade && e.unidade !== "turno"))
+      )
+        errors.push(
+          "Bônus da próxima ação exige Global, valor positivo e duração em turnos.",
+        );
       if (e.variantesMago && !configurable)
         errors.push("variantesMago exige arrowRain ou lightOrb.");
       if (configurable && e.duracao !== undefined && e.duracao < 1)
@@ -218,6 +244,31 @@ export function playableErrors(card: Card): string[] {
       }
       if (!(effectIds as readonly string[]).includes(e.id))
         errors.push(`Efeito ${e.id} não implementado.`);
+      if (
+        e.perfurante !== undefined &&
+        !["damage", "attackField"].includes(e.id)
+      )
+        errors.push("Perfuração exige dano ou efeito de campo.");
+      if ((e.curaPosterior || e.recompensaAoEliminar) && e.id !== "damage")
+        errors.push("Cura posterior e recompensa de abate exigem damage.");
+      if (e.reacoesElemento && e.id !== "attackField")
+        errors.push("Reações configuráveis exigem attackField.");
+      if (
+        e.id === "attackField" &&
+        (target !== "Global" || !e.duracao || !e.valor)
+      )
+        errors.push("Efeito de campo exige Global, valor e duração positivos.");
+      if (
+        e.reacoesElemento &&
+        new Set(e.reacoesElemento.map((r) => r.elemento)).size !==
+          e.reacoesElemento.length
+      )
+        errors.push("Não repita elementos de reação do campo.");
+      if (
+        e.curaPosterior &&
+        !["UnicoAliado", "TodosAliados"].includes(effectTarget ?? "")
+      )
+        errors.push("Cura posterior ao dano só pode atingir aliados.");
       if (e.valorEstrutura !== undefined && e.id !== "damage")
         errors.push("valorEstrutura exige damage.");
       if ((e.direcao || e.borda || e.estrutura) && e.id !== "displace")
@@ -258,9 +309,11 @@ export function playableErrors(card: Card): string[] {
         errors.push("carta/seNaoUsada exigem searchNamed.");
       if (
         e.unidade &&
-        (!["status", "guardTarget", "lightOrb"].includes(e.id) ||
+        (!["status", "guardTarget", "lightOrb", "nextActionDamage"].includes(
+          e.id,
+        ) ||
           (e.id !== "lightOrb" &&
-            ["Envenenado", "Queimado", "Sangrando", "Congelado"].includes(
+            ["Envenenado", "Queimado", "Sangrando"].includes(
               canonicalStatus(e.status ?? ""),
             )))
       )
@@ -465,6 +518,8 @@ export function playableErrors(card: Card): string[] {
         if (filter?.status && !statusIds.includes(filter.status))
           errors.push("Filtro de passiva usa status não implementado.");
       for (const effect of h.efeitos) {
+        if (effect.id === "attackElement" && card.tipo === "Feitico")
+          errors.push("Elemento de ataque exige carta permanente.");
         if (effect.id === "attackLimit" && card.tipo !== "Tropa")
           errors.push("Limite de ataques passivo exige Tropa.");
         if (effect.id === "attackLifesteal" && card.tipo !== "Armamento")
@@ -484,6 +539,7 @@ export function playableErrors(card: Card): string[] {
                 "manaRecovery",
                 "blockOwnAttack",
                 "attackLimit",
+                "attackElement",
                 "attackLifesteal",
                 "discardMana",
               ]
@@ -504,6 +560,7 @@ export function playableErrors(card: Card): string[] {
                       "reflectAttack",
                       "blockOwnAttack",
                       "attackLimit",
+                      "attackElement",
                       "interceptAttack",
                       "dodgeImpact",
                       "attackLifesteal",

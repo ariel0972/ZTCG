@@ -13,6 +13,9 @@ const legacyCards = {
 };
 export function createOngoingSpells(ownHost, enemyHost) {
   const doc = ownHost.ownerDocument;
+  const divider = doc.querySelector(".arena-divider");
+  const fieldHost = divider ? node("div", "", "active-field-effects") : null;
+  if (fieldHost) divider.append(fieldHost);
   const dialog = node("dialog", "", "ongoing-spell-dialog");
   dialog.setAttribute("aria-label", "Feitiço ativo em campo");
   const heading = node("h2"),
@@ -42,7 +45,9 @@ export function createOngoingSpells(ownHost, enemyHost) {
       node("p", `Ativado por ${effect.ownerName}`),
       node(
         "strong",
-        `${effect.damage} de dano no fim de cada rodada`,
+        effect.field
+          ? `${effect.damage} de dano após cada ataque no campo de ${effect.affectedName}`
+          : `${effect.damage} de dano no fim de cada rodada`,
         "ongoing-spell-damage",
       ),
       node("p", `${effect.rounds} rodada(s) restante(s)`),
@@ -52,18 +57,39 @@ export function createOngoingSpells(ownHost, enemyHost) {
         "muted",
       ),
     );
+    if (effect.field)
+      details.append(
+        node(
+          "p",
+          "Reações automáticas: " +
+            effect.reactions
+              .map(
+                (r) =>
+                  `${r.elemento === "Agua" ? "Água" : r.elemento}: ${r.remover ? "remove o efeito" : "multiplica o dano por " + r.multiplicador}`,
+              )
+              .join("; "),
+        ),
+        node(
+          "p",
+          "O ataque muda apenas o golpe atual. Feitiços dos dois jogadores alteram o dano pelo restante da duração.",
+        ),
+      );
   }
   return {
     update(state, viewerId) {
       active = new Map();
       ownHost.replaceChildren();
       enemyHost.replaceChildren();
+      fieldHost?.replaceChildren();
       const sources = state.players.flatMap((p) => [
         ...(p.graveyard || []),
         ...(p.banished || []),
         ...(p.forgotten || []),
       ]);
-      for (const spell of state.ongoingSpells || []) {
+      for (const spell of [
+        ...(state.ongoingSpells || []),
+        ...(state.fieldEffects || []).map((f) => ({ ...f, field: true })),
+      ]) {
         if (spell.rounds <= 0) continue;
         const card = spell.card ||
           sources.find((c) => c.id === spell.id) ||
@@ -77,6 +103,9 @@ export function createOngoingSpells(ownHost, enemyHost) {
           ownerName:
             state.players.find((p) => p.id === spell.ownerId)?.nome ||
             "Jogador",
+          affectedName:
+            state.players.find((p) => p.id === spell.affectedOwnerId)?.nome ||
+            "oponente",
         };
         active.set(spell.id, effect);
         const mine = spell.ownerId === viewerId,
@@ -84,6 +113,7 @@ export function createOngoingSpells(ownHost, enemyHost) {
           art = node("img"),
           counter = node("span", spell.rounds, "ongoing-spell-counter");
         button.type = "button";
+        if (spell.field) button.classList.add("field-effect-card");
         button.dataset.side = mine ? "me" : "enemy";
         button.setAttribute(
           "aria-label",
@@ -97,8 +127,18 @@ export function createOngoingSpells(ownHost, enemyHost) {
           describe(active.get(spell.id));
           dialog.showModal();
         };
-        (mine ? ownHost : enemyHost).append(button);
+        (spell.field && fieldHost
+          ? fieldHost
+          : mine
+            ? ownHost
+            : enemyHost
+        ).append(button);
       }
+      divider?.classList.toggle(
+        "has-field-effects",
+        !!fieldHost?.children.length,
+      );
+      if (fieldHost) fieldHost.hidden = !fieldHost.children.length;
       ownHost.hidden = !ownHost.children.length;
       enemyHost.hidden = !enemyHost.children.length;
       if (selected) {

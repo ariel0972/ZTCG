@@ -89,6 +89,34 @@ export const effectSchema = z
     requerStatus: z.string().max(80).optional(),
     inicio: z.enum(["proximaRodada"]).optional(),
     valorEstrutura: number.optional(),
+    perfurante: z.boolean().optional(),
+    reacoesElemento: z
+      .array(
+        z
+          .object({
+            elemento: z.enum(elements),
+            multiplicador: z.number().min(0).max(10).optional(),
+            remover: z.boolean().optional(),
+          })
+          .strict()
+          .refine(
+            (r) => r.remover === true || r.multiplicador !== undefined,
+            "Defina multiplicador ou remoção.",
+          ),
+      )
+      .max(6)
+      .optional(),
+    curaPosterior: z
+      .object({
+        multiplicador: z.number().int().min(1).max(10),
+        rodadas: z.number().int().min(1).max(10),
+      })
+      .strict()
+      .optional(),
+    recompensaAoEliminar: z
+      .object({ mana: number.max(20), tipo: z.enum(cardTypes).optional() })
+      .strict()
+      .optional(),
     direcao: z.enum(["direita", "vizinho"]).optional(),
     borda: z.enum(["mao"]).optional(),
     estrutura: z.enum(["impedirUso", "manter"]).optional(),
@@ -165,7 +193,12 @@ export const passiveFilterSchema = z
 const cardAction = { alvo: z.enum(passiveCardTargets), valor: number };
 const playerAction = { jogador: z.enum(["aliado", "inimigo"]), valor: number };
 export const passiveActionSchema = z.discriminatedUnion("id", [
-  z.object({ id: z.literal("dodgeImpact") }).strict(),
+  z
+    .object({
+      id: z.literal("dodgeImpact"),
+      esperaRodadas: z.number().int().min(0).max(100).optional(),
+    })
+    .strict(),
   z
     .object({ id: z.literal("attackLifesteal"), excedente: number.optional() })
     .strict(),
@@ -183,6 +216,9 @@ export const passiveActionSchema = z.discriminatedUnion("id", [
     })
     .strict(),
   z.object({ id: z.literal("blockOwnAttack") }).strict(),
+  z
+    .object({ id: z.literal("attackElement"), elemento: z.enum(elements) })
+    .strict(),
   z
     .object({ id: z.literal("attackLimit"), valor: number.min(1).max(10) })
     .strict(),
@@ -351,6 +387,7 @@ export const cardSchema = z
     tipo: z.enum(cardTypes),
     custoMana: number,
     assinatura: z.boolean().default(false),
+    requerElementoMago: z.enum(elements).optional(),
     elemento: z.enum(elements).optional(),
     descricao: z.string().max(4000).default(""),
     imgURL: imageSchema.optional(),

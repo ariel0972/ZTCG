@@ -158,6 +158,12 @@ export function cardFace(
     tag.setAttribute("aria-label", tag.title);
     effects.append(tag);
   }
+  for (const scheduled of card.scheduledHeals || []) {
+    const tag = node("span", "♡", "effect-token");
+    tag.title = `Cura programada: ${scheduled.amount} de vida na rodada ${scheduled.round}`;
+    tag.setAttribute("aria-label", tag.title);
+    effects.append(tag);
+  }
   const footer = node(
     "div",
     `${labels[card.tipo] || card.tipo}${card.elemento ? " · " + (labels[card.elemento] || card.elemento) : ""}`,

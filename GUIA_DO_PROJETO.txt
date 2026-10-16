@@ -1849,3 +1849,45 @@ Cartas de Ar jogáveis — 16/10/2026:
 - A fazer: atualizar as artes que ainda imprimem a busca de Lâmina do Mago de Ar
   e o bônus antigo da Lâmina. O texto do catálogo mostra a regra atual.
   Outras cartas podem usar os mesmos efeitos; veja MANUAL_EFEITOS_CATALOGO.txt.
+
+
+Fogo, Água, efeitos de campo e consequências de dano — 16/10/2026:
+- src/game/action-bonus.ts — Identifica o bônus da próxima ação e amplia os
+  efeitos de dano, inclusive dano alternativo contra estrutura e efeitos de campo.
+- src/game/field-effects.ts — Calcula multiplicadores e remoção por elemento de
+  efeitos de campo declarados no catálogo, sem conhecer números de cartas.
+- scripts/update-elemental-cards.ts — Simulação padrão de 002/009/016/026/031/
+  035/047/104 no banco. --apply salva backup e exige versão para gravar só os
+  campos autorizados. Não troca artes; preserva atributos/passiva do Mago de Fogo.
+- tests/fire-water-cards.test.ts — Cobertura das oito definições, persistência,
+  bônus único, reações configuradas, armamento, congelamento, Cauterizar, dano de
+  Barreira após ataques, elementos, duração, limites e atualização idempotente.
+- tests/ongoing-spells-ui.test.ts — Também verifica a Barreira no centro do campo,
+  informação de dano, reações, jogador afetado, contador e desaparecimento.
+- Mago de Fogo: Imbuir em chamas custa 3 e aumenta em 1 a próxima ação própria
+  de dano de qualquer carta. Cada alvo da ação recebe o bônus. Expira no fim do
+  turno se não usado; erro/cancelamento consome e tentativa inválida reverte.
+  A passiva permanente de feitiços de Fogo foi preservada.
+- Golém de Água: dodgeImpact aceita esperaRodadas:1. Desvio aceito na rodada 3
+  impede outro na 4 e volta na 5. Recusar não começa a espera.
+- Pele de Luokis: custo 7, +5 PV/+3 ATQ; attackElement converte os ataques dos
+  beneficiados em Água. A habilidade gratuita congela uma tropa por 2 rodadas,
+  uma vez por rodada. Sem unidade explícita, Congelado mantém padrão de 2 turnos.
+- Tornado de Fogo: custo 6, dano 4 nas tropas inimigas; segue a janela geral de
+  cancelamento. Reação em feitiço de Água permite cancelar um feitiço comum de
+  Fogo, pagando custo e limite da carta usada, sem executar seus outros efeitos.
+- Furacão de Areia: Cego e dano por uma única rodada. Mantém o roubo do Mago de Ar.
+- Barreira Ígnea: custo 6, exige Mago de Fogo, campo inimigo por 3 rodadas.
+  O ataque acontece antes de seu dano. Água/Ar modificam o golpe e Terra remove.
+  Feitiços de qualquer lado alteram o dano restante automaticamente. Fraqueza,
+  resistência e escudos continuam aplicáveis; a estrutura absorve o dano normalmente.
+  Uma cópia da mesma origem por dono.
+- Cauterizar: custo 3, só tropa ou mago aliado; dano 1 ignora estrutura, mas usa
+  fraqueza/resistência/escudos. Cura 3 vezes o dano efetivo no início da próxima
+  rodada. Morte inicial de tropa recupera 5 mana. Sem cura se não houver dano.
+  Não possui motor por carta: usa damage + perfurante + curaPosterior +
+  recompensaAoEliminar. Esses campos também podem compor outras habilidades.
+- Cura programada acompanha a carta no campo; morte/devolução e nova entrada
+  não transferem a cura para outra carta. Segue teto de vida e gatilhos de cura.
+- A fazer: revisar artes com descrições antigas e testar balanceamento em partidas.
+  Regras novas podem ser montadas no catálogo; consulte os exemplos do manual.

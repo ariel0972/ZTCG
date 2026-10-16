@@ -1632,3 +1632,52 @@ inicio: proximaRodada, em status, agenda o efeito para a próxima rodada complet
   SemAtaque impede somente ataques básicos (inclui estrutura vinculada à tropa).
   Campo livre também pode ser concedido como status temporário, sem renovar moved.
   Ex.: {"id":"status","status":"SemAtaque","duracao":1,"inicio":"proximaRodada","filtroAlvo":{"tipo":"Tropa","elemento":"Terra"}}
+
+
+EFEITOS CONFIGURÁVEIS DE FOGO E ÁGUA — 16/10/2026
+nextActionDamage: Global, valor positivo; duracao em turnos (padrão 1).
+  Concede Dano da próxima ação ao mago do jogador. A próxima ação de dano de
+  qualquer carta própria o consome. Ataque que erra/feitiço cancelado consome;
+  seleção ilegal reverte. Cura e deslocamento sem dano não consomem. Em área,
+  aumenta cada alvo. Não amplia passivas disparadas em resposta à ação.
+  Ex.: {"id":"nextActionDamage","valor":1,"duracao":1,"unidade":"turno"}
+
+attackElement: continuous/proprio em carta permanente, elemento obrigatório.
+  Armamento altera só ataques dos beneficiados; não muda o elemento da unidade
+  nem o elemento de suas habilidades. A conversão também vale na retaliação.
+  Ex.: {"gatilho":"continuous","escopo":"proprio","efeitos":[{"id":"attackElement","elemento":"Agua"}]}
+
+dodgeImpact: aceita esperaRodadas opcional. Padrão 0 mantém um desvio por rodada;
+  1 exige pular a rodada seguinte inteira. Só aceitar o desvio grava dodgedRound.
+
+Congelado: sem unidade explícita mantém 2 turnos. status com unidade rodada
+  e duracao permite configurar rodadas. Congelamento mais curto não encurta um
+  existente mais longo. Envenenado/Queimado/Sangrando mantêm suas durações fixas.
+
+Reação: palavra-chave para Feitico de Água. Pode ser gasto para cancelar um
+  feitiço comum de Fogo na janela de resposta; paga mana e limite correspondente,
+  dispara conjuração e vai ao cemitério sem executar efeitos normais. Assinaturas
+  de Fogo não são canceláveis. A seleção de cartas de resposta vem do servidor.
+
+requerElementoMago: campo da carta Feitico, restringe a conjuração ao elemento.
+  Não altera regras de construção de baralho; a interface explica a restrição.
+
+attackField: Global, valor/duracao positivos. Cria efeito no campo do adversário.
+  Após cada ataque básico do jogador afetado, causa dano em quem atacou. Também
+  recebe o elemento da carta de origem e as proteções normais. reacoesElemento
+  configura multiplicador ou remover por elemento. O ataque altera somente o
+  golpe atual; qualquer conjuração dos dois jogadores altera o valor persistente
+  ou remove automaticamente. Não soma duas cópias da mesma carta e mesmo dono.
+  Duração decresce no fim de cada rodada. Dano fracionado é arredondado para baixo.
+  Ex.: {"id":"attackField","valor":2,"duracao":3,"reacoesElemento":[{"elemento":"Agua","multiplicador":0.5},{"elemento":"Ar","multiplicador":2},{"elemento":"Terra","remover":true}]}
+
+Novos parâmetros de damage:
+  perfurante:true — ignora a estrutura; escudos/reduções e modificadores continuam.
+  curaPosterior:{multiplicador:3,rodadas:1} — após dano efetivo a aliado vivo,
+    agenda cura no início da rodada indicada. Mede vida realmente perdida,
+    limitada pela vida anterior; não cura dano prevenido. Somente alvos aliados.
+  recompensaAoEliminar:{mana:5,tipo:Tropa} — recompensa apenas a eliminação inicial
+    causada por esse dano. tipo é opcional; não repete na morte por outros efeitos.
+  Ex.: {"id":"damage","valor":1,"perfurante":true,"curaPosterior":{"multiplicador":3,"rodadas":1},"recompensaAoEliminar":{"mana":5,"tipo":"Tropa"}}
+  Alvos da carta: UnicoAliado com tiposAlvo [Tropa,Mago], como Cauterizar.
+  Não existe comportamento identificado pelo número ou nome dessa carta.

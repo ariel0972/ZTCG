@@ -150,7 +150,7 @@ test("área oferece escolhas separadas e mantém os demais alvos; recusar não c
   assert.equal(slot(g, "p2:front:2").card!.hpAtual, 8);
 });
 
-test("Golém evita ataque, não evita sangramento, e volta a desviar na rodada seguinte", () => {
+test("Golém evita ataque, não evita sangramento, e aguarda uma rodada completa para desviar novamente", () => {
   const g = game();
   slot(g, "p1:front:1").card = card("023");
   slot(g, "p2:front:1").card = card("026", "p2");
@@ -162,6 +162,10 @@ test("Golém evita ataque, não evita sangramento, e volta a desviar na rodada s
   act(g, { type: "endTurn" });
   assert.equal(g.state.pendingImpact, undefined);
   assert.equal(slot(g, "p2:front:1").card!.hpAtual, 14);
+  act(g, { type: "attack", slotId: "p1:front:1", targetId: "p2:front:1" });
+  assert.equal(g.state.pendingImpact, undefined);
+  act(g, { type: "endTurn" });
+  act(g, { type: "endTurn" });
   act(g, { type: "attack", slotId: "p1:front:1", targetId: "p2:front:1" });
   assert.ok(g.state.pendingImpact);
 });
@@ -342,7 +346,7 @@ test("desvio não refaz sorteios, aceite é idempotente e o timeout recusa", () 
   g.execute("p2", command);
   assert.equal(g.execute("p2", command).duplicate, true);
   assert.equal(slot(g, "p2:front:1").card!.hpAtual, 15);
-  g.state.round++;
+  g.state.round += 2;
   slot(g, "p1:front:1").card!.attacked = false;
   slot(g, "p1:front:1").card!.attacksMade = 0;
   slot(g, "p1:front:1").card!.statuses = [];

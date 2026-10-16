@@ -27,6 +27,7 @@ export const passiveActionIds = [
   "interceptAttack",
   "blockOwnAttack",
   "attackLimit",
+  "attackElement",
   "damage",
   "heal",
   "growMaxHp",
@@ -67,7 +68,9 @@ export function describePassiveActions(actions: PassiveAction[]) {
     .map((a) => {
       switch (a.id) {
         case "dodgeImpact":
-          return "Pode desviar de um golpe por rodada, anulando dano e efeitos";
+          return a.esperaRodadas
+            ? `Pode desviar de um golpe; aguarda ${a.esperaRodadas} rodada(s) completa(s) entre usos`
+            : "Pode desviar de um golpe por rodada, anulando dano e efeitos";
         case "attackLifesteal":
           return `Ataques curam o dano efetivo, até ${a.excedente ?? 0} de sobrevida`;
         case "discardMana":
@@ -78,6 +81,8 @@ export function describePassiveActions(actions: PassiveAction[]) {
           return "Interceptou um ataque básico";
         case "blockOwnAttack":
           return "Não pode atacar sem a condição exigida";
+        case "attackElement":
+          return `Os ataques passam a ser de ${a.elemento === "Agua" ? "Água" : a.elemento}`;
         case "attackLimit":
           return `Pode atacar até ${a.valor} vezes por rodada`;
         case "damage":
@@ -219,6 +224,29 @@ export function passiveMatches(
         s.card,
     );
   });
+}
+export function basicAttackElement(
+  card: Instance,
+  weapons: Instance[],
+  slots: Slot[],
+) {
+  let element = card.elemento;
+  for (const source of [card, ...weapons])
+    for (const rule of source.habilidadesPassivas.map(normalizePassive)) {
+      if (
+        rule.gatilho !== "continuous" ||
+        !passiveMatches(
+          rule,
+          source,
+          { ownerId: source.ownerId, cardId: source.id, card: source },
+          slots,
+        )
+      )
+        continue;
+      for (const action of rule.efeitos)
+        if (action.id === "attackElement") element = action.elemento;
+    }
+  return element;
 }
 export function basicAttackLimit(card: Instance, slots: Slot[]) {
   return card.habilidadesPassivas

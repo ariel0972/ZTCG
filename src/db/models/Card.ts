@@ -41,6 +41,40 @@ const effect = new Schema(
     requerStatus: String,
     inicio: { type: String, enum: ["proximaRodada"] },
     valorEstrutura: n,
+    perfurante: Boolean,
+    reacoesElemento: {
+      type: [
+        new Schema(
+          {
+            elemento: { type: String, enum: elements, required: true },
+            multiplicador: { type: Number, min: 0, max: 10 },
+            remover: Boolean,
+          },
+          { _id: false, strict: "throw" },
+        ),
+      ],
+      default: undefined,
+    },
+    curaPosterior: {
+      type: new Schema(
+        {
+          multiplicador: { type: Number, min: 1, max: 10, required: true },
+          rodadas: { type: Number, min: 1, max: 10, required: true },
+        },
+        { _id: false, strict: "throw" },
+      ),
+      default: undefined,
+    },
+    recompensaAoEliminar: {
+      type: new Schema(
+        {
+          mana: { ...n, max: 20, required: true },
+          tipo: { type: String, enum: cardTypes },
+        },
+        { _id: false, strict: "throw" },
+      ),
+      default: undefined,
+    },
     direcao: { type: String, enum: ["direita", "vizinho"] },
     borda: { type: String, enum: ["mao"] },
     estrutura: { type: String, enum: ["impedirUso", "manter"] },
@@ -182,6 +216,7 @@ const schema = new Schema<Card>(
     tipo: { type: String, enum: cardTypes, required: true },
     custoMana: { ...n, required: true },
     assinatura: { type: Boolean, default: false },
+    requerElementoMago: { type: String, enum: elements },
     elemento: { type: String, enum: elements },
     descricao: String,
     imgURL: String,

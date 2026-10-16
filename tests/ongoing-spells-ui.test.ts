@@ -80,3 +80,69 @@ test("feitiços ativos ficam separados por dono e o modal acompanha rodadas e t�
     else Reflect.deleteProperty(globalThis, "document");
   }
 });
+
+test("Barreira aparece entre as tropas e detalha dano após ataque, reações e expiração", async () => {
+  const dom = new JSDOM(
+    '<div class="arena-divider"><span>✧</span></div><div id="me"></div><div id="enemy"></div>',
+  );
+  const previous = Object.getOwnPropertyDescriptor(globalThis, "document");
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: dom.window.document,
+  });
+  try {
+    const path = "../public/JS/ongoing-spells.js";
+    const { createOngoingSpells } = await import(path);
+    const doc = dom.window.document;
+    const ui = createOngoingSpells(
+      doc.getElementById("me"),
+      doc.getElementById("enemy"),
+    );
+    const state = {
+      players: [
+        { id: "me", nome: "Eu" },
+        { id: "enemy", nome: "Outro" },
+      ],
+      fieldEffects: [
+        {
+          id: "field",
+          ownerId: "me",
+          affectedOwnerId: "enemy",
+          rounds: 3,
+          damage: 2,
+          reactions: [
+            { elemento: "Agua", multiplicador: 0.5 },
+            { elemento: "Ar", multiplicador: 2 },
+            { elemento: "Terra", remover: true },
+          ],
+          card: {
+            nome: "Barreira Ígnea",
+            imgURL: "/assets/Cards/Barreira Ígnea.png",
+          },
+        },
+      ],
+    };
+    ui.update(state, "me");
+    const divider = doc.querySelector(".arena-divider")!;
+    assert.ok(divider.classList.contains("has-field-effects"));
+    const button = divider.querySelector("button")!;
+    assert.match(button.textContent, /Barreira/);
+    const dialog = doc.querySelector("dialog") as any;
+    dialog.showModal = () => {
+      dialog.open = true;
+    };
+    button.click();
+    assert.match(dialog.textContent, /após cada ataque/);
+    assert.match(dialog.textContent, /Outro/);
+    assert.match(dialog.textContent, /Água/);
+    assert.match(dialog.textContent, /remove o efeito/);
+    state.fieldEffects = [];
+    ui.update(state, "me");
+    assert.ok(!divider.classList.contains("has-field-effects"));
+    assert.match(dialog.textContent, /terminou/);
+  } finally {
+    if (previous) Object.defineProperty(globalThis, "document", previous);
+    else Reflect.deleteProperty(globalThis, "document");
+    dom.window.close();
+  }
+});

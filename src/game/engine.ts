@@ -1,3 +1,5 @@
+import { fieldElementResult } from "./field-effects";
+import { nextActionBonusStatus, addActionDamage } from "./action-bonus";
 import { planDisplacement } from "./displacement";
 import { playableErrors } from "./capabilities";
 import type { Instance, Slot, Player, State, DeckDefinition } from "./state";
@@ -8,6 +10,7 @@ import {
   targetAttackBonus,
   blockedOwnAttack,
   basicAttackLimit,
+  basicAttackElement,
   canMount,
   attackInterceptor,
   restrictedBasicAttack,
@@ -111,7 +114,12 @@ export class Game {
       .some(
         (p) =>
           p.gatilho === "onTargeted" &&
-          p.efeitos.some((e) => e.id === "dodgeImpact") &&
+          p.efeitos.some(
+            (e) =>
+              e.id === "dodgeImpact" &&
+              (target.dodgedRound === undefined ||
+                this.state.round - target.dodgedRound > (e.esperaRodadas ?? 0)),
+          ) &&
           passiveMatches(
             p,
             target,
@@ -607,13 +615,98 @@ export class Game {
       });
     return recovered;
   }
+  private findSourceCard(id: string) {
+    return (
+      this.findCard(id) ??
+      this.state.players
+        .flatMap((p) => [
+          ...p.hand,
+          ...p.deck,
+          ...p.graveyard,
+          ...p.banished,
+          ...p.forgotten,
+        ])
+        .find((c) => c.id === id)
+    );
+  }
+  private reactFields(element: Card["elemento"]) {
+    for (const field of this.state.fieldEffects ?? []) {
+      const result = fieldElementResult(field, element);
+      if (!result.changed) continue;
+      field.damage = result.damage;
+      if (result.remove) field.rounds = 0;
+      this.event(
+        "notice",
+        field.card,
+        result.remove
+          ? `${field.card.nome} foi removida por ${element}.`
+          : `${field.card.nome}: dano alterado para ${field.damage} por ${element}.`,
+      );
+    }
+    this.state.fieldEffects = this.state.fieldEffects?.filter(
+      (f) => f.rounds > 0,
+    );
+  }
+  private afterAttackFields(card: Instance) {
+    for (const field of this.state.fieldEffects ?? []) {
+      if (
+        field.affectedOwnerId !== card.ownerId ||
+        field.rounds <= 0 ||
+        card.hpAtual <= 0 ||
+        !this.targetSlot(card.id)
+      )
+        continue;
+      const result = fieldElementResult(field, this.attackElement(card));
+      if (result.remove) {
+        field.rounds = 0;
+        this.event(
+          "notice",
+          field.card,
+          `${card.nome} removeu ${field.card.nome} com seu ataque de ${this.attackElement(card)}.`,
+        );
+        continue;
+      }
+      this.inImpact("spell", field.card.nome, () =>
+        this.damage(
+          card.id,
+          result.damage,
+          undefined,
+          field.piercing,
+          field.element,
+          this.findSourceCard(field.card.id),
+          `${field.card.nome} após o ataque de ${card.nome}`,
+          field.ownerId,
+        ),
+      );
+    }
+    this.state.fieldEffects = this.state.fieldEffects?.filter(
+      (f) => f.rounds > 0,
+    );
+  }
+  private takeActionBonus(user: string) {
+    const mage = this.player(user).mage;
+    const status = mage.statuses.find(
+      (s) => s.nome === nextActionBonusStatus && s.turnosRestantes > 0,
+    );
+    if (!status) return 0;
+    mage.statuses = mage.statuses.filter((s) => s !== status);
+    const bonus = status.valor ?? 0;
+    this.event(
+      "notice",
+      mage,
+      `${status.origin ?? mage.nome}: +${bonus} de dano nesta ação.`,
+    );
+    return bonus;
+  }
   private causesDamage(
     effects: Effect[] = [],
     abilityId?: string,
     mageElement?: Card["elemento"],
   ) {
     return (
-      ["ataqueFurtivo", "ordemDaEspada"].includes(abilityId ?? "") ||
+      ["ataqueFurtivo", "ordemDaEspada", "deslocar"].includes(
+        abilityId ?? "",
+      ) ||
       effects.some((e) =>
         e.id === "lightOrb"
           ? (e.variantesMago?.find((v) => v.elemento === mageElement)
@@ -639,6 +732,7 @@ export class Game {
             )
           : [
               "damage",
+              "attackField",
               "stoneVolley",
               "tornado",
               "arrowRain",
@@ -718,7 +812,7 @@ export class Game {
     cause?: string,
     originOwnerId?: string,
     interception?: { cardId: string; valor: number; origin: string },
-  ): void {
+  ): { target: Instance; amount: number; killed: boolean } | undefined {
     const slot = this.targetSlot(id);
     if (!slot) this.fail("Alvo não encontrado.");
     const protectedCard = this.findCard(id) ?? slot.card;
@@ -941,6 +1035,11 @@ export class Game {
         originOwnerId ?? source?.ownerId ?? attacker?.ownerId,
       );
     }
+    return {
+      target,
+      amount: Math.min(Math.max(0, hpBefore), remaining),
+      killed: hpBefore > 0 && target.hpAtual <= 0,
+    };
   }
   private reportDamage(
     target: Instance,
@@ -1015,6 +1114,7 @@ export class Game {
     card.attacked = false;
     card.attacksMade = 0;
     delete card.scheduledStatuses;
+    delete card.scheduledHeals;
     card.usedAbility = false;
     card.moved = false;
     delete card.appliedElement;
@@ -1240,7 +1340,7 @@ export class Game {
         source,
         target,
         this.basicAttackDamage(source, defender),
-        source.elemento,
+        this.attackElement(source),
       );
       return true;
     }
@@ -1684,6 +1784,49 @@ export class Game {
           this.event("notice", troop, message);
           break;
         }
+        case "attackField": {
+          if (!source) this.fail("Efeito de campo exige uma carta de origem.");
+          if (
+            this.state.fieldEffects?.some(
+              (f) =>
+                f.ownerId === ownerId &&
+                f.card.numeroCatalogo === source.numeroCatalogo &&
+                f.rounds > 0,
+            )
+          )
+            this.fail("Esta carta já possui um efeito de campo ativo.");
+          (this.state.fieldEffects ??= []).push({
+            id: source.id,
+            ownerId,
+            affectedOwnerId: this.opponent(ownerId).id,
+            rounds: effect.duracao!,
+            damage: effect.valor!,
+            element: effect.elemento ?? element,
+            piercing: effect.perfurante,
+            reactions: effect.reacoesElemento ?? [],
+            card: {
+              id: source.id,
+              ownerId,
+              numeroCatalogo: source.numeroCatalogo,
+              nome: source.nome,
+              imgURL: source.imgURL,
+            },
+          });
+          break;
+        }
+        case "nextActionDamage": {
+          const status = applyStatus(
+            player.mage.statuses,
+            nextActionBonusStatus,
+            effect.duracao ?? 1,
+            effect.valor,
+            this.state.turn,
+            "turno",
+          );
+          status.origin = cause ?? source?.nome;
+          status.originOwnerId = ownerId;
+          break;
+        }
         case "spendAttack":
           if (!source) this.fail("Consumir ataque exige a carta de origem.");
           const position = this.targetSlot(source.id)!;
@@ -1722,15 +1865,36 @@ export class Game {
               effect.valorEstrutura !== undefined
                 ? this.targetSlot(id)?.structure
                 : undefined;
-            this.damage(
+            const outcome = this.damage(
               structure?.id ?? id,
               structure ? effect.valorEstrutura! : effect.valor!,
               undefined,
-              false,
+              effect.perfurante ?? false,
               effect.elemento ?? element,
               source,
               cause,
             );
+            if (
+              outcome &&
+              effect.curaPosterior &&
+              outcome.amount > 0 &&
+              !outcome.killed
+            ) {
+              (outcome.target.scheduledHeals ??= []).push({
+                round: this.state.round + effect.curaPosterior.rodadas,
+                amount: outcome.amount * effect.curaPosterior.multiplicador,
+                sourceId: source?.id,
+                ownerId,
+                origin: cause ?? source?.nome ?? "Cura programada",
+              });
+            }
+            const reward = effect.recompensaAoEliminar;
+            if (
+              outcome?.killed &&
+              reward &&
+              (!reward.tipo || reward.tipo === outcome.target.tipo)
+            )
+              this.gainMana(player, reward.mana);
           }
           break;
         case "heal":
@@ -2018,6 +2182,11 @@ export class Game {
       this.fail("Esta carta não aceita destino de deslocamento.");
     const limits = player.mage.limites[0];
     if (card.tipo === "Feitico") {
+      if (
+        card.requerElementoMago &&
+        player.mage.elemento !== card.requerElementoMago
+      )
+        this.fail(`Este feitiço exige mago de ${card.requerElementoMago}.`);
       if (hasStatus(player.mage.statuses, ["Cego"]))
         this.fail("Um mago Cego não pode conjurar feitiços.");
       if (
@@ -2051,6 +2220,13 @@ export class Game {
         this.fail("Tipo de alvo não permitido por este feitiço.");
       this.spend(player, card.custoMana);
       const bonus = spellDamageBonus(player.mage, card.elemento);
+      const actionBonus = this.causesDamage(
+        card.efeitos,
+        undefined,
+        player.mage.elemento,
+      )
+        ? this.takeActionBonus(user)
+        : 0;
       player.hand.splice(index, 1);
       player.graveyard.push(card);
       (player.castCards ??= []).push(card.numeroCatalogo);
@@ -2063,6 +2239,7 @@ export class Game {
         element: card.elemento,
         cardId: card.id,
       });
+      this.reactFields(card.elemento);
       if (
         this.state.phase === "BATTLE" &&
         card.elemento === "Fogo" &&
@@ -2079,14 +2256,15 @@ export class Game {
           card,
           targets: ids,
           bonus,
+          actionBonus,
           destinationId: cmd.destinationId,
         };
         this.log(
-          `${player.nome} conjurou ${card.nome}. Aguardando resposta com Jato d'água.`,
+          `${player.nome} conjurou ${card.nome}. Aguardando reação de Água.`,
         );
         return;
       }
-      this.resolveSpell(user, card, ids, bonus, cmd.destinationId);
+      this.resolveSpell(user, card, ids, bonus, cmd.destinationId, actionBonus);
     } else {
       if (!cmd.slotId) this.fail("Selecione um slot.");
       const slot = this.ownSlot(cmd.slotId, user);
@@ -2168,16 +2346,23 @@ export class Game {
     if (card.tipo !== "Feitico") this.zarcosPlayed(user, card);
     this.log(`${player.nome} jogou ${card.nome}.`);
   }
-  canRespondWithWater(user: string) {
-    const p = this.player(user);
+  private waterReactionAllowed(player: Player, card: Instance) {
     return (
-      !hasStatus(p.mage.statuses, ["Cego"]) &&
-      p.counters.spells < p.mage.limites[0].feiticosUsados &&
-      p.hand.some(
-        (c) =>
-          c.numeroCatalogo === "002" && !c.assinatura && p.mana >= c.custoMana,
-      )
+      card.tipo === "Feitico" &&
+      card.elemento === "Agua" &&
+      card.palavrasChave.includes("Reação") &&
+      (!card.requerElementoMago ||
+        card.requerElementoMago === player.mage.elemento) &&
+      !hasStatus(player.mage.statuses, ["Cego"]) &&
+      player.mana >= card.custoMana &&
+      (card.assinatura
+        ? player.counters.unique < player.mage.limites[0].feiticosUnicos
+        : player.counters.spells < player.mage.limites[0].feiticosUsados)
     );
+  }
+  canRespondWithWater(user: string) {
+    const player = this.player(user);
+    return player.hand.some((card) => this.waterReactionAllowed(player, card));
   }
   private resolveSpell(
     user: string,
@@ -2185,9 +2370,10 @@ export class Game {
     ids: string[],
     bonus: number,
     destinationId?: string,
+    actionBonus = 0,
   ) {
     return this.inImpact("spell", card.nome, () =>
-      this.resolveSpellOnce(user, card, ids, bonus, destinationId),
+      this.resolveSpellOnce(user, card, ids, bonus, destinationId, actionBonus),
     );
   }
   private resolveSpellOnce(
@@ -2196,14 +2382,13 @@ export class Game {
     ids: string[],
     bonus: number,
     destinationId?: string,
+    actionBonus = 0,
   ) {
-    if (!this.specialSpell(user, card, ids, bonus)) {
+    if (!this.specialSpell(user, card, ids, bonus, actionBonus)) {
       if (card.elemento) this.react(user, ids, card.elemento);
       this.effects(
         user,
-        card.efeitos.map((e) =>
-          e.id === "damage" ? { ...e, valor: (e.valor ?? 0) + bonus } : e,
-        ),
+        addActionDamage(card.efeitos, bonus + actionBonus),
         ids,
         card.elemento,
         card,
@@ -2272,6 +2457,21 @@ export class Game {
   }
   private spellBlockReason(card: Instance, user: string) {
     if (
+      card.requerElementoMago &&
+      this.player(user).mage.elemento !== card.requerElementoMago
+    )
+      return `Este feitiço exige mago de ${card.requerElementoMago}.`;
+    if (
+      card.efeitos.some((e) => e.id === "attackField") &&
+      this.state.fieldEffects?.some(
+        (f) =>
+          f.ownerId === user &&
+          f.card.numeroCatalogo === card.numeroCatalogo &&
+          f.rounds > 0,
+      )
+    )
+      return `Você já tem ${card.nome} ativo em campo.`;
+    if (
       card.efeitos?.some((e) =>
         this.state.ongoingSpells?.some(
           (s) => s.ownerId === user && s.kind === e.id && s.rounds > 0,
@@ -2329,6 +2529,7 @@ export class Game {
     card: Instance,
     ids: string[],
     bonus: number,
+    actionBonus = 0,
   ) {
     const player = this.player(user),
       enemy = this.opponent(user),
@@ -2359,7 +2560,7 @@ export class Game {
       for (const target of targets)
         this.damage(
           target,
-          damage,
+          damage + actionBonus,
           undefined,
           false,
           element,
@@ -2385,7 +2586,7 @@ export class Game {
         ownerId: user,
         kind,
         rounds,
-        damage,
+        damage: damage + actionBonus,
         element: card.elemento,
         card: {
           numeroCatalogo: card.numeroCatalogo,
@@ -2582,7 +2783,10 @@ export class Game {
           for (const id of ids)
             this.damage(
               id,
-              (effect.valor ?? 3) + (variant?.bonusDano ?? 0) + bonus,
+              (effect.valor ?? 3) +
+                (variant?.bonusDano ?? 0) +
+                bonus +
+                actionBonus,
               undefined,
               false,
               card.elemento,
@@ -2612,8 +2816,8 @@ export class Game {
       }
       case "sandstorm":
         if (card.elemento) this.react(user, ids, card.elemento);
-        status(ids, "Cego", 2);
-        ongoing("sandstorm", 2);
+        status(ids, "Cego", effect.duracao ?? 2);
+        ongoing("sandstorm", effect.valor ?? 2, effect.duracao ?? 2);
         if (mageElement === "Ar") {
           const stolen = enemy.deck.pop();
           if (stolen) {
@@ -2703,6 +2907,7 @@ export class Game {
       pending.targets,
       pending.bonus,
       pending.destinationId,
+      pending.actionBonus,
     );
     this.log(`${pending.card.nome} resolveu sem cancelamento.`);
     this.resolve();
@@ -2718,17 +2923,15 @@ export class Game {
     }
     const player = this.player(user),
       card = player.hand.find((c) => c.id === cardId);
-    if (
-      !card ||
-      card.numeroCatalogo !== "002" ||
-      card.assinatura ||
-      !this.canRespondWithWater(user)
-    )
-      this.fail("Jato d'água não está disponível para responder.");
+    if (!card || !this.waterReactionAllowed(player, card))
+      this.fail(
+        "Este feitiço de Água com Reação não está disponível para responder.",
+      );
     this.spend(player, card.custoMana);
     player.hand.splice(player.hand.indexOf(card), 1);
     player.graveyard.push(card);
-    player.counters.spells++;
+    if (card.assinatura) player.counters.unique++;
+    else player.counters.spells++;
     player.castCards = [
       ...new Set([...(player.castCards ?? []), card.numeroCatalogo]),
     ];
@@ -2738,7 +2941,8 @@ export class Game {
       element: card.elemento,
       cardId: card.id,
     });
-    this.log(`${player.nome} cancelou ${pending.card.nome} com Jato d'água.`);
+    this.reactFields(card.elemento);
+    this.log(`${player.nome} cancelou ${pending.card.nome} com ${card.nome}.`);
   }
   private attackSourceError(user: string, slot: Slot, card: Instance | null) {
     const p = this.player(user);
@@ -2922,6 +3126,7 @@ export class Game {
       if (card.tipo === "Tropa" && target.card?.tipo === "Tropa")
         enemy.lastTroopAttacker = { cardId: card.id, turn: this.state.turn };
     }
+    const actionBonus = this.takeActionBonus(user);
     const announcedDefender = this.basicAttackDefender(target);
     this.event(
       "attack",
@@ -2956,6 +3161,7 @@ export class Game {
           slotId: target.id,
         });
         this.log(`${card.nome} errou por cegueira.`);
+        this.afterAttackFields(card);
         return;
       }
     }
@@ -2965,7 +3171,7 @@ export class Game {
       this.log(
         `${card.nome} ganhou +${bonusOnTarget} neste ataque contra ${defender.nome} pela vida do alvo.`,
       );
-    const damage = this.basicAttackDamage(card, defender);
+    const damage = this.basicAttackDamage(card, defender) + actionBonus;
     if (this.canReflectAttack(defender, card)) {
       this.state.pendingAttack = {
         attackerOwnerId: user,
@@ -2973,7 +3179,7 @@ export class Game {
         targetSlotId: target.id,
         defenderId: defender.id,
         damage,
-        element: card.elemento,
+        element: this.attackElement(card),
         interception: interceptionProtection,
       };
       this.log(`${defender.nome} pode devolver o ataque de ${card.nome}.`);
@@ -2983,10 +3189,18 @@ export class Game {
       card,
       target,
       damage,
-      card.elemento,
+      this.attackElement(card),
       false,
       undefined,
       interceptionProtection,
+    );
+  }
+  private attackElement(card: Instance) {
+    const slot = this.targetSlot(card.id);
+    return basicAttackElement(
+      card,
+      slot && card.tipo !== "Estrutura" ? this.weapons(slot, card) : [],
+      this.state.slots,
     );
   }
   private basicAttackDamage(card: Instance, defender: Instance) {
@@ -3126,6 +3340,7 @@ export class Game {
       slotId: target.id,
     });
     this.log(`${card.nome} atacou a coluna ${target.column + 1}.`);
+    this.afterAttackFields(card);
   }
   resolvePendingAttack(reflect = false) {
     if (this.state.pendingAttack)
@@ -3209,6 +3424,13 @@ export class Game {
       this.fail(
         "Habilidades bloqueadas na preparação e no primeiro turno de cada jogador.",
       );
+    const actionBonus = this.causesDamage(
+      ability.efeitos,
+      ability.id,
+      p.mage.elemento,
+    )
+      ? this.takeActionBonus(user)
+      : 0;
     if (ability.efeitos?.length) {
       let selected = cmd.targets;
       if (ability.alvoAutomatico) {
@@ -3278,7 +3500,7 @@ export class Game {
       }
       this.effects(
         user,
-        ability.efeitos,
+        addActionDamage(ability.efeitos, actionBonus),
         targets,
         card.elemento,
         card,
@@ -3316,7 +3538,7 @@ export class Game {
           this.spend(p, ability.custoMana);
           this.damage(
             target.id,
-            3,
+            3 + actionBonus,
             undefined,
             false,
             card.elemento,
@@ -3390,7 +3612,7 @@ export class Game {
           this.spend(p, ability.custoMana);
           this.damage(
             this.opponent(user).mage.id,
-            2,
+            2 + actionBonus,
             undefined,
             false,
             undefined,
@@ -3407,7 +3629,7 @@ export class Game {
           ))
             this.damage(
               s.id,
-              3,
+              3 + actionBonus,
               undefined,
               false,
               undefined,
@@ -3536,6 +3758,10 @@ export class Game {
     const roundEnded = this.state.turn % 2 === 0;
     if (roundEnded) {
       this.tickOngoingSpells();
+      for (const field of this.state.fieldEffects ?? []) field.rounds--;
+      this.state.fieldEffects = this.state.fieldEffects?.filter(
+        (f) => f.rounds > 0,
+      );
       for (const player of this.state.players) {
         player.roundSpells = [];
         player.comboTriggered = false;
@@ -3601,6 +3827,32 @@ export class Game {
     if (roundEnded) {
       this.state.round++;
       for (const card of this.state.slots.flatMap(slotCards)) {
+        const heals = (card.scheduledHeals ?? []).filter(
+          (h) => h.round <= this.state.round,
+        );
+        card.scheduledHeals = card.scheduledHeals?.filter(
+          (h) => h.round > this.state.round,
+        );
+        for (const scheduled of heals) {
+          const source =
+            this.findCard(scheduled.sourceId ?? "") ??
+            this.state.players
+              .flatMap((p) => [
+                ...p.hand,
+                ...p.deck,
+                ...p.graveyard,
+                ...p.banished,
+                ...p.forgotten,
+              ])
+              .find((c) => c.id === scheduled.sourceId) ??
+            this.player(scheduled.ownerId).mage;
+          const healed = this.heal(card, scheduled.amount, undefined, source);
+          this.event(
+            "notice",
+            card,
+            `${scheduled.origin}: ${card.nome} recuperou ${healed} de vida no início da rodada.`,
+          );
+        }
         const due = (card.scheduledStatuses ?? []).filter(
           (s) => s.round <= this.state.round,
         );
@@ -3800,6 +4052,7 @@ export class Game {
       events: this.state.events ?? [],
       reactions: reactionDescriptions,
       ongoingSpells: this.state.ongoingSpells,
+      fieldEffects: this.state.fieldEffects,
       pendingImpact: this.state.pendingImpact?.request,
       pendingHandChoice: this.state.pendingHandChoice,
       pendingSpell: this.state.pendingSpell,
@@ -3809,6 +4062,16 @@ export class Game {
         !!this.state.pendingSpell &&
         this.state.pendingSpell.casterId !== user &&
         this.canRespondWithWater(user),
+      responseCards:
+        user &&
+        this.state.pendingSpell &&
+        this.state.pendingSpell.casterId !== user
+          ? this.player(user)
+              .hand.filter((c) =>
+                this.waterReactionAllowed(this.player(user), c),
+              )
+              .map((c) => c.id)
+          : [],
       version: this.state.version,
       turn: this.state.turn,
       round: this.state.round,
