@@ -41,6 +41,15 @@ const effect = new Schema(
     requerStatus: String,
     inicio: { type: String, enum: ["proximaRodada"] },
     valorEstrutura: n,
+    bonusAtaque: n,
+    bonusHp: n,
+    recompensaMorteRodada: {
+      type: new Schema(
+        { mana: { ...n, max: 20, required: true } },
+        { _id: false, strict: "throw" },
+      ),
+      default: undefined,
+    },
     perfurante: Boolean,
     reacoesElemento: {
       type: [
@@ -98,6 +107,7 @@ const active = new Schema(
     nome: { type: String, required: true },
     descricao: { type: String, maxlength: 2000 },
     custoMana: { ...n, required: true },
+    custoVida: { ...n, min: 1 },
     esperaRodadas: { type: Number, min: 0, max: 100 },
     alvo: { type: String, enum: targets },
     alvoAutomatico: { type: String, enum: ["Proprio", "Frontal"] },
@@ -160,6 +170,7 @@ const passiveAction = new Schema(
     destino: String,
     filtro: { type: passiveFilter, default: undefined },
     qualquerDe: { type: [passiveFilter], default: undefined },
+    acumulavel: Boolean,
     colunaAtacante: { type: Number, min: 0, max: 2 },
     esperaRodadas: { type: Number, min: 0, max: 100 },
   },
@@ -174,6 +185,20 @@ const passive = new Schema(
       enum: ["proprio", "aliado", "inimigo", "qualquer"],
     },
     excluirFonte: Boolean,
+    reacao: {
+      type: new Schema(
+        {
+          nome: { type: String, required: true },
+          quando: {
+            type: String,
+            enum: ["provoca", "recebe", "provocaOuRecebe"],
+            required: true,
+          },
+        },
+        { _id: false, strict: "throw" },
+      ),
+      default: undefined,
+    },
     filtroEvento: { type: passiveFilter, default: undefined },
     filtroAlvo: {
       type: new Schema(

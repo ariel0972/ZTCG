@@ -56,6 +56,8 @@ export function publicFieldNotice(state) {
     message = `${player(state.pendingImpact.ownerId)} está decidindo se desvia do golpe.`;
   else if (state.pendingHandChoice)
     message = `${player(state.pendingHandChoice.ownerId)} está escolhendo uma carta.`;
+  else if (state.pendingRevive)
+    message = `${player(state.pendingRevive.ownerId)} está escolhendo uma tropa e um espaço para reviver.`;
   else if (state.pendingAttack)
     message = "Aguardando a decisão de devolver ou receber o ataque.";
   else if (state.pendingSpell)

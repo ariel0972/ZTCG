@@ -1891,3 +1891,38 @@ Fogo, Água, efeitos de campo e consequências de dano — 16/10/2026:
   não transferem a cura para outra carta. Segue teto de vida e gatilhos de cura.
 - A fazer: revisar artes com descrições antigas e testar balanceamento em partidas.
   Regras novas podem ser montadas no catálogo; consulte os exemplos do manual.
+
+
+Necromante e ressurreição configurável — 16/10/2026:
+- src/game/resurrection.ts — Define o nome do bônus temporário de feitiços e
+  encontra espaços aliados válidos para ressurreição, sem conhecer cartas.
+- public/JS/revive-choice.js — Mostra tropa e espaço na resposta de ressurreição,
+  valida a seleção na interface e preserva escolhas durante atualizações da tela.
+- scripts/update-necromancer-cards.ts — Simula a atualização de 080/108 no banco.
+  --apply cria backup e grava só as regras aprovadas com controle de versão;
+  preserva arte e deixa intactas as demais cartas.
+- tests/necromancer.test.ts — Custo de vida, escolhas de cemitério, reversão,
+  ressurreição, equipamento/passivas, bônus acumulável, recompensa de morte,
+  Zarconizado, restauração de partida, escolhas dos dois lados e migração.
+- tests/necromancer-ui.test.ts — Filtra destinos/tropas, valida dono da resposta,
+  escolha completa, custo de vida e seção de indicadores de reação.
+- Necromante: 18 PV, ataque 2, recuperação 4; limites 1/2/3/2, elemento Neutro,
+  fraqueza Zarcos e resistência Neutro, seguindo a arte. Enganar a morte paga
+  4 de vida (exige mais de 4), escolhe até 3 tropas e embaralha no baralho.
+  Ressurreição Sombria foi removida do catálogo e do motor.
+- Ressurreição aliada acumula +2 de dano em todos os feitiços até o fim do turno.
+  Sacrifício cura 2 e recupera 1 mana; mantém seu uso da habilidade do mago.
+- Indicador de Zarconizado: o dono provoca a reação ou o próprio mago a recebe;
+  escolhe uma tropa e um espaço para reviver. A reação normal ainda concede
+  2 de mana. Sem cemitério/espaço válido, mantém só a reação normal.
+- Reviver Tropa custa 5 e concede +2 ataque/+3 vida enquanto estiver em campo.
+  Morte na rodada da ressurreição recupera 6 mana uma vez. Sair do campo remove
+  os acréscimos; a tropa não conserva nem acumula esses bônus no cemitério.
+- Ressurreições diretas não consomem mobilização nem geram mana de entrada;
+  aplicam armamento do espaço e disparam onSummon/onRevive. Lama impede entrada.
+  A escolha de reação dura 20 segundos com turno pausado e persiste na reconexão.
+- Recursos gerais disponíveis no editor: custoVida, shuffleGraveyard, revive,
+  bonusAtaque/bonusHp/recompensaMorteRodada, spellDamageTurn, onElementalReaction
+  e filtro reacao com participação. Consulte o manual para montar outras cartas.
+- A fazer: cadastrar os indicadores dos outros magos quando suas regras forem
+  confirmadas; revisar a arte antiga do Necromante que ainda não fala em acúmulo.

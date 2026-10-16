@@ -57,16 +57,18 @@ test("descrições explicam habilidades fixas e só as escolhas reais pedem alvo
   const { abilityNeedsTarget, abilityDescription, describe } = await import(
     modulePath
   );
-  for (const id of [
-    "ataqueFurtivo",
-    "armaduraPoderosa",
-    "ordemDaEspada",
-    "enganarAMorte",
-  ]) {
+  for (const id of ["ataqueFurtivo", "armaduraPoderosa", "ordemDaEspada"]) {
     assert.equal(abilityNeedsTarget({ id }), false);
     assert.match(abilityDescription({ id }), /automático/);
   }
-  assert.equal(abilityNeedsTarget({ id: "ressurreicaoSombria" }), true);
+  assert.equal(
+    abilityNeedsTarget({
+      id: "enganarAMorte",
+      alvo: "Cemiterio",
+      efeitos: [{ id: "shuffleGraveyard", valor: 3 }],
+    }),
+    true,
+  );
   assert.equal(abilityNeedsTarget({ id: "protecaoAquatica" }), true);
   assert.equal(
     abilityNeedsTarget({ id: "generic", alvo: "TodosInimigos" }),

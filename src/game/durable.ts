@@ -291,7 +291,13 @@ export class DurableGame {
       if (expired.length && now >= (room.recoveryUntil ?? 0))
         game.abandon(expired[0].id, "Abandono após desconexão.");
       if (game.responseKey() && now >= (room.responseDeadline ?? now)) {
-        if (game.state.pendingImpact || game.state.pendingHandChoice)
+        if (
+          game.state.pendingImpact ||
+          game.state.pendingHandChoice ||
+          (game.state.pendingRevives?.length &&
+            !game.state.pendingSpell &&
+            !game.state.pendingAttack)
+        )
           game.resolvePendingChoice();
         else if (game.state.pendingAttack) game.resolvePendingAttack();
         else game.resolvePendingSpell();

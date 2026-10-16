@@ -29,6 +29,13 @@ export interface Instance extends Card {
   usedAbility: boolean;
   moved?: boolean;
   revivedFromGraveyard?: boolean;
+  reviveBonuses?: { hp: number; ataque: number };
+  deathReward?: {
+    round: number;
+    mana: number;
+    ownerId: string;
+    source: string;
+  };
   appliedElement?: string;
   statuses: Status[];
   scheduledStatuses?: { round: number; status: Status }[];
@@ -121,6 +128,12 @@ export interface State {
     randoms: number[];
     request: { key: string; ownerId: string; cardId: string; source: string };
   };
+  pendingRevives?: {
+    id: string;
+    ownerId: string;
+    cards: string[];
+    source: string;
+  }[];
   pendingHandChoice?: { ownerId: string; opponentId: string; source: string };
   pendingAttack?: {
     attackerOwnerId: string;
@@ -146,6 +159,7 @@ export interface State {
     targets: string[];
     bonus: number;
     actionBonus?: number;
+    temporaryBonus?: number;
     destinationId?: string;
   };
   version: number;

@@ -1,3 +1,4 @@
+import { reviveDestinations, spellTurnBonusStatus } from "./resurrection";
 import { fieldElementResult } from "./field-effects";
 import { nextActionBonusStatus, addActionDamage } from "./action-bonus";
 import { planDisplacement } from "./displacement";
@@ -17,6 +18,7 @@ import {
   passiveMatches,
   matchesPassiveFilter,
   spellDamageBonus,
+  temporarySpellDamageBonus,
   describePassiveActions,
   continuousPassiveActive,
   type PassiveEvent,
@@ -236,7 +238,9 @@ export class Game {
           ? `attack:${this.state.pendingAttack.attackerId}`
           : this.state.pendingSpell
             ? `spell:${this.state.pendingSpell.card.id}`
-            : "";
+            : this.state.pendingRevives?.length
+              ? `revive:${this.state.pendingRevives[0].id}`
+              : "";
   }
   resolvePendingChoice() {
     if (this.state.pendingImpact)
@@ -245,6 +249,12 @@ export class Game {
       delete this.state.pendingHandChoice;
       this.log(
         "Olho da Verdade: tempo de escolha esgotado, nenhuma carta transferida.",
+      );
+      this.state.version++;
+    } else if (this.state.pendingRevives?.length) {
+      const choice = this.state.pendingRevives.shift()!;
+      this.log(
+        choice.source + ": tempo de escolha esgotado; nenhuma tropa revivida.",
       );
       this.state.version++;
     }
@@ -520,6 +530,7 @@ export class Game {
     delete this.state.pendingAttack;
     delete this.state.pendingImpact;
     delete this.state.pendingHandChoice;
+    delete this.state.pendingRevives;
     this.state.winner = winner;
     this.state.reason = reason;
     this.log(reason);
@@ -615,6 +626,91 @@ export class Game {
       });
     return recovered;
   }
+  private revive(
+    user: string,
+    cardId: string,
+    destinationId: string | undefined,
+    options: Pick<
+      Effect,
+      "bonusHp" | "bonusAtaque" | "recompensaMorteRodada"
+    > = {},
+    source = "Ressurreição",
+  ) {
+    const player = this.player(user);
+    const index = player.graveyard.findIndex(
+      (c) => c.id === cardId && c.tipo === "Tropa",
+    );
+    const slot = reviveDestinations(this.state.slots, user).find(
+      (s) => s.id === destinationId,
+    );
+    if (index < 0) this.fail("Escolha uma tropa do seu cemitério.");
+    if (!slot) this.fail("Escolha um espaço de tropa livre e sem Lama.");
+    const card = player.graveyard.splice(index, 1)[0];
+    this.resetCard(card);
+    card.hp = (card.hp ?? 0) + (options.bonusHp ?? 0);
+    card.ataque = (card.ataque ?? 0) + (options.bonusAtaque ?? 0);
+    card.reviveBonuses = {
+      hp: options.bonusHp ?? 0,
+      ataque: options.bonusAtaque ?? 0,
+    };
+    slot.card = card;
+    card.hpAtual =
+      card.hp +
+      this.weapons(slot, card).reduce((n, w) => n + (w.bonusHp ?? 0), 0);
+    if (options.recompensaMorteRodada)
+      card.deathReward = {
+        round: this.state.round,
+        mana: options.recompensaMorteRodada.mana,
+        ownerId: user,
+        source,
+      };
+    this.event(
+      "summon",
+      card,
+      source + ": " + card.nome + " voltou do cemitério ao campo.",
+      { slotId: slot.id },
+    );
+    this.trigger("onSummon", {
+      ownerId: user,
+      cardId: card.id,
+      card,
+      slotId: slot.id,
+      element: card.elemento,
+    });
+    this.trigger("onRevive", {
+      ownerId: user,
+      cardId: card.id,
+      card,
+      slotId: slot.id,
+      element: card.elemento,
+    });
+    this.log(source + ": " + card.nome + " foi revivida.");
+  }
+  private queueRevive(user: string, source: string) {
+    const cards = this.player(user)
+      .graveyard.filter((c) => c.tipo === "Tropa")
+      .map((c) => c.id);
+    if (!cards.length || !reviveDestinations(this.state.slots, user).length)
+      return false;
+    if ((this.state.pendingRevives?.length ?? 0) >= 32)
+      this.fail("Limite de escolhas de ressurreição excedido.");
+    (this.state.pendingRevives ??= []).push({
+      id: randomUUID(),
+      ownerId: user,
+      cards,
+      source,
+    });
+    return true;
+  }
+  private chooseRevive(user: string, cardId?: string, destinationId?: string) {
+    const choice = this.state.pendingRevives?.[0];
+    if (!choice || choice.ownerId !== user)
+      this.fail("Não há ressurreição disponível para você.");
+    if (!cardId || !destinationId || !choice.cards.includes(cardId))
+      this.fail("Escolha uma tropa oferecida e um espaço para reviver.");
+    this.state.pendingRevives!.shift();
+    this.revive(user, cardId, destinationId, {}, choice.source);
+  }
   private findSourceCard(id: string) {
     return (
       this.findCard(id) ??
@@ -656,7 +752,15 @@ export class Game {
         !this.targetSlot(card.id)
       )
         continue;
-      const result = fieldElementResult(field, this.attackElement(card));
+      const result = fieldElementResult(
+        {
+          ...field,
+          damage:
+            field.damage +
+            temporarySpellDamageBonus(this.player(field.ownerId).mage),
+        },
+        this.attackElement(card),
+      );
       if (result.remove) {
         field.rounds = 0;
         this.event(
@@ -1108,7 +1212,15 @@ export class Game {
       (s) => s.column === weaponSlot.column,
     );
   }
+  private removeReviveBonuses(card: Instance) {
+    if (!card.reviveBonuses) return;
+    card.hp = Math.max(0, (card.hp ?? 0) - card.reviveBonuses.hp);
+    card.ataque = Math.max(0, (card.ataque ?? 0) - card.reviveBonuses.ataque);
+    card.hpAtual = Math.min(card.hpAtual, card.hp);
+    delete card.reviveBonuses;
+  }
   private resetCard(card: Instance) {
+    this.removeReviveBonuses(card);
     card.hpAtual = card.hp ?? 0;
     card.statuses = [];
     card.attacked = false;
@@ -1119,6 +1231,7 @@ export class Game {
     card.moved = false;
     delete card.appliedElement;
     delete card.revivedFromGraveyard;
+    delete card.deathReward;
     delete card.killedBy;
   }
   private event(
@@ -1189,7 +1302,24 @@ export class Game {
             slot.card = slot.rider ?? null;
             slot.rider = null;
           }
+          this.removeReviveBonuses(dead);
           player.graveyard.push(dead);
+          const reward = dead.deathReward;
+          delete dead.deathReward;
+          if (reward?.round === this.state.round) {
+            const recovered = this.gainMana(
+              this.player(reward.ownerId),
+              reward.mana,
+            );
+            this.event(
+              "notice",
+              dead,
+              reward.source +
+                ": morte nesta rodada recuperou " +
+                recovered +
+                " de mana.",
+            );
+          }
           changed = true;
           for (const weapon of slot.card ? [] : this.weapons(slot)) {
             if (this.has(weapon, "Herança")) continue;
@@ -1221,6 +1351,13 @@ export class Game {
       }
     }
     if (guard >= 100) this.fail("Ciclo de efeitos excedeu o limite.");
+    this.state.pendingRevives = this.state.pendingRevives?.filter(
+      (choice) =>
+        reviveDestinations(this.state.slots, choice.ownerId).length &&
+        this.player(choice.ownerId).graveyard.some(
+          (c) => c.tipo === "Tropa" && choice.cards.includes(c.id),
+        ),
+    );
     const dead = this.state.players.filter((p) => p.mage.hpAtual <= 0);
     if (dead.length && !this.deferMageDefeat)
       this.finish(
@@ -1298,6 +1435,30 @@ export class Game {
     event: PassiveEvent,
   ): boolean {
     const owner = this.player(source.ownerId);
+    if (action.id === "revive")
+      return this.queueRevive(
+        action.jogador === "aliado" ? owner.id : this.opponent(owner.id).id,
+        source.nome,
+      );
+    if (action.id === "spellDamageTurn") {
+      const previous = source.statuses.find(
+        (s) => s.nome === spellTurnBonusStatus && s.turnosRestantes > 0,
+      );
+      const value = action.acumulavel
+        ? (previous?.valor ?? 0) + action.valor
+        : Math.max(previous?.valor ?? 0, action.valor);
+      const status = applyStatus(
+        source.statuses,
+        spellTurnBonusStatus,
+        1,
+        value,
+        this.state.turn,
+        "turno",
+      );
+      status.origin = source.nome;
+      status.originOwnerId = owner.id;
+      return true;
+    }
     if (action.id === "counterAttack") {
       const targetId =
         action.alvo === "atacante" ? event.attackerId : event.cardId;
@@ -1731,7 +1892,10 @@ export class Game {
     destinationId?: string,
   ) {
     const player = this.player(ownerId);
-    if (destinationId && !effects.some((e) => e.id === "displace"))
+    if (
+      destinationId &&
+      !effects.some((e) => ["displace", "revive"].includes(e.id))
+    )
       this.fail("Este efeito não aceita destino de deslocamento.");
     for (const effect of effects) {
       if (effect.alvo === "Proprio" && (!source || !this.targetSlot(source.id)))
@@ -1784,6 +1948,38 @@ export class Game {
           this.event("notice", troop, message);
           break;
         }
+        case "shuffleGraveyard": {
+          if (
+            !ids.length ||
+            ids.length > effect.valor! ||
+            new Set(ids).size !== ids.length
+          )
+            this.fail("Escolha até " + effect.valor + " tropas diferentes.");
+          const cards = ids.map((id) =>
+            player.graveyard.find((c) => c.id === id && c.tipo === "Tropa"),
+          );
+          if (cards.some((c) => !c))
+            this.fail("Escolha somente tropas do seu cemitério.");
+          for (const card of cards as Instance[]) {
+            this.resetCard(card);
+            player.deck.push(card);
+          }
+          player.graveyard = player.graveyard.filter(
+            (c) => !ids.includes(c.id),
+          );
+          this.shuffle(player.deck);
+          break;
+        }
+        case "revive":
+          if (ids.length !== 1) this.fail("Escolha uma tropa para reviver.");
+          this.revive(
+            ownerId,
+            ids[0],
+            destinationId,
+            effect,
+            cause ?? source?.nome,
+          );
+          break;
         case "attackField": {
           if (!source) this.fail("Efeito de campo exige uma carta de origem.");
           if (
@@ -2048,6 +2244,8 @@ export class Game {
         this.fail("Selecione uma carta em campo ou no seu cemitério.");
       card = p.graveyard.splice(index, 1)[0];
     }
+    this.removeReviveBonuses(card);
+    delete card.deathReward;
     this.player(card.ownerId)[
       kind === "banish" ? "banished" : "forgotten"
     ].push(card);
@@ -2095,6 +2293,15 @@ export class Game {
         { slotId: slot.id, reaction, originOwnerId: ownerId },
       );
       this.resolveReaction(reaction, ownerId, card, slot);
+      this.trigger("onElementalReaction", {
+        ownerId: slot.ownerId,
+        originOwnerId: ownerId,
+        cardId: card?.id,
+        card: card ?? undefined,
+        reaction,
+        slotId: slot.id,
+        element: incoming as Card["elemento"],
+      });
       this.log(
         `${reaction} foi ativado em ${card?.nome ?? `campo ${slot.column + 1}`}.`,
       );
@@ -2178,7 +2385,10 @@ export class Game {
       index = player.hand.findIndex((c) => c.id === cmd.cardId),
       card = player.hand[index];
     if (!card) this.fail("Carta não está na sua mão.");
-    if (cmd.destinationId && !card.efeitos.some((e) => e.id === "displace"))
+    if (
+      cmd.destinationId &&
+      !card.efeitos.some((e) => ["displace", "revive"].includes(e.id))
+    )
       this.fail("Esta carta não aceita destino de deslocamento.");
     const limits = player.mage.limites[0];
     if (card.tipo === "Feitico") {
@@ -2220,6 +2430,7 @@ export class Game {
         this.fail("Tipo de alvo não permitido por este feitiço.");
       this.spend(player, card.custoMana);
       const bonus = spellDamageBonus(player.mage, card.elemento);
+      const temporaryBonus = temporarySpellDamageBonus(player.mage);
       const actionBonus = this.causesDamage(
         card.efeitos,
         undefined,
@@ -2257,6 +2468,7 @@ export class Game {
           targets: ids,
           bonus,
           actionBonus,
+          temporaryBonus,
           destinationId: cmd.destinationId,
         };
         this.log(
@@ -2264,7 +2476,15 @@ export class Game {
         );
         return;
       }
-      this.resolveSpell(user, card, ids, bonus, cmd.destinationId, actionBonus);
+      this.resolveSpell(
+        user,
+        card,
+        ids,
+        bonus,
+        cmd.destinationId,
+        actionBonus,
+        temporaryBonus,
+      );
     } else {
       if (!cmd.slotId) this.fail("Selecione um slot.");
       const slot = this.ownSlot(cmd.slotId, user);
@@ -2371,9 +2591,18 @@ export class Game {
     bonus: number,
     destinationId?: string,
     actionBonus = 0,
+    temporaryBonus = 0,
   ) {
     return this.inImpact("spell", card.nome, () =>
-      this.resolveSpellOnce(user, card, ids, bonus, destinationId, actionBonus),
+      this.resolveSpellOnce(
+        user,
+        card,
+        ids,
+        bonus,
+        destinationId,
+        actionBonus,
+        temporaryBonus,
+      ),
     );
   }
   private resolveSpellOnce(
@@ -2383,12 +2612,22 @@ export class Game {
     bonus: number,
     destinationId?: string,
     actionBonus = 0,
+    temporaryBonus = 0,
   ) {
-    if (!this.specialSpell(user, card, ids, bonus, actionBonus)) {
+    if (
+      !this.specialSpell(user, card, ids, bonus, actionBonus, temporaryBonus)
+    ) {
       if (card.elemento) this.react(user, ids, card.elemento);
       this.effects(
         user,
-        addActionDamage(card.efeitos, bonus + actionBonus),
+        addActionDamage(card.efeitos, bonus + actionBonus).map((e) =>
+          e.id === "attackField"
+            ? {
+                ...e,
+                valor: e.valor! - temporaryBonus,
+              }
+            : e,
+        ),
         ids,
         card.elemento,
         card,
@@ -2530,6 +2769,7 @@ export class Game {
     ids: string[],
     bonus: number,
     actionBonus = 0,
+    temporaryBonus = 0,
   ) {
     const player = this.player(user),
       enemy = this.opponent(user),
@@ -2560,7 +2800,7 @@ export class Game {
       for (const target of targets)
         this.damage(
           target,
-          damage + actionBonus,
+          damage + bonus + actionBonus,
           undefined,
           false,
           element,
@@ -2586,7 +2826,7 @@ export class Game {
         ownerId: user,
         kind,
         rounds,
-        damage: damage + actionBonus,
+        damage: damage + bonus - temporaryBonus + actionBonus,
         element: card.elemento,
         card: {
           numeroCatalogo: card.numeroCatalogo,
@@ -2872,7 +3112,8 @@ export class Game {
           for (const id of targets)
             this.damage(
               id,
-              spell.damage,
+              spell.damage +
+                temporarySpellDamageBonus(this.player(spell.ownerId).mage),
               undefined,
               false,
               spell.element,
@@ -2908,6 +3149,7 @@ export class Game {
       pending.bonus,
       pending.destinationId,
       pending.actionBonus,
+      pending.temporaryBonus,
     );
     this.log(`${pending.card.nome} resolveu sem cancelamento.`);
     this.resolve();
@@ -3410,7 +3652,10 @@ export class Game {
       );
     const ability = card.habilidadesAtivas.find((h) => h.id === cmd.abilityId);
     if (!ability) this.fail("Esta carta não possui a habilidade.");
-    if (cmd.destinationId && !ability.efeitos?.some((e) => e.id === "displace"))
+    if (
+      cmd.destinationId &&
+      !ability.efeitos?.some((e) => ["displace", "revive"].includes(e.id))
+    )
       this.fail("Esta habilidade não aceita destino de deslocamento.");
     if (
       ability.esperaRodadas &&
@@ -3424,6 +3669,18 @@ export class Game {
       this.fail(
         "Habilidades bloqueadas na preparação e no primeiro turno de cada jogador.",
       );
+    if (ability.custoVida) {
+      if (card.hpAtual <= ability.custoVida)
+        this.fail(
+          "Vida insuficiente: o custo não pode derrotar a própria carta.",
+        );
+      card.hpAtual -= ability.custoVida;
+      this.event(
+        "notice",
+        card,
+        ability.nome + ": pagou " + ability.custoVida + " de vida.",
+      );
+    }
     const actionBonus = this.causesDamage(
       ability.efeitos,
       ability.id,
@@ -3470,7 +3727,7 @@ export class Game {
         this.fail("Selecione alvos diferentes.");
       if (ability.filtroAlvo) {
         const matches = (id: string) =>
-          matchesPassiveFilter(this.findCard(id)!, ability.filtroAlvo);
+          matchesPassiveFilter(this.findSourceCard(id), ability.filtroAlvo);
         if (
           ["TodosAliados", "TodasTropasInimigas"].includes(ability.alvo ?? "")
         )
@@ -3584,30 +3841,6 @@ export class Game {
             });
           break;
         }
-        case "enganarAMorte": {
-          const cards = p.graveyard.filter((c) => c.tipo === "Tropa").slice(-3);
-          if (!cards.length) this.fail("Não há tropas no cemitério.");
-          this.spend(p, ability.custoMana);
-          for (const c of cards) this.resetCard(c);
-          p.graveyard = p.graveyard.filter((c) => !cards.includes(c));
-          p.deck.push(...cards);
-          this.shuffle(p.deck);
-          break;
-        }
-        case "ressurreicaoSombria": {
-          this.validateTargets(user, "Cemiterio", cmd.targets);
-          const i = p.graveyard.findIndex(
-            (c) => c.id === cmd.targets[0] && c.tipo === "Tropa",
-          );
-          if (i < 0) this.fail("Escolha uma tropa do cemitério.");
-          this.spend(p, ability.custoMana);
-          const c = p.graveyard.splice(i, 1)[0];
-          this.resetCard(c);
-          c.custoMana = 0;
-          c.revivedFromGraveyard = true;
-          p.hand.push(c);
-          break;
-        }
         case "ataqueFurtivo":
           this.spend(p, ability.custoMana);
           this.damage(
@@ -3663,17 +3896,21 @@ export class Game {
       (card?.habilidadesAtivas ?? [])
         .filter(
           (h) =>
-            h.esperaRodadas || h.efeitos?.some((e) => e.id === "spendAttack"),
+            h.custoVida ||
+            h.esperaRodadas ||
+            h.efeitos?.some((e) => e.id === "spendAttack"),
         )
         .map((h) => [
           h.id,
-          h.esperaRodadas &&
-          card?.abilityRounds?.[h.id] !== undefined &&
-          this.state.round - card.abilityRounds[h.id] <= h.esperaRodadas
-            ? "Aguarda uma rodada completa entre usos."
-            : h.efeitos?.some((e) => e.id === "spendAttack")
-              ? this.attackSourceError(user, slot, card ?? null)
-              : "",
+          h.custoVida && (card?.hpAtual ?? 0) <= h.custoVida
+            ? "Vida insuficiente para pagar a habilidade sem morrer."
+            : h.esperaRodadas &&
+                card?.abilityRounds?.[h.id] !== undefined &&
+                this.state.round - card.abilityRounds[h.id] <= h.esperaRodadas
+              ? "Aguarda uma rodada completa entre usos."
+              : h.efeitos?.some((e) => e.id === "spendAttack")
+                ? this.attackSourceError(user, slot, card ?? null)
+                : "",
         ]),
     );
   }
@@ -3911,7 +4148,16 @@ export class Game {
     )
       this.fail("Aguarde a resposta à ação pendente.");
     if (
-      !["surrender", "respondSpell", "respondAttack"].includes(cmd.type) &&
+      this.state.pendingRevives?.length &&
+      !this.state.pendingSpell &&
+      !this.state.pendingAttack &&
+      !["chooseRevive", "surrender"].includes(cmd.type)
+    )
+      this.fail("Aguarde a escolha da tropa a reviver.");
+    if (
+      !["surrender", "respondSpell", "respondAttack", "chooseRevive"].includes(
+        cmd.type,
+      ) &&
       this.state.phase === "BATTLE" &&
       this.state.current !== user
     )
@@ -3926,6 +4172,9 @@ export class Game {
     this.state = structuredClone(previous);
     try {
       switch (cmd.type) {
+        case "chooseRevive":
+          this.chooseRevive(user, cmd.cardId, cmd.destinationId);
+          break;
         case "mount":
           this.mount(user, cmd.slotId, cmd.destinationId);
           break;
@@ -4055,6 +4304,19 @@ export class Game {
       fieldEffects: this.state.fieldEffects,
       pendingImpact: this.state.pendingImpact?.request,
       pendingHandChoice: this.state.pendingHandChoice,
+      pendingRevive:
+        !this.state.pendingSpell &&
+        !this.state.pendingAttack &&
+        !this.state.pendingImpact &&
+        !this.state.pendingHandChoice
+          ? this.state.pendingRevives?.[0]
+          : undefined,
+      reviveDestinations: this.state.pendingRevives?.length
+        ? reviveDestinations(
+            this.state.slots,
+            this.state.pendingRevives[0].ownerId,
+          ).map((s) => s.id)
+        : [],
       pendingSpell: this.state.pendingSpell,
       pendingAttack: this.state.pendingAttack,
       canRespond:

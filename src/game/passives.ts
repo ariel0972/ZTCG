@@ -7,9 +7,12 @@ import type { Instance, Slot } from "./state";
 import { troopPositions, slotCards } from "./state";
 import { normalizePassive, legacyFireCounter } from "./legacy-passives";
 import { canonicalStatus, hasStatus } from "./status";
+import { spellTurnBonusStatus } from "./resurrection";
 
 export interface PassiveEvent {
   ownerId: string;
+  originOwnerId?: string;
+  reaction?: string;
   cardId?: string;
   card?: Instance;
   element?: Instance["elemento"];
@@ -38,6 +41,8 @@ export const passiveActionIds = [
   "mana",
   "draw",
   "recover",
+  "revive",
+  "spellDamageTurn",
   "spellDamageBonus",
   "attackAura",
   "blockAttack",
@@ -62,6 +67,7 @@ export const passiveEventTriggers = [
   "onRevive",
   "onSacrifice",
   "onStatusApplied",
+  "onElementalReaction",
 ] as const;
 export function describePassiveActions(actions: PassiveAction[]) {
   return actions
@@ -105,6 +111,10 @@ export function describePassiveActions(actions: PassiveAction[]) {
           return `Recuperou ${a.valor} de mana`;
         case "draw":
           return `Comprou ${a.valor} carta(s)`;
+        case "revive":
+          return "Escolha uma tropa do cemitério e um espaço para reviver";
+        case "spellDamageTurn":
+          return `Feitiços recebem +${a.valor} de dano até o fim do turno`;
         case "recover":
           return `Recuperou ${a.valor} carta(s) do cemitério`;
         case "spellDamageBonus":
@@ -151,6 +161,19 @@ export function passiveMatches(
   event: PassiveEvent,
   slots: Slot[],
 ) {
+  if (rule.reacao) {
+    const caused = event.originOwnerId === source.ownerId;
+    const received = event.cardId === source.id;
+    if (
+      event.reaction !== rule.reacao.nome ||
+      !(rule.reacao.quando === "provoca"
+        ? caused
+        : rule.reacao.quando === "recebe"
+          ? received
+          : caused || received)
+    )
+      return false;
+  }
   if (rule.escopo === "proprio" && source.id !== event.cardId) return false;
   if (rule.escopo === "aliado" && source.ownerId !== event.ownerId)
     return false;
@@ -482,27 +505,36 @@ export function targetAttackBonus(
       );
     }, 0);
 }
+export function temporarySpellDamageBonus(card: Instance) {
+  return card.statuses
+    .filter((s) => s.nome === spellTurnBonusStatus && s.turnosRestantes > 0)
+    .reduce((n, s) => n + (s.valor ?? 0), 0);
+}
 export function spellDamageBonus(
   card: Instance,
   element?: Instance["elemento"],
 ) {
-  if (!element) return 0;
-  return card.habilidadesPassivas
-    .flatMap((h) => normalizePassive(h).efeitos)
-    .reduce(
-      (sum, action) =>
-        action.id === "spellDamageBonus" && action.elemento === element
-          ? sum +
-            Math.floor(
-              (card.passiveCounters?.[action.contador] ??
-                (action.contador === legacyFireCounter
-                  ? (card.fireSpellsCast ?? 0)
-                  : 0)) / action.aCada,
-            ) *
-              action.valor
-          : sum,
-      0,
-    );
+  const temporary = temporarySpellDamageBonus(card);
+  if (!element) return temporary;
+  return (
+    temporary +
+    card.habilidadesPassivas
+      .flatMap((h) => normalizePassive(h).efeitos)
+      .reduce(
+        (sum, action) =>
+          action.id === "spellDamageBonus" && action.elemento === element
+            ? sum +
+              Math.floor(
+                (card.passiveCounters?.[action.contador] ??
+                  (action.contador === legacyFireCounter
+                    ? (card.fireSpellsCast ?? 0)
+                    : 0)) / action.aCada,
+              ) *
+                action.valor
+            : sum,
+        0,
+      )
+  );
 }
 export function continuousPassiveActive(
   source: Instance,

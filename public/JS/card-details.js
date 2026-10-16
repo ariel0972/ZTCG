@@ -1,4 +1,9 @@
-import { labels, abilityDescription, passiveDescription } from "./card-view.js";
+import {
+  labels,
+  abilityDescription,
+  abilityCost,
+  passiveDescription,
+} from "./card-view.js";
 
 const paths = {
   mana: ["M9 3h6M10 3v7l-5 8a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-8V3", "M8 15h8"],
@@ -142,6 +147,21 @@ export function renderCardDetails(host, card, { reactions = {} } = {}) {
         `Bônus permanente de Fogo: +${card.fireDamageBonus} dano · ${card.fireSpellsCast || 0} feitiços de Fogo conjurados.`,
       ),
     );
+  const indicators = (card.habilidadesPassivas || []).filter(
+    (p) => p.gatilho === "onElementalReaction",
+  );
+  if (indicators.length) {
+    const reactionSection = section(
+      "Indicadores de reação",
+      true,
+      "card-info-section--reactions",
+    );
+    for (const indicator of indicators)
+      reactionSection.append(
+        make("h3", indicator.reacao?.nome || "Reação"),
+        make("p", passiveDescription(indicator)),
+      );
+  }
   if (card.habilidadesAtivas?.length) {
     const active = section(
       "Habilidades ativas",
@@ -161,8 +181,11 @@ export function renderCardDetails(host, card, { reactions = {} } = {}) {
       const entry = make("article", "", "card-active-ability"),
         heading = make("div", "", "card-ability-heading"),
         cost = make("span", "", "card-ability-cost");
-      cost.title = `Custo da habilidade: ${ability.custoMana ?? 0} mana`;
-      cost.append(icon("mana"), make("span", `${ability.custoMana ?? 0} mana`));
+      cost.title = `Custo da habilidade: ${abilityCost(ability)}`;
+      cost.append(
+        icon(ability.custoVida ? "life" : "mana"),
+        make("span", abilityCost(ability)),
+      );
       heading.append(make("h3", ability.nome), cost);
       entry.append(heading, make("p", abilityDescription(ability)));
       active.append(entry);

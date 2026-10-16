@@ -11,13 +11,10 @@ export const labels = {
 export function abilityNeedsTarget(ability) {
   if (ability.alvoAutomatico) return false;
   if (
-    [
-      "ataqueFurtivo",
-      "ordemDaEspada",
-      "armaduraPoderosa",
-      "enganarAMorte",
-      "deslocar",
-    ].includes(ability.id)
+    !ability.efeitos?.length &&
+    ["ataqueFurtivo", "ordemDaEspada", "armaduraPoderosa", "deslocar"].includes(
+      ability.id,
+    )
   )
     return false;
   return ![
@@ -26,6 +23,13 @@ export function abilityNeedsTarget(ability) {
     "TodasTropasInimigas",
     "TodosAliados",
   ].includes(ability.alvo);
+}
+export function abilityCost(ability) {
+  const costs = [];
+  if (ability.custoMana || !ability.custoVida)
+    costs.push(ability.custoMana + " mana");
+  if (ability.custoVida) costs.push(ability.custoVida + " de vida");
+  return costs.join(" + ");
 }
 export function abilityDescription(ability) {
   if (ability.descricao) return ability.descricao;
@@ -41,10 +45,6 @@ export function abilityDescription(ability) {
       "Causa 3 de dano a todas as tropas inimigas. Estruturas absorvem o golpe. Alvos automáticos.",
     armaduraPoderosa:
       "Esta carta recebe Guardar e reduz em 2 o dano recebido por 2 rodadas. Consome seu ataque. Alvo automático: a própria carta.",
-    enganarAMorte:
-      "Devolve até 3 tropas mais recentes do seu cemitério ao baralho e o embaralha. Alvos automáticos.",
-    ressurreicaoSombria:
-      "Escolha uma tropa do seu cemitério. Ela retorna à mão restaurada e com custo de mobilização 0.",
     protecaoAquatica:
       "Escolha um aliado e um modo: curar 3 de vida ou conceder Escudo 3 por 2 rodadas.",
   };
@@ -57,6 +57,8 @@ export function abilityDescription(ability) {
 function effectDescription(effect) {
   const description =
     {
+      revive: `Revive uma tropa do próprio cemitério em um espaço livre, com +${effect.bonusAtaque ?? 0} de ataque e +${effect.bonusHp ?? 0} de vida.`,
+      shuffleGraveyard: `Embaralha até ${effect.valor} tropas escolhidas do próprio cemitério no baralho.`,
       attackField: `Cria um efeito no campo inimigo por ${effect.duracao} rodadas, causando ${effect.valor} de dano após cada ataque.`,
       nextActionDamage: `A próxima ação que causar dano recebe +${effect.valor} de dano até o fim do turno.`,
       damage: `Causa ${effect.valor || 0} de dano.${effect.valorEstrutura === undefined ? "" : " Contra estrutura, causa " + effect.valorEstrutura + "."}`,
@@ -110,6 +112,7 @@ export function passiveDescription(h) {
         onEquip: "Ao equipar",
         onDamageTaken: "Ao receber dano",
         onRevive: "Ao reviver",
+        onElementalReaction: "Indicador de reação elemental",
         onSacrifice: "Ao sacrificar",
         onStatusApplied: "Ao aplicar status",
         continuous: "Enquanto a condição for válida",
@@ -139,6 +142,9 @@ export function passiveDescription(h) {
             status: `aplica ${e.status}`,
             mana: `recupera ${e.valor} de mana`,
             draw: `compra ${e.valor} carta(s)`,
+            revive:
+              "revive uma tropa do próprio cemitério em um espaço escolhido",
+            spellDamageTurn: `feitiços recebem +${e.valor} de dano${e.acumulavel ? " acumulável" : ""} até o fim do turno`,
             recover: `recupera ${e.valor} carta(s) do cemitério`,
             spellDamageBonus: `a cada ${e.aCada} eventos ganha +${e.valor} de dano de ${e.elemento}`,
             attackAura: `aura de ataque +${e.valor} entre vizinhos`,
@@ -228,9 +234,13 @@ export function describe(card) {
       `Bônus permanente de Fogo: +${card.fireDamageBonus} dano · ${card.fireSpellsCast || 0} feitiços de Fogo conjurados`,
     );
   if (card.palavrasChave?.length) parts.push(card.palavrasChave.join(", "));
+  if (card.deathReward)
+    parts.push(
+      `Se morrer na rodada ${card.deathReward.round}, recupera ${card.deathReward.mana} mana para quem a reviveu.`,
+    );
   if (card.descricao) parts.push(card.descricao);
   for (const h of card.habilidadesAtivas || [])
-    parts.push(`${h.nome} · ${h.custoMana} mana: ${abilityDescription(h)}`);
+    parts.push(`${h.nome} · ${abilityCost(h)}: ${abilityDescription(h)}`);
   for (const h of card.habilidadesPassivas || [])
     parts.push(passiveDescription(h));
   return parts.join("\n");

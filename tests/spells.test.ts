@@ -257,6 +257,11 @@ function make(element: Card["elemento"] = "Neutro") {
   for (const p of g.state.players) {
     p.hand = [];
     p.mage.habilidadesPassivas = [];
+    // Cenário neutro de 20 PV para medir somente as regras dos feitiços.
+    p.mage.hp = 20;
+    p.mage.hpAtual = 20;
+    p.mage.fraqueza = [];
+    p.mage.resistencia = [];
     p.mage.limites[0].feiticosUsados = 20;
     p.mana = 20;
   }

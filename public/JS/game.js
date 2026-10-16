@@ -8,8 +8,9 @@ import {
   slotTargetId,
   zoneCardAllowed,
   targetDescription,
-  displacementChoice,
+  destinationChoice,
 } from "./battle-targets.js";
+import { renderReviveChoice } from "./revive-choice.js";
 import { createHandNavigation } from "./hand-navigation.js";
 import { createTurnAnnouncement } from "./turn-announcement.js";
 import { createBattleEvents } from "./battle-events.js";
@@ -20,6 +21,7 @@ import {
   describe,
   abilityNeedsTarget,
   abilityDescription,
+  abilityCost,
   passiveDescription,
 } from "./card-view.js";
 import { createCardInspector } from "./card-inspection.js";
@@ -176,6 +178,7 @@ function myTurn() {
     !state?.pendingAttack &&
     !state?.pendingImpact &&
     !state?.pendingHandChoice &&
+    !state?.pendingRevive &&
     state?.status === "ACTIVE" &&
     (state.phase === "PREPARATION"
       ? !myPlayer().preparation.ready
@@ -287,7 +290,10 @@ function dragBinding(element, source) {
         return;
       }
       selectSlot(state.slots.find((s) => s.id === id));
-      if (displacementChoice(targetAction(), targets, state.slots).required)
+      if (
+        destinationChoice(targetAction(), targets, state.slots, user.id)
+          .required
+      )
         return;
       if (
         action === "play" &&
@@ -370,7 +376,7 @@ function selectSlot(slot, asStructure = false, asRider = false) {
     }
     if (selected.type === "play" || selected.type === "ability") {
       const action = targetAction();
-      const choice = displacementChoice(action, targets, state.slots);
+      const choice = destinationChoice(action, targets, state.slots, user.id);
       if (choice.destinations.includes(slot.id)) {
         selected.destinationId = slot.id;
         render();
@@ -509,8 +515,15 @@ function chooseZone(type) {
         : "Escolha uma carta do cemitério",
     cards.filter((c) => zoneCardAllowed(action, c)),
     (card) => {
-      targets = [card.id];
-      $("zone-dialog").close();
+      if ((action.maxAlvos ?? 1) > 1) {
+        if (targets.includes(card.id))
+          targets = targets.filter((id) => id !== card.id);
+        else if (targets.length < action.maxAlvos) targets.push(card.id);
+      } else {
+        targets = [card.id];
+        $("zone-dialog").close();
+      }
+      delete selected.destinationId;
       render();
     },
   );
@@ -545,7 +558,20 @@ function renderTargetZones() {
       ?.classList.add("spell-target");
 }
 function displacementBlockReason() {
-  const choice = displacementChoice(targetAction(), targets, state.slots);
+  const choice = destinationChoice(
+    targetAction(),
+    targets,
+    state.slots,
+    user.id,
+  );
+  if (targetAction()?.efeitos?.some((e) => e.id === "revive"))
+    return !targets.length
+      ? "Escolha primeiro uma tropa no seu cemitério."
+      : !selected?.destinationId
+        ? choice.destinations.length
+          ? "Escolha um espaço aliado destacado para reviver."
+          : "Não há espaço livre e sem Lama para reviver."
+        : "";
   return choice.required && !selected?.destinationId
     ? choice.destinations.length
       ? "Escolha um espaço vizinho destacado para o destino."
@@ -574,22 +600,26 @@ function renderActions() {
   }
   $("selection-help").textContent = !connected
     ? "Conexão interrompida. As ações voltarão quando o servidor reconectar."
-    : !myTurn()
-      ? "Aguarde o turno do oponente."
-      : !selected
-        ? "Selecione uma carta da mão ou do campo."
-        : selected.type === "attack"
-          ? `${selected.card.tipo === "Mago" ? "Universal" : selected.card.direcaoAtaque || selected.slot.card?.direcaoAtaque || "Frente"} · ${selected.slot.attackTargets?.[selected.source]?.length || 0} alvo(s) disponível(is). Escolha um alvo destacado para atacar.`
-          : selected.type === "move"
-            ? "Escolha um campo aliado vazio para reposicionar."
-            : selected.type === "mount"
-              ? "Escolha uma montaria destacada. Montar consome o ataque desta tropa."
-              : selected.type === "play" && selected.card.tipo !== "Feitico"
-                ? "Escolha o campo onde deseja jogar a carta."
-                : displacementBlockReason() ||
-                  (selected?.destinationId
-                    ? "Destino escolhido. Confirme o uso da carta."
-                    : targetDescription(targetAction()));
+    : state.pendingRevive
+      ? state.pendingRevive.ownerId === user.id
+        ? "Escolha a tropa e o destino no painel de ressurreição."
+        : "Aguardando a ressurreição do oponente."
+      : !myTurn()
+        ? "Aguarde o turno do oponente."
+        : !selected
+          ? "Selecione uma carta da mão ou do campo."
+          : selected.type === "attack"
+            ? `${selected.card.tipo === "Mago" ? "Universal" : selected.card.direcaoAtaque || selected.slot.card?.direcaoAtaque || "Frente"} · ${selected.slot.attackTargets?.[selected.source]?.length || 0} alvo(s) disponível(is). Escolha um alvo destacado para atacar.`
+            : selected.type === "move"
+              ? "Escolha um campo aliado vazio para reposicionar."
+              : selected.type === "mount"
+                ? "Escolha uma montaria destacada. Montar consome o ataque desta tropa."
+                : selected.type === "play" && selected.card.tipo !== "Feitico"
+                  ? "Escolha o campo onde deseja jogar a carta."
+                  : displacementBlockReason() ||
+                    (selected?.destinationId
+                      ? "Destino escolhido. Confirme o uso da carta."
+                      : targetDescription(targetAction()));
   if (!selected) return;
   const inspected = selected.card || selected.slot?.card;
   if (inspected) {
@@ -732,7 +762,7 @@ function renderActions() {
     for (const ability of card.habilidadesAtivas)
       panel.append(
         actionButton(
-          `${ability.nome} · ${ability.custoMana} mana`,
+          `${ability.nome} · ${abilityCost(ability)}`,
           () => {
             if (!abilityNeedsTarget(ability)) {
               void command({
@@ -746,16 +776,11 @@ function renderActions() {
             }
             selected = { type: "ability", slot, card, ability };
             targets = [];
-            if (["ressurreicaoSombria", "refazerCaminhos"].includes(ability.id))
+            if (zoneTargets.includes(ability.alvo)) chooseZone(ability.alvo);
+            else if (ability.id === "refazerCaminhos")
               zone(
-                ability.id === "refazerCaminhos"
-                  ? "Escolha um feitiço do cemitério"
-                  : "Escolha uma tropa do cemitério",
-                myPlayer().graveyard.filter(
-                  (c) =>
-                    c.tipo ===
-                    (ability.id === "refazerCaminhos" ? "Feitico" : "Tropa"),
-                ),
+                "Escolha um feitiço do cemitério",
+                myPlayer().graveyard.filter((c) => c.tipo === "Feitico"),
                 (c) => {
                   targets = [c.id];
                   $("zone-dialog").close();
@@ -863,6 +888,12 @@ function renderActions() {
     }
   } else if (selected.type === "ability") {
     const ability = selected.ability;
+    if (zoneTargets.includes(ability.alvo))
+      panel.append(
+        actionButton("Escolher cartas do cemitério", () =>
+          chooseZone(ability.alvo),
+        ),
+      );
     if (ability.id === "protecaoAquatica") {
       for (const mode of ["cura", "escudo"])
         panel.append(
@@ -892,7 +923,10 @@ function renderActions() {
               targets,
               destinationId: selected.destinationId,
             }),
-          displacementBlockReason(),
+          displacementBlockReason() ||
+            (!hasAutomaticTarget(ability) && !targets.length
+              ? "Selecione pelo menos uma carta."
+              : ""),
         ),
       );
     panel.append(node("p", `Alvos selecionados: ${targets.length}`, "hint"));
@@ -912,7 +946,7 @@ function renderActions() {
     notes.append(node("summary", "Habilidades e passivas"));
     for (const ability of inspected.habilidadesAtivas || []) {
       notes.append(
-        node("strong", `${ability.nome} · ${ability.custoMana} mana`),
+        node("strong", `${ability.nome} · ${abilityCost(ability)}`),
         node("p", abilityDescription(ability)),
       );
     }
@@ -1025,7 +1059,12 @@ function slotView(slot) {
     }
   }
   if (isChoosingSpell()) {
-    const choice = displacementChoice(targetAction(), targets, state.slots);
+    const choice = destinationChoice(
+      targetAction(),
+      targets,
+      state.slots,
+      user.id,
+    );
     const destination = choice.destinations.includes(slot.id);
     const valid = destination || spellSlotTarget(targetAction(), slot, user.id);
     button.classList.add(valid ? "spell-target" : "spell-unavailable");
@@ -1234,6 +1273,7 @@ function render() {
     !state?.pendingAttack &&
     !state?.pendingImpact &&
     !state?.pendingHandChoice &&
+    !state?.pendingRevive &&
     !state?.paused;
   if (state?.paused)
     responsePanel.append(
@@ -1292,6 +1332,14 @@ function render() {
       responsePanel.append(
         node("p", "O oponente está escolhendo uma carta da sua mão."),
       );
+  }
+  if (state?.pendingRevive && user) {
+    selected = null;
+    targets = [];
+    renderReviveChoice(responsePanel, state, user.id, {
+      disabled: pending || state.paused || !connected,
+      onChoose: command,
+    });
   }
   if (state?.pendingAttack && user) {
     selected = null;
@@ -1508,9 +1556,19 @@ function zone(title, cards, select) {
     ...cards.map((c) =>
       (() => {
         const tile = cardTile(c, (card) => {
-          if (select) select(card);
-          else inspector.inspect(card);
+          if (select) {
+            select(card);
+            if ((targetAction()?.maxAlvos ?? 1) > 1) {
+              tile.setAttribute(
+                "aria-pressed",
+                String(targets.includes(card.id)),
+              );
+              tile.classList.toggle("selected", targets.includes(card.id));
+            }
+          } else inspector.inspect(card);
         });
+        if (select && (targetAction()?.maxAlvos ?? 1) > 1)
+          tile.setAttribute("aria-pressed", String(targets.includes(c.id)));
         inspector.bind(tile, c);
         return tile;
       })(),
@@ -1636,7 +1694,8 @@ setInterval(() => {
         : state.pendingSpell ||
             state.pendingAttack ||
             state.pendingImpact ||
-            state.pendingHandChoice
+            state.pendingHandChoice ||
+            state.pendingRevive
           ? `Resposta: ${Math.max(0, Math.ceil((state.responseDeadline - Date.now() - clockOffset) / 1000))}s · turno pausado`
           : `${Math.max(0, Math.ceil((state.deadline - Date.now() - clockOffset) / 1000))}s restantes`
       : "Reconectando…";

@@ -2121,3 +2121,28 @@
   max-width: 130px;
   white-space: normal;
 }
+
+.revive-choice-controls {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.revive-choice-controls label {
+  display: grid;
+  gap: 6px;
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.revive-choice-controls select {
+  width: 100%;
+}
+#zone-cards .card-tile[aria-pressed="true"] {
+  outline: 3px solid var(--gold, #d3ad68);
+  outline-offset: -3px;
+}
+
+.field-menu:has(.revive-choice-controls) {
+  z-index: 120;
+  background: #11232b;
+}

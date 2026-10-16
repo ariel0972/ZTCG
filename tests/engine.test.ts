@@ -215,7 +215,7 @@ test("ressurreição inválida não cobra mana; tropas retornam restauradas", ()
     command(g, "p1", {
       type: "ability",
       slotId: "p1:mage",
-      abilityId: "ressurreicaoSombria",
+      abilityId: "enganarAMorte",
       targets: [],
     }),
   );
@@ -227,7 +227,7 @@ test("ressurreição inválida não cobra mana; tropas retornam restauradas", ()
     type: "ability",
     slotId: "p1:mage",
     abilityId: "enganarAMorte",
-    targets: [],
+    targets: [dead.id],
   });
   assert.equal(
     g.player("p1").deck.find((c) => c.id === dead.id)!.hpAtual,

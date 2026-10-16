@@ -137,7 +137,7 @@ test("Mago de Fogo acumula a cada feitiço de Fogo para os próximos; Bola de Fo
     g.state.slots.find((s) => s.id === "p2:arm:front-right")!.card!.hpAtual,
     48,
   );
-  assert.equal(g.player("p2").mage.hpAtual, 20);
+  assert.equal(g.player("p2").mage.hpAtual, g.player("p2").mage.hp);
   act(g, "p1", { type: "endTurn" });
   turn(g, "p1");
   g.player("p1").mana = 20;

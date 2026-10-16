@@ -343,9 +343,16 @@ test("Esqueleto ganha ataque em cada retorno de tropa revivida; Deslocar é fron
   assert.equal(g.player("p1").mana, 20);
   for (const col of [1, 2]) {
     const revived = instance("020", "p1");
-    revived.revivedFromGraveyard = true;
-    g.player("p1").hand.push(revived);
-    act(g, { type: "play", cardId: revived.id, slotId: slot(g, "p1", col).id });
+    revived.hpAtual = 0;
+    g.player("p1").graveyard.push(revived);
+    const spell = instance("080", "p1");
+    g.player("p1").hand.push(spell);
+    act(g, {
+      type: "play",
+      cardId: spell.id,
+      targets: [revived.id],
+      destinationId: slot(g, "p1", col).id,
+    });
   }
   assert.equal(skeleton.card!.ataque, 5);
   const enemy = slot(g, "p2", 2);

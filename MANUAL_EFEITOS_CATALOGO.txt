@@ -212,8 +212,8 @@ Efeitos especiais de feitiços e field não são aceitos em habilidades genéric
 
 Executores antigos sem lista de efeitos:
 protecaoAquatica: escolher aliado e cura 3 OU Escudo 3 por 2 rodadas.
-enganarAMorte: até 3 tropas recentes do cemitério ao baralho, embaralhando.
-ressurreicaoSombria: tropa do cemitério à mão, restaurada e com custo 0.
+Enganar a morte: efeito shuffleGraveyard, seleção de até 3 tropas e custoVida:4.
+Ressurreição Sombria foi removida; use o efeito geral revive para entrar em campo.
 ataqueFurtivo: 2 de dano ao mago inimigo, automático.
 ordemDaEspada: 3 de dano às tropas inimigas, estruturas absorvem.
 armaduraPoderosa: Guardar e redução 2 por 2 rodadas; consome ataque.
@@ -873,43 +873,97 @@ EXEMPLO_JSON_INICIO 108 — Necromante
   "nome": "Necromante",
   "tipo": "Mago",
   "custoMana": 0,
-  "descricao": "",
+  "descricao": "Cada tropa aliada revivida concede +2 de dano acumulável aos seus feitiços até o fim do turno. Sacrificar uma tropa recupera 2 de vida e 1 de mana. Ao provocar Zarconizado ou quando a reação atingir este mago, escolha uma tropa do seu cemitério para reviver em um espaço livre, sem custo nem mobilização.",
   "imgURL": "/assets/Cards/Necromante.png",
-  "publicado": false,
+  "publicado": true,
   "versao": 1,
-  "hp": 20,
+  "hp": 18,
   "ataque": 2,
-  "recuperacaoMana": 3,
+  "recuperacaoMana": 4,
   "limites": [
     {
-      "tropasMobilizadas": 3,
+      "tropasMobilizadas": 1,
       "tropaAtacam": 2,
-      "feiticosUsados": 2,
+      "feiticosUsados": 3,
       "feiticosUnicos": 2
     }
   ],
-  "elemento": "Zarcos",
+  "elemento": "Neutro",
   "habilidadesPassivas": [
     {
       "gatilho": "onRevive",
-      "efeito": "comprarCartaCemiterio"
+      "escopo": "aliado",
+      "filtroEvento": {
+        "tipo": "Tropa"
+      },
+      "efeitos": [
+        {
+          "id": "spellDamageTurn",
+          "valor": 2,
+          "acumulavel": true
+        }
+      ]
     },
     {
       "gatilho": "onSacrifice",
-      "efeito": "ganharVidaEManaSacrificio"
+      "escopo": "aliado",
+      "filtroEvento": {
+        "tipo": "Tropa"
+      },
+      "efeitos": [
+        {
+          "id": "heal",
+          "alvo": "magoAliado",
+          "valor": 2
+        },
+        {
+          "id": "mana",
+          "jogador": "aliado",
+          "valor": 1
+        }
+      ]
+    },
+    {
+      "gatilho": "onElementalReaction",
+      "escopo": "qualquer",
+      "reacao": {
+        "nome": "Zarconizado",
+        "quando": "provocaOuRecebe"
+      },
+      "descricao": "Indicador de reação — Zarconizado: ao provocar a reação ou quando ela atingir este mago, reviva uma tropa do próprio cemitério em um espaço livre. Mantém os 2 de mana da reação.",
+      "efeitos": [
+        {
+          "id": "revive",
+          "jogador": "aliado"
+        }
+      ]
     }
   ],
   "habilidadesAtivas": [
     {
       "id": "enganarAMorte",
-      "nome": "Enganar a Morte",
-      "custoMana": 4
-    },
-    {
-      "id": "ressurreicaoSombria",
-      "nome": "Ressurreição Sombria",
-      "custoMana": 5
+      "nome": "Enganar a morte",
+      "custoMana": 0,
+      "custoVida": 4,
+      "alvo": "Cemiterio",
+      "maxAlvos": 3,
+      "filtroAlvo": {
+        "tipo": "Tropa"
+      },
+      "descricao": "Pague 4 de vida para escolher de 1 a 3 tropas do próprio cemitério, devolvê-las ao baralho e embaralhar. Exige mais de 4 de vida.",
+      "efeitos": [
+        {
+          "id": "shuffleGraveyard",
+          "valor": 3
+        }
+      ]
     }
+  ],
+  "fraqueza": [
+    "Zarcos"
+  ],
+  "resistencia": [
+    "Neutro"
   ]
 }
 EXEMPLO_JSON_FIM
@@ -1681,3 +1735,71 @@ Novos parâmetros de damage:
   Ex.: {"id":"damage","valor":1,"perfurante":true,"curaPosterior":{"multiplicador":3,"rodadas":1},"recompensaAoEliminar":{"mana":5,"tipo":"Tropa"}}
   Alvos da carta: UnicoAliado com tiposAlvo [Tropa,Mago], como Cauterizar.
   Não existe comportamento identificado pelo número ou nome dessa carta.
+
+
+NECROMANTE, CUSTO DE VIDA E RESSURREIÇÃO — 16/10/2026
+custoVida: campo opcional de habilidade ativa. A própria carta paga a vida,
+  ignorando escudos/resistências por ser custo, sem disparar dano ou cura.
+  Exige vida atual estritamente maior que o custo; seleção inválida reverte.
+  Pode coexistir com custoMana. O cliente e a ficha mostram ambos os custos.
+
+shuffleGraveyard: alvo Cemiterio e valor de 1 a 3. O jogador seleciona até esse
+  número de tropas do próprio cemitério, restaura-as, devolve ao baralho e embaralha.
+  Não dispara onRevive. No Necromante: custoMana:0, custoVida:4, maxAlvos:3,
+  filtroAlvo:{tipo:Tropa}. Não existe rotina especial pelo número da carta.
+
+revive: alvo Cemiterio, um único efeito e uma tropa selecionada. O comando envia
+  destinationId de um espaço frontal aliado, vazio e sem Lama. Pode ter estrutura.
+  Entra restaurada, sem custo de mobilização, sem consumir o contador e sem gerar
+  mana de entrada. Recebe bônus de armamentos do espaço, onSummon e onRevive.
+  bonusAtaque/bonusHp opcionais duram enquanto a tropa permanecer em campo;
+  morte, devolução, banimento ou esquecimento removem somente esses acréscimos.
+  recompensaMorteRodada:{mana:6} recupera mana para quem a reviveu se morrer na
+  rodada de entrada. Não recompensa devolução nem morte em rodada posterior.
+  Ex.: {"id":"revive","bonusAtaque":2,"bonusHp":3,"recompensaMorteRodada":{"mana":6}}
+
+spellDamageTurn: ação de passiva de Mago. valor positivo e acumulavel opcional.
+  Concede Bônus de dano de feitiço em turnos, até o fim do turno corrente.
+  Sem acumulavel, mantém o maior bônus; true soma cada ativação. Afeta todos os
+  elementos. Feitiços contínuos recebem o bônus somente no turno em que ele
+  estiver ativo, sem fixá-lo para as rodadas seguintes.
+  Ex.: onRevive/aliado, filtroEvento:{tipo:Tropa},
+       efeitos:[{"id":"spellDamageTurn","valor":2,"acumulavel":true}].
+
+onElementalReaction: evento de reação elemental. Use escopo qualquer e reacao:
+  {nome:Zarconizado,quando:provocaOuRecebe}. Nomes são os da lista de reações;
+  quando pode ser provoca, recebe ou provocaOuRecebe. Provocar significa que o
+  dono da fonte ativou a reação; receber exige que a própria fonte seja atingida.
+  Um evento que cumpre ambos os casos ativa a regra apenas uma vez.
+  O evento mantém a reação normal e executa os bônus configurados no catálogo.
+  A ficha mostra essas passivas como Indicadores de reação.
+  revive como ação de passiva recebe jogador:aliado ou inimigo e abre escolha
+  de tropa e espaço. O turno fica pausado por até 20 segundos. O tempo esgotado
+  encerra apenas a escolha; múltiplas escolhas são resolvidas na ordem do campo.
+  Sem tropa elegível ou espaço livre, nenhuma escolha é aberta.
+
+EXEMPLO_JSON_INICIO 080 — Reviver Tropa
+{
+  "numeroCatalogo": "080",
+  "nome": "Reviver Tropa",
+  "tipo": "Feitico",
+  "custoMana": 5,
+  "descricao": "Escolha uma tropa do próprio cemitério e coloque-a em um espaço livre, com +2 de ataque e +3 de vida. Se morrer nesta mesma rodada, você recupera 6 de mana. Não consome mobilização nem gera mana de entrada.",
+  "imgURL": "/assets/Cards/Reviver Tropa.png",
+  "publicado": true,
+  "versao": 1,
+  "alvo": "Cemiterio",
+  "elemento": "Neutro",
+  "maxAlvos": 1,
+  "efeitos": [
+    {
+      "id": "revive",
+      "bonusAtaque": 2,
+      "bonusHp": 3,
+      "recompensaMorteRodada": {
+        "mana": 6
+      }
+    }
+  ]
+}
+EXEMPLO_JSON_FIM

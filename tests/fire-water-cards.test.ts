@@ -146,7 +146,7 @@ test("Imbuir amplia cada alvo de um feitiço de área e mantém a passiva perman
   cast(g, "035");
   for (const col of [0, 1, 2])
     assert.equal(slot(g, "p2:front:" + col).card!.hpAtual, 35);
-  assert.equal(g.player("p2").mage.hpAtual, 20);
+  assert.equal(g.player("p2").mage.hpAtual, g.player("p2").mage.hp);
   assert.equal(g.player("p1").mage.fireDamageBonus, 1);
   assert.equal(g.player("p1").mana, 11);
 });

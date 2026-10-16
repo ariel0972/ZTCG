@@ -106,7 +106,10 @@ export function zoneCardAllowed(action, card) {
     );
   if (action.id === "refazerCaminhos" || action.id === "recuperarEnergia")
     return card.tipo === "Feitico";
-  if (action.id === "ressurreicaoSombria") return card.tipo === "Tropa";
+  if (
+    action.efeitos?.some((e) => ["revive", "shuffleGraveyard"].includes(e.id))
+  )
+    return card.tipo === "Tropa";
   return true;
 }
 export function targetDescription(action) {
@@ -168,4 +171,25 @@ export function displacementChoice(action, targetIds, slots) {
       )
       .map((s) => s.id),
   };
+}
+
+export function destinationChoice(action, targetIds, slots, ownerId) {
+  if (action?.efeitos?.some((e) => e.id === "revive"))
+    return {
+      required: true,
+      destinations:
+        targetIds?.length === 1
+          ? slots
+              .filter(
+                (s) =>
+                  s.ownerId === ownerId &&
+                  s.kind === "Tropa" &&
+                  !s.card &&
+                  !s.rider &&
+                  !s.terrain,
+              )
+              .map((s) => s.id)
+          : [],
+    };
+  return displacementChoice(action, targetIds, slots);
 }

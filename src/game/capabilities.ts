@@ -2,11 +2,14 @@ import type { Card, Effect, TipoAlvoFeitico } from "../types/card";
 import { legacyPassiveTriggers } from "./legacy-passives";
 import { passiveEventTriggers, passiveActionIds } from "./passives";
 import { canonicalStatus } from "./status";
+import { reactionDescriptions } from "./reactions";
 
 export const effectIds = [
   "revealStealHand",
   "bloodScent",
   "damage",
+  "revive",
+  "shuffleGraveyard",
   "nextActionDamage",
   "attackField",
   "displace",
@@ -34,8 +37,6 @@ export const effectIds = [
 ] as const;
 export const abilityIds = [
   "protecaoAquatica",
-  "enganarAMorte",
-  "ressurreicaoSombria",
   "ataqueFurtivo",
   "ordemDaEspada",
   "armaduraPoderosa",
@@ -80,6 +81,7 @@ const statusIds = [
   "SemAtaque",
   "Campo livre",
   "Dano da próxima ação",
+  "Bônus de dano de feitiço",
   "Atordoamento",
   "Atordoado",
   "Congelado",
@@ -170,6 +172,24 @@ export function playableErrors(card: Card): string[] {
         );
       const effectTarget = e.alvo === "Proprio" ? "UnicoAliado" : target;
       const configurable = ["arrowRain", "lightOrb"].includes(e.id);
+      if (
+        ["revive", "shuffleGraveyard"].includes(e.id) &&
+        effectTarget !== "Cemiterio"
+      )
+        errors.push("Ressurreição e embaralhar tropas exigem alvo Cemiterio.");
+      if (e.id === "revive" && effects.length !== 1)
+        errors.push(
+          "Ressurreição exige um único efeito para escolher um destino.",
+        );
+      if (e.id === "shuffleGraveyard" && (!e.valor || e.valor > 3))
+        errors.push("Embaralhar cemitério exige quantidade entre 1 e 3.");
+      if (
+        (e.bonusHp !== undefined ||
+          e.bonusAtaque !== undefined ||
+          e.recompensaMorteRodada) &&
+        e.id !== "revive"
+      )
+        errors.push("Bônus de ressurreição exigem revive.");
       if (
         ["sandstorm", "nextActionDamage"].includes(e.id) &&
         e.duracao !== undefined &&
@@ -347,6 +367,7 @@ export function playableErrors(card: Card): string[] {
         e.id !== "searchNamed" &&
         e.id !== "spendAttack" &&
         e.id !== "displace" &&
+        e.id !== "revive" &&
         e.valor === undefined
       )
         errors.push(`Defina valor para ${e.id}.`);
@@ -414,7 +435,11 @@ export function playableErrors(card: Card): string[] {
   if (card.tipo === "Feitico" && !card.efeitos.length)
     errors.push("Feitiço sem efeitos.");
   for (const h of card.habilidadesAtivas) {
-    if (h.maxAlvos && h.alvo !== "MultiplosInimigos")
+    if (
+      h.maxAlvos &&
+      h.alvo !== "MultiplosInimigos" &&
+      !(h.alvo === "Cemiterio" && h.maxAlvos <= 3)
+    )
       errors.push("maxAlvos de habilidade exige MultiplosInimigos.");
     if (
       h.filtroAlvo &&
@@ -426,6 +451,7 @@ export function playableErrors(card: Card): string[] {
           "MultiplosInimigos",
           "TodosAliados",
           "TodasTropasInimigas",
+          "Cemiterio",
         ].includes(h.alvo))
     )
       errors.push("Filtro de habilidade vazio ou alvo incompatível.");
@@ -517,7 +543,25 @@ export function playableErrors(card: Card): string[] {
       ])
         if (filter?.status && !statusIds.includes(filter.status))
           errors.push("Filtro de passiva usa status não implementado.");
+      if (
+        h.gatilho === "onElementalReaction" &&
+        (!h.reacao || h.escopo !== "qualquer")
+      )
+        errors.push(
+          "Reação elemental exige filtro de reação e escopo qualquer.",
+        );
+      if (
+        h.reacao &&
+        (h.gatilho !== "onElementalReaction" ||
+          !Object.prototype.hasOwnProperty.call(
+            reactionDescriptions,
+            h.reacao.nome,
+          ))
+      )
+        errors.push("Filtro de reação não implementado ou em outro gatilho.");
       for (const effect of h.efeitos) {
+        if (effect.id === "spellDamageTurn" && card.tipo !== "Mago")
+          errors.push("Bônus temporário de feitiços exige Mago.");
         if (effect.id === "attackElement" && card.tipo === "Feitico")
           errors.push("Elemento de ataque exige carta permanente.");
         if (effect.id === "attackLimit" && card.tipo !== "Tropa")

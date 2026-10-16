@@ -874,12 +874,24 @@
     "numeroCatalogo": "080",
     "nome": "Reviver Tropa",
     "tipo": "Feitico",
-    "custoMana": 2,
-    "descricao": "",
+    "custoMana": 5,
+    "descricao": "Escolha uma tropa do próprio cemitério e coloque-a em um espaço livre, com +2 de ataque e +3 de vida. Se morrer nesta mesma rodada, você recupera 6 de mana. Não consome mobilização nem gera mana de entrada.",
     "imgURL": "/assets/Cards/Reviver Tropa.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
-    "alvo": "UnicoInimigo"
+    "alvo": "Cemiterio",
+    "elemento": "Neutro",
+    "maxAlvos": 1,
+    "efeitos": [
+      {
+        "id": "revive",
+        "bonusAtaque": 2,
+        "bonusHp": 3,
+        "recompensaMorteRodada": {
+          "mana": 6
+        }
+      }
+    ]
   },
   {
     "numeroCatalogo": "082",
@@ -2724,43 +2736,93 @@
     "nome": "Necromante",
     "tipo": "Mago",
     "custoMana": 0,
-    "descricao": "",
+    "descricao": "Cada tropa aliada revivida concede +2 de dano acumulável aos seus feitiços até o fim do turno. Sacrificar uma tropa recupera 2 de vida e 1 de mana. Ao provocar Zarconizado ou quando a reação atingir este mago, escolha uma tropa do seu cemitério para reviver em um espaço livre, sem custo nem mobilização.",
     "imgURL": "/assets/Cards/Necromante.png",
     "publicado": true,
     "versao": 1,
-    "hp": 20,
+    "hp": 18,
     "ataque": 2,
-    "recuperacaoMana": 3,
+    "recuperacaoMana": 4,
     "limites": [
       {
-        "tropasMobilizadas": 3,
+        "tropasMobilizadas": 1,
         "tropaAtacam": 2,
-        "feiticosUsados": 2,
+        "feiticosUsados": 3,
         "feiticosUnicos": 2
       }
     ],
-    "elemento": "Zarcos",
+    "elemento": "Neutro",
     "habilidadesPassivas": [
       {
         "gatilho": "onRevive",
-        "efeito": "comprarCartaCemiterio"
+        "escopo": "aliado",
+        "filtroEvento": {
+          "tipo": "Tropa"
+        },
+        "efeitos": [
+          {
+            "id": "spellDamageTurn",
+            "valor": 2,
+            "acumulavel": true
+          }
+        ]
       },
       {
         "gatilho": "onSacrifice",
-        "efeito": "ganharVidaEManaSacrificio"
+        "escopo": "aliado",
+        "filtroEvento": {
+          "tipo": "Tropa"
+        },
+        "efeitos": [
+          {
+            "id": "heal",
+            "alvo": "magoAliado",
+            "valor": 2
+          },
+          {
+            "id": "mana",
+            "jogador": "aliado",
+            "valor": 1
+          }
+        ]
+      },
+      {
+        "gatilho": "onElementalReaction",
+        "escopo": "qualquer",
+        "reacao": {
+          "nome": "Zarconizado",
+          "quando": "provocaOuRecebe"
+        },
+        "descricao": "Indicador de reação — Zarconizado: ao provocar a reação ou quando ela atingir este mago, reviva uma tropa do próprio cemitério em um espaço livre. Mantém os 2 de mana da reação.",
+        "efeitos": [
+          {
+            "id": "revive",
+            "jogador": "aliado"
+          }
+        ]
       }
     ],
     "habilidadesAtivas": [
       {
         "id": "enganarAMorte",
-        "nome": "Enganar a Morte",
-        "custoMana": 4
-      },
-      {
-        "id": "ressurreicaoSombria",
-        "nome": "Ressurreição Sombria",
-        "custoMana": 5
+        "nome": "Enganar a morte",
+        "custoMana": 0,
+        "custoVida": 4,
+        "alvo": "Cemiterio",
+        "maxAlvos": 3,
+        "filtroAlvo": {
+          "tipo": "Tropa"
+        },
+        "descricao": "Pague 4 de vida para escolher de 1 a 3 tropas do próprio cemitério, devolvê-las ao baralho e embaralhar. Exige mais de 4 de vida.",
+        "efeitos": [
+          {
+            "id": "shuffleGraveyard",
+            "valor": 3
+          }
+        ]
       }
-    ]
+    ],
+    "fraqueza": ["Zarcos"],
+    "resistencia": ["Neutro"]
   }
 ]

@@ -101,7 +101,11 @@ test("preparação simultânea mantém cinco cartas privadas e mobilização man
         .every((s) => !s.card),
     );
     const mana = g.player(id).mana;
-    for (let col = 0; col < 3; col++)
+    for (
+      let col = 0;
+      col < g.player(id).mage.limites[0].tropasMobilizadas;
+      col++
+    )
       command(g, id, {
         type: "play",
         cardId: g.player(id).hand[0].id,
@@ -130,7 +134,10 @@ test("preparação simultânea mantém cinco cartas privadas e mobilização man
   assert.equal(g.state.phase, "BATTLE");
   assert.equal(g.state.round, 2);
   assert.equal(g.state.turn, 1);
-  assert.equal(g.player("p1").hand.length, 3);
+  assert.equal(
+    g.player("p1").hand.length,
+    6 - g.player("p1").mage.limites[0].tropasMobilizadas,
+  );
 });
 
 test("preparação permite cura, cobra armamentos e rejeita habilidades e feitiços de dano sem consumir recursos", () => {
@@ -288,7 +295,7 @@ test("primeiro ataque bloqueia mobilização, mas preserva feitiços e habilidad
 
 test("feitiços de assinatura e comuns usam limites separados", () => {
   const g = later();
-  for (let i = 0; i < 2; i++)
+  for (let i = 0; i < g.player("p1").mage.limites[0].feiticosUsados; i++)
     cast(
       g,
       instance("002", "p1", {
@@ -307,7 +314,10 @@ test("feitiços de assinatura e comuns usam limites separados", () => {
     }),
     [],
   );
-  assert.equal(g.player("p1").counters.spells, 2);
+  assert.equal(
+    g.player("p1").counters.spells,
+    g.player("p1").mage.limites[0].feiticosUsados,
+  );
   assert.equal(g.player("p1").counters.unique, 1);
 });
 
@@ -411,7 +421,7 @@ test("sacrifício gratuito consome habilidade do mago e ativa a passiva do Necro
   g.player("p1").mana = 5;
   command(g, "p1", { type: "sacrifice", slotId: "p1:front:0" });
   assert.equal(g.player("p1").mage.hpAtual, 12);
-  assert.equal(g.player("p1").mana, 7);
+  assert.equal(g.player("p1").mana, 6);
   assert.equal(g.player("p1").mage.usedAbility, true);
   assert.equal(slot(g, "p1:front:0").card, null);
   assert.throws(() =>
@@ -423,22 +433,29 @@ test("sacrifício gratuito consome habilidade do mago e ativa a passiva do Necro
   );
 });
 
-test("reviver só dispara ao mobilizar a tropa devolvida à mão", () => {
+test("Reviver Tropa entra em campo e ativa bônus sem recuperar outras cartas do cemitério", () => {
   const g = later();
   g.player("p1").mana = 20;
   const returned = instance("021"),
     other = instance("027");
   g.player("p1").graveyard.push(other, returned);
+  const spell = instance("080");
+  g.player("p1").hand.push(spell);
   command(g, "p1", {
-    type: "ability",
-    slotId: "p1:mage",
-    abilityId: "ressurreicaoSombria",
+    type: "play",
+    cardId: spell.id,
     targets: [returned.id],
+    destinationId: "p1:front:0",
   });
-  assert.equal(g.player("p1").graveyard.length, 1);
-  command(g, "p1", { type: "play", cardId: returned.id, slotId: "p1:front:0" });
-  assert.equal(g.player("p1").graveyard.length, 0);
-  assert.ok(g.player("p1").hand.some((c) => c.id === other.id));
+  assert.equal(slot(g, "p1:front:0").card!.id, returned.id);
+  assert.ok(g.player("p1").graveyard.some((c) => c.id === other.id));
+  assert.ok(!g.player("p1").hand.some((c) => c.id === other.id));
+  assert.equal(
+    g
+      .player("p1")
+      .mage.statuses.find((s) => s.nome === "Bônus de dano de feitiço")!.valor,
+    2,
+  );
 });
 
 test("Lama impede mobilização; Lama + Água floresce plantas e envenena as demais", () => {
@@ -519,6 +536,7 @@ test("Erosão descarta duas; Lava perfura adjacentes; Explosão transfere excess
   );
   const z = later(),
     spell = instance("002", "p1", { elemento: "Zarcos", custoMana: 3 });
+  z.player("p2").mage.appliedElement = "Zarcos";
   cast(z, spell, [z.player("p2").mage.id]);
   assert.equal(z.player("p1").mana, 19);
 });
@@ -1114,7 +1132,7 @@ test("regeneração inclui tropas flanqueadas e respeita teto de 20 mana", () =>
   });
   g.player("p2").mana = 0;
   command(g, "p1", { type: "endTurn" });
-  assert.equal(g.player("p2").mana, 10);
+  assert.equal(g.player("p2").mana, 7 + g.player("p2").mage.recuperacaoMana!);
   command(g, "p2", { type: "endTurn" });
   g.player("p2").mana = 19;
   command(g, "p1", { type: "endTurn" });
@@ -1380,7 +1398,12 @@ test("abertura bloqueia ataque, habilidade e dano para ambos; mana só cresce ap
     if (phase === "prep") {
       command(g, "p1", { type: "endTurn" });
       command(g, "p2", { type: "endTurn" });
-      assert.equal(g.player("p1").mana, 10);
+      assert.equal(
+        g.player("p1").mana,
+        5 +
+          g.player("p1").mage.recuperacaoMana! +
+          slot(g, "p1:front:0").card!.manaGerada!,
+      );
       assert.equal(g.player("p2").mana, 5);
     } else command(g, g.state.current, { type: "endTurn" });
   }

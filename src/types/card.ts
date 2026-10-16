@@ -49,6 +49,7 @@ export const triggers = [
   "onRevive",
   "onSacrifice",
   "onStatusApplied",
+  "onElementalReaction",
 ] as const;
 const number = z.number().int().min(0).max(1000);
 const identifier = z
@@ -89,6 +90,12 @@ export const effectSchema = z
     requerStatus: z.string().max(80).optional(),
     inicio: z.enum(["proximaRodada"]).optional(),
     valorEstrutura: number.optional(),
+    bonusAtaque: number.optional(),
+    bonusHp: number.optional(),
+    recompensaMorteRodada: z
+      .object({ mana: number.max(20) })
+      .strict()
+      .optional(),
     perfurante: z.boolean().optional(),
     reacoesElemento: z
       .array(
@@ -147,6 +154,7 @@ export const activeSchema = z
     id: identifier,
     nome: z.string().trim().min(1).max(100),
     custoMana: number,
+    custoVida: number.min(1).optional(),
     esperaRodadas: z.number().int().min(0).max(100).optional(),
     descricao: z.string().max(2000).optional(),
     alvo: z.enum(targets).optional(),
@@ -259,6 +267,16 @@ export const passiveActionSchema = z.discriminatedUnion("id", [
   z.object({ id: z.literal("draw"), ...playerAction }).strict(),
   z.object({ id: z.literal("recover"), ...playerAction }).strict(),
   z
+    .object({ id: z.literal("revive"), jogador: z.enum(["aliado", "inimigo"]) })
+    .strict(),
+  z
+    .object({
+      id: z.literal("spellDamageTurn"),
+      valor: number.min(1),
+      acumulavel: z.boolean().optional(),
+    })
+    .strict(),
+  z
     .object({
       id: z.literal("spellDamageBonus"),
       elemento: z.enum(elements),
@@ -301,6 +319,13 @@ export const declarativePassiveSchema = z
     descricao: z.string().max(2000).optional(),
     escopo: z.enum(["proprio", "aliado", "inimigo", "qualquer"]),
     excluirFonte: z.boolean().optional(),
+    reacao: z
+      .object({
+        nome: z.string().min(1).max(80),
+        quando: z.enum(["provoca", "recebe", "provocaOuRecebe"]),
+      })
+      .strict()
+      .optional(),
     filtroEvento: passiveFilterSchema.optional(),
     filtroAlvo: z
       .object({

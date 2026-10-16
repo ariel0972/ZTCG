@@ -75,6 +75,10 @@ test("aviso para espectador só informa a preparação ou a pausa, sem cartas pr
   });
   assert.match(choice.message, /Um está escolhendo uma carta/);
   assert.equal(JSON.stringify(choice).includes("Segredo"), false);
+  assert.match(
+    publicFieldNotice({ ...state, pendingRevive: { ownerId: "p1" } }).message,
+    /Um está escolhendo uma tropa e um espaço/,
+  );
   assert.equal(
     publicFieldNotice({ ...state, status: "FINISHED", paused: true }),
     null,
