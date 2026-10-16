@@ -441,7 +441,7 @@ export class DurableGame {
         const game = await this.advance(current, heartbeat);
         viewGame = game;
         const after = JSON.stringify([
-          current.game.state.version,
+          game.state.version,
           current.deadline,
           current.responseDeadline,
           current.pausedAt,

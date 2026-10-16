@@ -47,6 +47,22 @@ async function pair(f: ReturnType<typeof fixture>, a = "p1", b = "p2") {
   return (await game.state(a)).match!;
 }
 
+test("estado persiste encerramento automático mesmo antes do próximo checkpoint", async () => {
+  const f = fixture(),
+    match = await pair(f);
+  f.advance(LEASE_MS + RECONNECT_MS);
+  const room = f.store.rooms.get(match.id)!;
+  room.pausedAt = 1000000 + LEASE_MS;
+  room.lastAdvancedAt = 1000000 + LEASE_MS + RECONNECT_MS - 1;
+  const response = await f.service().state("p1", false);
+  assert.equal(response.match!.status, "FINISHED");
+  assert.equal((await f.store.room(match.id))!.game.state.status, "FINISHED");
+  assert.equal((await f.store.room(match.id))!.resultSaved, true);
+  assert.equal(f.results.size, 1);
+  await f.service().state("p2", false);
+  assert.equal(f.results.size, 1);
+});
+
 test("convite privado concorrente é idempotente e concede presença inicial após conexão antiga", async () => {
   const f = fixture();
   await f.store.touch("p1", 1);
@@ -147,15 +163,13 @@ test("reação de ataque persiste, expira em 20 segundos e pausa o turno sem con
   room.game = g.exportState();
   room.deadline = 1080000;
   f.store.rooms.set(match.id, room);
-  await f
-    .service()
-    .command(match.id, "p1", {
-      type: "attack",
-      slotId: "p1:front:0",
-      targetId,
-      version: g.state.version,
-      actionId: randomUUID(),
-    });
+  await f.service().command(match.id, "p1", {
+    type: "attack",
+    slotId: "p1:front:0",
+    targetId,
+    version: g.state.version,
+    actionId: randomUUID(),
+  });
   const pending = (await f.service().state("p2")).match!;
   assert.ok(pending.pendingAttack);
   assert.equal(pending.responseDeadline, 1020000);
