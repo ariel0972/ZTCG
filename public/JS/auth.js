@@ -31,7 +31,9 @@ async function fetchApi(path, options, renewed) {
     // Public resources share the browser/CDN cache across pages and sessions.
     const publicRead =
       (!options.method || options.method === "GET") &&
-      /^(\/cards(?:\/schema)?|\/rules-data|\/rankings)(?:\?|$)/.test(path);
+      /^(\/cards(?:\/schema)?|\/rules-data|\/rankings|\/lore-data(?:\/[a-z0-9-]+)?)(?:\?|$)/.test(
+        path,
+      );
     if (token() && !publicRead) headers.Authorization = `Bearer ${token()}`;
     const response = await fetch(path, {
       ...options,

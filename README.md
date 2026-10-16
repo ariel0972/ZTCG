@@ -4,6 +4,8 @@ Jogo de cartas com contas, construção de baralhos, partidas públicas e por co
 
 O [GUIA_DO_PROJETO.txt](GUIA_DO_PROJETO.txt) explica **cada arquivo**, as mecânicas utilizadas, os problemas restantes, prioridades e como implementar mudanças. É a referência consolidada; os relatórios históricos em Markdown foram removidos.
 
+A aba `/lore` reúne as histórias das cartas e do universo, começando pela Arena de Thumos e Llan Dukai. Administradores escrevem em `/HTML/admin-lore.html`: salvar rascunho preserva a versão pública; publicar ou retirar do ar são ações separadas. O conteúdo narrativo não faz parte do motor nem dos snapshots das partidas.
+
 ## Executar
 
 Requisitos: Node.js 22.16 ou superior compatível com o lockfile, npm e MongoDB.

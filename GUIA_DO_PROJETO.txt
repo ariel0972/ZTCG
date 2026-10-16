@@ -1755,3 +1755,59 @@ Compatibilidade de publicação: apenas clientes que enviam o cabeçalho
 X-Match-Social-Heartbeat: 1 recebem pacotes sociais mínimos. Clientes antigos
 continuam recebendo o formato anterior; uma aba aberta durante o deploy não
 precisa interpretar campos novos. /game/state expõe Server-Timing do handler.
+
+LORE DAS CARTAS E DO UNIVERSO — 16/10/2026
+
+/lore é uma biblioteca pública, sem exigência de login, com busca local por
+título, resumo e cartas vinculadas. Categorias: personagens, lugares, facções e
+universo. Cada história tem endereço permanente /lore/slug. No detalhe da carta
+do construtor, Histórias desta carta abre /lore?carta=NUMERO.
+
+Conteúdo inicial confirmado pelo autor: Llan Dukai Luytez (carta 020), adaptado
+somente para correções de redação da página de Notion Llan Dukai - Assassino;
+Arena de Thumos/Sant Hein Olt, a partir das mensagens do próprio autor na conversa
+Equilíbrio de cartas e jogo. O torneio ocorre a cada três anos, sobre a antiga
+mineração de mana, com circulação cíclica contra Unma, arquibancadas protegidas
+e história ligada a Monte Negro/Alto Conselho Magista. Propostas antigas de nome
+ou lore sugeridas pelo assistente não foram promovidas a fatos do universo.
+
+Administradores: abrir Catálogo -> Editar histórias e lore, ou diretamente
+/HTML/admin-lore.html. Nova história exige título e endereço; texto/resumo podem
+ficar vazios em rascunho. Para publicar, preencher ambos. Separar parágrafos por
+linha em branco. Cartas vinculadas são opcionais; o formulário mostra seus nomes.
+Pré-visualizar não salva nem publica. Fonte aceita link https opcional.
+
+Salvar rascunho altera apenas a versão de trabalho. Publicar copia o rascunho
+para a versão pública. Retirar do ar preserva o rascunho, inclusive nas histórias
+iniciais. slug permanece fixo após salvar para não quebrar links. Há proteção
+contra saída com alterações não salvas e contra gravação de revisão antiga.
+As definições iniciais ficam no JSON até existir substituição no MongoDB; ler a
+biblioteca não grava dados. Lore usa coleção própria LoreArticle e não altera
+cartas, versões do motor ou partidas. Não há chamada ao Notion no navegador.
+O editor usa texto simples, renderizado com textContent, sem HTML executável.
+
+Desempenho: /lore-data retorna só os resumos e metadados leves das cartas.
+/lore-data/slug carrega um texto quando aberto. Consultas públicas compartilham
+cache local de 15 segundos; publicar/retirar invalida a instância atual. Outras
+instâncias podem levar até 15 segundos para refletir a mudança. A busca e os
+filtros do leitor são locais; digitar não consulta MongoDB. Rascunhos e endpoints
+administrativos usam no-store, autenticação e verificação de administrador.
+
+Arquivos desta funcionalidade:
+- src/types/lore.ts — Contrato Zod de história, categoria, slug, fonte, revisão e ação editorial; separado do schema das cartas.
+- src/db/models/lore.ts — Coleção LoreArticle com endereço único, rascunho, cópia publicada e versão para concorrência.
+- src/data/lore.json — Textos iniciais da Arena de Thumos e Llan Dukai, com vínculo da carta e fonte quando disponível.
+- src/services/lore.ts — Mescla textos iniciais e registros, projeta dados públicos, preserva rascunhos e controla gravação/cache de publicações.
+- src/routes/loreRoutes.ts — Leitura pública /lore-data e edição protegida /admin/lore; valida slug, conteúdo, publicação e revisão.
+- public/HTML/lore.html — Biblioteca e área de leitura pública com busca, categorias e navegação por história.
+- public/HTML/admin-lore.html — Formulário de histórias para administradores com prévia, rascunho, publicação e retirada do ar.
+- public/JS/lore-view.js — Renderização segura e compartilhada de título, parágrafos, cartas vinculadas e fonte no leitor e na prévia.
+- public/JS/lore.js — Busca/filtros locais, links diretos, cache de textos abertos e proteção contra respostas fora de ordem no leitor.
+- public/JS/admin-lore.js — Editor autenticado, seleção de cartas, endereço, prévia local, estados de publicação e proteção contra perda de edições.
+- public/CSS/lore.css — Biblioteca, leitura e editor responsivos, usando as cores e tipografia base do jogo.
+- tests/lore.test.ts — Integração HTTP de acesso, privacidade do rascunho, publicação, retirada, versões, links de cartas e isolamento das regras.
+- tests/lore-ui.test.ts — DOM real do leitor/editor: busca sem consultas, leitura anônima, prévia sem HTML executável e fluxo rascunho/publicação.
+
+Evoluções futuras: formatação editorial mais rica, imagens próprias dos lugares,
+relacionamento entre personagens/lugares/facções e histórico de revisões. Fontes
+novas devem ser conferidas com o autor; novas histórias não mudam regras do jogo.

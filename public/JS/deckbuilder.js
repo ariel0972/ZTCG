@@ -255,6 +255,8 @@ function add(card) {
 function details(card) {
   detailCard = card;
   $("detail-name").textContent = card.nome;
+  $("detail-lore").href =
+    "/lore?carta=" + encodeURIComponent(card.numeroCatalogo);
   renderCardDetails($("detail-text"), card);
   setImageSource($("detail-image"), card.imgURL || "/assets/avatar.png");
   $("detail-image").alt = card.nome;

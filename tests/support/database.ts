@@ -14,15 +14,19 @@ import { socialModels } from "../../src/game/social";
 import Avatar from "../../src/db/models/avatar";
 import { invalidateCatalog } from "../../src/services/catalog";
 import { invalidateRankings } from "../../src/services/ranking-cache";
+import Lore from "../../src/db/models/lore";
+import { invalidateLore } from "../../src/services/lore";
 export async function fakeDatabase() {
   invalidateRankings();
   invalidateCatalog();
+  invalidateLore();
   const users: any[] = [],
     decks: any[] = [],
     cards: any[] = [],
     matches: any[] = [],
     friendships: any[] = [],
-    invitations: any[] = [];
+    invitations: any[] = [],
+    lores: any[] = [];
   function equal(a: unknown, b: unknown) {
     return String(a) === String(b);
   }
@@ -137,6 +141,7 @@ export async function fakeDatabase() {
     [User, users],
     [Deck, decks],
     [Avatar, []],
+    [Lore, lores],
     [Friendship, friendships],
     [Invitation, invitations],
     ...Object.values(socialModels).map((model) => [model, []] as [any, any[]]),
@@ -180,6 +185,8 @@ export async function fakeDatabase() {
       );
       patch(model, "exists", (filter) => query(find(rows, filter)[0] ?? null));
       patch(model, "create", (data) => {
+        if (model === Lore && rows.some((r) => r.slug === data.slug))
+          throw Object.assign(new Error("duplicate"), { code: 11000 });
         if (data._id && rows.some((r) => r._id === data._id))
           throw Object.assign(new Error("duplicate"), { code: 11000 });
         const row = { status: "pending", ...data };
@@ -325,9 +332,11 @@ export async function fakeDatabase() {
     friendships,
     invitations,
     catalog,
+    lores,
     restore: () => {
       invalidateCatalog();
       invalidateRankings();
+      invalidateLore();
       mock.restoreAll();
     },
   };

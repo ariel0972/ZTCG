@@ -1,0 +1,22 @@
+[
+  {
+    "slug": "arena-de-thumos",
+    "titulo": "Arena de Thumos",
+    "subtitulo": "Sant Hein Olt · Grande Palco da Magia",
+    "resumo": "A cada três anos, os magos da Nação se encontram em um palco histórico de Monte Negro para medir suas forças.",
+    "categoria": "universo",
+    "cartas": [],
+    "fonteURL": "",
+    "texto": "A Arena de Thumos é um evento de combate entre magos realizado em Sant Hein Olt, o Grande Palco da Magia. A cada três anos, magos da Nação se reúnem para competir, medir suas forças e, em alguns casos, subir de cargo dentro da própria Nação.\n\nSemelhante a um coliseu, o campo foi construído sobre uma antiga mineração de pedras de mana. Pedras espalhadas pela arena expelem thumos para dentro do espaço de combate, onde os magos podem usar seus feitiços, mana e thumos durante os confrontos.\n\nA concentração de mana do local é cíclica, para que ela não se transforme em Unma. Objetos mágicos que inibem a magia protegem as arquibancadas, mantendo os espectadores seguros de anomalias.\n\nPara o país de Monte Negro e a região, Sant Hein Olt também é um lugar histórico. Foi ali que ocorreu uma das primeiras guerras para decidir o futuro do Alto Conselho Magista."
+  },
+  {
+    "slug": "llan-dukai",
+    "titulo": "Llan Dukai Luytez",
+    "subtitulo": "O assassino da Vila Oronai",
+    "resumo": "Um jovem dos Gatos da Noite procura levar justiça à região além da luz, onde a proteção do reino não chega.",
+    "categoria": "personagem",
+    "cartas": ["020"],
+    "fonteURL": "https://app.notion.com/p/e992ef46079383cdb5948147dcf5123e",
+    "texto": "Llan Dukai Luytez é um jovem assassino de 20 anos, residente da Vila Oronai, na região além da luz do Reino do Sul. Ele cresceu com seu irmão mais velho, Kalku’ tan, e com seus pais, que desejavam uma vida melhor e pacífica para a família. Seu irmão saiu de casa mais cedo e se alistou entre os Cavaleiros da Espada da Luz. Dukai, porém, não via essa escolha como algo bom.\n\nNo dia em que seu irmão foi nomeado cavaleiro, Dukai brigou com ele após a cerimônia. Na noite seguinte, fugiu de casa. Acostumado a rondar os becos sujos da vila, permaneceu por lá durante alguns dias, até ser encontrado por um assassino dos Gatos da Noite.\n\nOs Gatos da Noite eram conhecidos no reino como bandidos, arruaceiros e marginais que causavam desordem. Na verdade, eram um grupo escondido de pessoas que procuravam ajudar os outros à sua maneira. Naquela noite, receberam Dukai, ouviram sua história e o aceitaram. Alguns dias depois, ele voltou para casa e começou a aprender táticas de assassinato.\n\nDukai percebeu que poderia fazer muito mais do que roubar moedas e comida ou ameaçar alguém com sua adaga. Poderia ajudar sua vila, esquecida pelos próprios cavaleiros, e fazer parte dos Gatos da Noite. Passou noites em claro procurando caravanas e acampamentos de bandidos, resgatando crianças e outras pessoas com suas habilidades de thumos.\n\nCom o tempo, percebeu o quanto a terra além da luz era esquecida. Longe da capital, faltavam a presença do reino e a segurança dos cavaleiros que seu irmão tanto admirava. Enquanto isso, os Gatos protegiam, ajudavam, resgatavam e dividiam suas posses com os necessitados. Buscavam tirar dos injustos para entregar aos justos.\n\nDukai nunca quis ser contra o reino, nem contra seu irmão. Sempre quis que houvesse justiça ao seu redor. Mas, se a luz de seu irmão e do reino não chega até a escuridão, cabe a ele levá-la até lá."
+  }
+]

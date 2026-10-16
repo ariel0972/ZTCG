@@ -46,6 +46,7 @@ export function createSiteNavigation(header) {
     ["/HTML/friends.html", "Amigos", "friends", "♧"],
     ["/ranking", "Ranking", "ranking", "♔"],
     ["/regras", "Regras", "rules", "≡"],
+    ["/lore", "Lore", "lore", "✧"],
     ["/HTML/index.html", "Jogar", "play", "▷"],
   ];
   for (const [href, label, kind, icon] of destinations) {
@@ -63,7 +64,11 @@ export function createSiteNavigation(header) {
       win.location.pathname === href ||
       (kind === "profile" &&
         win.location.pathname.startsWith("/thumosplayer/")) ||
-      (kind === "decks" && win.location.pathname === "/HTML/deckbuilder.html")
+      (kind === "decks" &&
+        win.location.pathname === "/HTML/deckbuilder.html") ||
+      (kind === "lore" &&
+        (win.location.pathname.startsWith("/lore/") ||
+          win.location.pathname === "/HTML/lore.html"))
     )
       link.setAttribute("aria-current", "page");
   }

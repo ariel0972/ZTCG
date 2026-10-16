@@ -3,6 +3,7 @@ import path from "node:path";
 import ts from "typescript";
 import { cardSchema } from "../src/types/card";
 import { playableErrors } from "../src/game/capabilities";
+import { loreContentSchema, loreSlug } from "../src/types/lore";
 
 // Static, offline audit of authored files; never loads .env or connects to MongoDB.
 export async function auditProject(root = path.resolve(__dirname, "..")) {
@@ -172,6 +173,21 @@ export async function auditProject(root = path.resolve(__dirname, "..")) {
       link("src/data/catalog.json", "public" + decodeURI(card.imgURL));
   }
   // These URLs are assembled at runtime; their enumerated variants need exact files too.
+  const loreSlugs = new Set<string>();
+  for (const { slug, ...raw } of JSON.parse(texts.get("src/data/lore.json")!)) {
+    if (!loreSlug.safeParse(slug).success || loreSlugs.has(slug))
+      errors.push(`Lore: endereço inválido/duplicado: ${slug}`);
+    loreSlugs.add(slug);
+    const result = loreContentSchema.safeParse(raw);
+    if (!result.success)
+      errors.push(`Lore ${slug}: conteúdo inicial inválido.`);
+    else {
+      if (!result.data.texto || !result.data.resumo)
+        errors.push(`Lore ${slug}: publicação inicial sem texto/resumo.`);
+      for (const id of result.data.cartas)
+        if (!ids.has(id)) errors.push(`Lore ${slug}: carta inexistente ${id}.`);
+    }
+  }
   for (const name of ["common", "zarcos", "water", "air", "fire", "earth"])
     link("public/JS/card-backs.js", `public/assets/card-backs/${name}.png`);
   for (const name of [

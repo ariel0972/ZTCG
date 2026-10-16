@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="description"
+      content="Conheça as histórias das cartas e o universo da Arena de Thumos."
+    />
+    <title>Lore · Zacornia</title>
+    <link rel="icon" href="/assets/icons/favicon.svg" />
+    <link rel="stylesheet" href="/CSS/app.css" />
+    <link rel="stylesheet" href="/CSS/lore.css" />
+    <script type="module" src="/JS/lore.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">ZACORNIA <small>TRADING CARD GAME</small></a>
+      <nav aria-label="Principal">
+        <a href="/">Decks</a><a href="/HTML/index.html">Jogar</a
+        ><a href="/HTML/perfil.html">Perfil</a>
+      </nav>
+      <div id="account" class="account"></div>
+    </header>
+    <main class="lore-page">
+      <header id="lore-hero" class="lore-hero">
+        <p class="eyebrow">CRÔNICAS DE ZACÓRNIA</p>
+        <h1>Além das cartas.</h1>
+        <p>Os rostos, os lugares e as histórias por trás da Arena de Thumos.</p>
+      </header>
+      <section class="lore-filters" aria-label="Localizar histórias">
+        <label
+          >Buscar história<input
+            id="lore-search"
+            type="search"
+            placeholder="Personagem, lugar ou carta…"
+            maxlength="100"
+        /></label>
+        <div class="lore-categories" aria-label="Categorias">
+          <button type="button" data-lore-category="" aria-pressed="true">
+            Todas
+          </button>
+          <button
+            type="button"
+            data-lore-category="universo"
+            aria-pressed="false"
+          >
+            Universo
+          </button>
+          <button
+            type="button"
+            data-lore-category="personagem"
+            aria-pressed="false"
+          >
+            Personagens
+          </button>
+          <button type="button" data-lore-category="lugar" aria-pressed="false">
+            Lugares
+          </button>
+          <button
+            type="button"
+            data-lore-category="faccao"
+            aria-pressed="false"
+          >
+            Facções
+          </button>
+        </div>
+      </section>
+      <p id="lore-count" class="muted" role="status" aria-live="polite"></p>
+      <p id="lore-status" class="muted" role="status">Carregando histórias…</p>
+      <div id="lore-layout" class="lore-layout">
+        <section aria-label="Histórias disponíveis">
+          <div id="lore-list" class="lore-list"></div>
+          <p id="lore-empty" class="surface muted" hidden>
+            Nenhuma história encontrada. Outras crônicas serão adicionadas aos
+            poucos.
+          </p>
+        </section>
+        <section
+          id="lore-reader"
+          class="lore-reader"
+          aria-label="Leitura da história"
+          tabindex="-1"
+          hidden
+        >
+          <button id="lore-back" type="button" class="quiet">
+            ← Todas as histórias
+          </button>
+          <article id="lore-article" class="lore-article"></article>
+        </section>
+      </div>
+      <noscript>Ative o JavaScript para abrir as histórias.</noscript>
+    </main>
+    <p id="message" class="message" role="status" aria-live="polite" hidden></p>
+  </body>
+</html>

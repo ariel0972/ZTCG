@@ -26,6 +26,7 @@ import { friendRoutes } from "./routes/friendRoutes";
 import { matchSocialRoutes } from "./routes/matchSocialRoutes";
 import { MatchSocial } from "./game/social";
 import { requestLog, log } from "./lib/observability";
+import { loreRoutes, adminLoreRoutes } from "./routes/loreRoutes";
 export function createApp(
   origins: string[] = [],
   connect = dbConnect,
@@ -93,6 +94,9 @@ export function createApp(
       ),
     );
   });
+  app.get(["/lore", "/lore/:slug"], (_req, res) =>
+    res.sendFile(path.join(__dirname, "..", "public/HTML/lore.html")),
+  );
   app.get("/thumosplayer/:id", (req, res) => {
     if (!/^[a-f\d]{24}$/i.test(req.params.id)) {
       res.status(404).send("Perfil inválido.");
@@ -205,7 +209,9 @@ export function createApp(
     res.json({ success: true, database: "connected" });
   });
   app.use("/cards", cardRoutes);
+  app.use("/lore-data", loreRoutes);
   app.use("/decks", checkToken, deckRoutes);
+  app.use("/admin/lore", checkToken, checkAdmin, adminLoreRoutes);
   app.use("/admin", checkToken, checkAdmin, adminRoutes);
   app.get("/user/:id", checkToken, async (req: AuthRequest, res) => {
     if (req.params.id !== req.userId) throw new AppError(403, "Acesso negado.");
