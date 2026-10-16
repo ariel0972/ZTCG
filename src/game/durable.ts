@@ -18,6 +18,7 @@ export const TURN_MS = 120_000,
   RECONNECT_MS = 90_000;
 type Loader = typeof ownedDeck;
 export class DurableGame {
+  private contexts = new WeakMap<DurableRoom, Record<string, number>>();
   constructor(
     readonly store: DurableStore = new MongoGameStore(),
     private now = Date.now,
@@ -221,15 +222,22 @@ export class DurableGame {
     user?: string,
     claims?: Pick<Lobby, "active">,
   ) {
-    const [room, data] = await Promise.all([
-      this.store.room(id),
-      claims
-        ? Promise.resolve(claims)
-        : this.store.lobbyState
-          ? this.store.lobbyState()
-          : this.store.lobby().then((lobby) => lobby.data),
-    ]);
+    const context = this.store.roomContext
+      ? await this.store.roomContext(id, !claims)
+      : undefined;
+    const [room, data] =
+      context !== undefined
+        ? [context?.room ?? null, claims ?? { active: context?.active ?? {} }]
+        : await Promise.all([
+            this.store.room(id),
+            claims
+              ? Promise.resolve(claims)
+              : this.store.lobbyState
+                ? this.store.lobbyState()
+                : this.store.lobby().then((lobby) => lobby.data),
+          ]);
     if (!room) throw new AppError(404, "Partida não encontrada.");
+    if (context) this.contexts.set(room, context.seen);
     if (user && !room.entries.some((e) => e.id === user))
       throw new AppError(403, "Acesso negado.");
     if (
@@ -254,7 +262,10 @@ export class DurableGame {
         room.responseDeadline += now - room.lastAdvancedAt;
       room.recoveryUntil = now + RECONNECT_MS;
     }
-    const seen = await this.store.presence(room.entries.map((e) => e.id));
+    const seen =
+      this.contexts.get(room) ??
+      (await this.store.presence(room.entries.map((e) => e.id)));
+    this.contexts.delete(room);
     const absent = room.entries.filter(
       (e) => now - Math.max(seen[e.id] ?? 0, e.joinedAt) > LEASE_MS,
     );
@@ -355,7 +366,7 @@ export class DurableGame {
       if (!saved) return undefined;
       room.revision++;
       if (error) throw error;
-      return { room, response };
+      return { room, response, game };
     });
     await this.project(result.room);
     log("game_command", {
@@ -371,13 +382,17 @@ export class DurableGame {
         success: true,
         queued: false,
         serverNow: this.now(),
-        match: this.view(result.room, user),
+        match: this.view(result.room, user, result.game),
       },
     };
   }
-  private view(room: DurableRoom, user: string) {
+  private view(
+    room: DurableRoom,
+    user: string,
+    game = Game.restore(room.game),
+  ) {
     return {
-      ...Game.restore(room.game).snapshot(user),
+      ...game.snapshot(user),
       revision: room.revision,
       deadline: room.deadline,
       responseDeadline: room.responseDeadline,
@@ -409,8 +424,10 @@ export class DurableGame {
       : (await this.store.lobby()).data;
     const id = data.active[user];
     let room: DurableRoom | null = null;
+    let viewGame: Game | undefined;
     if (id)
       room = await this.retry(async () => {
+        viewGame = undefined;
         const current = await this.authorized(id, user, data);
         if (current.game.state.status === "FINISHED") return current;
         const before = JSON.stringify([
@@ -422,7 +439,7 @@ export class DurableGame {
           ]),
           checkpoint = this.now() - current.lastAdvancedAt >= 10000;
         const game = await this.advance(current, heartbeat);
-        this.finalize(current, game);
+        viewGame = game;
         const after = JSON.stringify([
           current.game.state.version,
           current.deadline,
@@ -431,6 +448,7 @@ export class DurableGame {
           current.recoveryUntil,
         ]);
         if (before === after && !checkpoint) return current;
+        this.finalize(current, game);
         if (!(await this.store.saveRoom(current.revision, current)))
           return undefined;
         current.revision++;
@@ -452,7 +470,7 @@ export class DurableGame {
           room.game.state.status === "FINISHED" &&
           room.seenResultBy?.includes(user)
         )
-          ? this.view(room, user)
+          ? this.view(room, user, viewGame)
           : null,
       rematch:
         room &&

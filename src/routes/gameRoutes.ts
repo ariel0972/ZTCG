@@ -13,13 +13,36 @@ export function gameRoutes(game: DurableGame, social: MatchSocial) {
   router.get("/stream", async (req: AuthRequest, res) => {
     const initial = await game.state(req.userId!);
     res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Cache-Control", "private, no-store, no-transform");
     res.setHeader("X-Accel-Buffering", "no");
     res.flushHeaders();
     let closed = false,
       snapshot = initial,
       lastRead = Date.now();
+    let lastPresence = lastRead;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let ticking = false,
+      wakePending = false,
+      notifiedRevision = -1;
+    let watched: string | undefined,
+      unsubscribe = () => {};
+    const watch = (id?: string) => {
+      if (id === watched) return;
+      unsubscribe();
+      watched = id;
+      notifiedRevision = -1;
+      unsubscribe =
+        id && game.store.subscribeRoom
+          ? game.store.subscribeRoom(id, (revision) => {
+              notifiedRevision = Math.max(notifiedRevision, revision);
+              if (ticking) wakePending = true;
+              else {
+                clearTimeout(timer);
+                timer = setTimeout(tick, 0);
+              }
+            })
+          : () => {};
+    };
     let socialAt = 0,
       socialKey = "",
       socialPending = false;
@@ -27,6 +50,7 @@ export function gameRoutes(game: DurableGame, social: MatchSocial) {
       closed = true;
       clearTimeout(timer);
       clearTimeout(lifetime);
+      unsubscribe();
       res.end();
     };
     const lifetime = setTimeout(finish, 45000);
@@ -34,23 +58,28 @@ export function gameRoutes(game: DurableGame, social: MatchSocial) {
       closed = true;
       clearTimeout(timer);
       clearTimeout(lifetime);
+      unsubscribe();
     });
     const write = () => res.write(`data: ${JSON.stringify(snapshot)}\n\n`);
     write();
     const tick = async () => {
+      if (closed || ticking) return;
+      ticking = true;
       try {
         if (closed) return;
         const match = snapshot.match;
         const changed =
           match?.status === "ACTIVE" && game.store.roomRevision
-            ? (await game.store.roomRevision(match.id)) !== match.revision
+            ? notifiedRevision > match.revision ||
+              (await game.store.roomRevision(match.id)) !== match.revision
             : Date.now() - lastRead >= (snapshot.queued ? 2000 : 5000);
         if (closed) return;
         const due =
           match?.status === "ACTIVE" &&
           !match.paused &&
           Date.now() >= (match.responseDeadline ?? match.deadline);
-        if (changed || due || Date.now() - lastRead >= 5000) {
+        const fullReadInterval = match?.status === "ACTIVE" ? 10000 : 5000;
+        if (changed || due || Date.now() - lastRead >= fullReadInterval) {
           const previous = JSON.stringify([
             snapshot.match?.id,
             snapshot.match?.version,
@@ -61,7 +90,9 @@ export function gameRoutes(game: DurableGame, social: MatchSocial) {
             snapshot.rematch,
           ]);
           snapshot = await game.state(req.userId!);
+          watch(snapshot.match?.id);
           lastRead = Date.now();
+          lastPresence = lastRead;
           if (closed) return;
           if (res.writableLength > 1000000) {
             finish();
@@ -78,6 +109,14 @@ export function gameRoutes(game: DurableGame, social: MatchSocial) {
           ]);
           if (previous !== next) write();
           else res.write(": heartbeat\n\n");
+        } else if (
+          match?.status === "ACTIVE" &&
+          Date.now() - lastPresence >= 5000
+        ) {
+          // Keeping a player online does not require downloading both decks.
+          await game.store.touch(req.userId!, Date.now());
+          lastPresence = Date.now();
+          if (!closed) res.write(": heartbeat\n\n");
         }
         if (
           !closed &&
@@ -103,6 +142,15 @@ export function gameRoutes(game: DurableGame, social: MatchSocial) {
                 }
                 res.write(`data: ${JSON.stringify({ social: state })}\n\n`);
                 socialKey = key;
+              } else if (
+                !closed &&
+                state.matchId === snapshot.match?.id &&
+                req.headers["x-match-social-heartbeat"] === "1"
+              ) {
+                // Confirm a successful social read without resending 50 messages.
+                res.write(
+                  `data: ${JSON.stringify({ social: { matchId: state.matchId, serverNow: state.serverNow, unchanged: true } })}\n\n`,
+                );
               }
             })
             .catch(() => {
@@ -113,20 +161,31 @@ export function gameRoutes(game: DurableGame, social: MatchSocial) {
             });
         }
         if (closed) return;
-        timer = setTimeout(
-          tick,
-          snapshot.match?.status === "ACTIVE" ? 750 : 2000,
-        );
       } catch {
         log("game_stream_interrupted", {}, "warn");
         finish();
+      } finally {
+        ticking = false;
+        if (!closed)
+          timer = setTimeout(
+            tick,
+            wakePending ? 0 : snapshot.match?.status === "ACTIVE" ? 750 : 2000,
+          );
+        wakePending = false;
       }
     };
+    watch(snapshot.match?.id);
     timer = setTimeout(tick, 750);
   });
   router.get("/state", async (req: AuthRequest, res) => {
+    const started = performance.now();
+    const state = await game.state(req.userId!);
     res.setHeader("Cache-Control", "no-store");
-    res.json(await game.state(req.userId!));
+    res.setHeader(
+      "Server-Timing",
+      `game-state;dur=${(performance.now() - started).toFixed(1)}`,
+    );
+    res.json(state);
   });
   router.post("/event", async (req: AuthRequest, res) => {
     const started = performance.now();

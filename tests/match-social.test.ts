@@ -362,6 +362,9 @@ test("DOM: chat recolhível, emojis e HTML como texto, contador e envios sem dup
     assert.equal(host.querySelector("img"), null);
     assert.equal(confirmations, 0);
     assert.match(host.textContent!, /<img src=x/);
+    const history = host.querySelector(".match-messages")!.textContent;
+    chat.update({ matchId, serverNow: Date.now(), unchanged: true });
+    assert.equal(host.querySelector(".match-messages")!.textContent, history);
     assert.match(
       host.querySelector(".match-watchers")!.textContent!,
       /1 pessoa/,

@@ -3,6 +3,7 @@ import { AppError } from "../lib/errors";
 import { Friendship } from "../db/models/social";
 import { DurableGame } from "./durable";
 import type { RoomInfo } from "./store";
+import { ReadCache } from "../lib/read-cache";
 
 export const CHAT_TTL = 86_400_000,
   VIEWER_TTL = 45_000,
@@ -89,14 +90,31 @@ const messageView = (d: any): ChatMessage => ({
   expiresAt: +d.expiresAt,
 });
 export class MongoSocialStore implements SocialStore {
+  private messageReads = new ReadCache<ChatMessage[]>(1000);
+  private viewerReads = new ReadCache<Viewer[]>(1000);
   async messages(matchId: string, now: number) {
-    const docs = await Chat.find({ matchId, expiresAt: { $gt: new Date(now) } })
-      .sort({ createdAt: -1, _id: -1 })
-      .limit(50)
-      .lean();
-    return docs.reverse().map(messageView);
+    return this.messageReads.get(
+      `${matchId}:${Math.floor(now / 1000)}`,
+      async () => {
+        const docs = await Chat.find({
+          matchId,
+          expiresAt: { $gt: new Date(now) },
+        })
+          .sort({ createdAt: -1, _id: -1 })
+          .limit(50)
+          .lean();
+        return docs.reverse().map(messageView);
+      },
+    );
   }
   async send(message: ChatMessage) {
+    try {
+      return await this.persistMessage(message);
+    } finally {
+      this.messageReads.clear();
+    }
+  }
+  private async persistMessage(message: ChatMessage) {
     const previous = await Chat.findById(message.id).lean();
     if (previous) {
       if (
@@ -150,17 +168,22 @@ export class MongoSocialStore implements SocialStore {
     }
   }
   async viewers(matchId: string, now: number) {
-    const docs = await Lease.find({
-      matchId,
-      expiresAt: { $gt: new Date(now) },
-    })
-      .select({ userId: 1, nome: 1 })
-      .lean();
-    return [
-      ...new Map(
-        docs.map((d) => [d.userId!, { userId: d.userId!, nome: d.nome! }]),
-      ).values(),
-    ].sort((a, b) => a.userId.localeCompare(b.userId));
+    return this.viewerReads.get(
+      `${matchId}:${Math.floor(now / 1000)}`,
+      async () => {
+        const docs = await Lease.find({
+          matchId,
+          expiresAt: { $gt: new Date(now) },
+        })
+          .select({ userId: 1, nome: 1 })
+          .lean();
+        return [
+          ...new Map(
+            docs.map((d) => [d.userId!, { userId: d.userId!, nome: d.nome! }]),
+          ).values(),
+        ].sort((a, b) => a.userId.localeCompare(b.userId));
+      },
+    );
   }
   async watch(
     matchId: string,
@@ -176,9 +199,11 @@ export class MongoSocialStore implements SocialStore {
       },
       { upsert: true },
     );
+    this.viewerReads.clear();
   }
   async leave(match: string, user: string, session: string) {
     await Lease.deleteOne({ _id: `${match}:${user}:${session}` });
+    this.viewerReads.clear();
   }
   async touch(user: string, now: number) {
     await Presence.updateOne(

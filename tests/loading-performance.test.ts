@@ -255,7 +255,18 @@ test("Mongo: leituras leves do lobby e revisões concorrentes compartilhadas, in
     assert.equal(reads, 1);
     await store.saveRoom(1, { id: "match", revision: 1 } as any);
     assert.equal(await store.roomRevision("match"), 2);
-    assert.equal(reads, 2);
+    assert.equal(
+      reads,
+      1,
+      "a revisão confirmada é reutilizada sem consulta adicional",
+    );
+    (rooms as any).updateOne = async () => ({ modifiedCount: 0 });
+    assert.equal(
+      await store.saveRoom(0, { id: "match", revision: 0 } as any),
+      false,
+    );
+    assert.equal(await store.roomRevision("match"), 2);
+    assert.equal(reads, 2, "CAS recusado exige nova leitura da revisão");
   } finally {
     lobby.findById = originalLobby;
     rooms.findById = originalRoom;

@@ -72,7 +72,7 @@ export function matchSocialRoutes(social: MatchSocial) {
     await social.authorize(id, req.userId!);
     let snapshot = await social.game.spectatorState(id);
     res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Cache-Control", "private, no-store, no-transform");
     res.setHeader("X-Accel-Buffering", "no");
     res.flushHeaders();
     let closed = false,
@@ -114,7 +114,15 @@ export function matchSocialRoutes(social: MatchSocial) {
           if (key !== lastKey) {
             write({ social: state });
             lastKey = key;
-          } else if (!closed) res.write(": heartbeat\n\n");
+          } else if (!closed && req.headers["x-match-social-heartbeat"] === "1")
+            write({
+              social: {
+                matchId: id,
+                serverNow: state.serverNow,
+                unchanged: true,
+              },
+            });
+          else if (!closed) res.write(": heartbeat\n\n");
           lastSocial = Date.now();
         }
         if (closed) return;

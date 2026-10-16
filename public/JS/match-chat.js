@@ -222,6 +222,7 @@ export function createMatchChat({
     if (closed || data.matchId !== id || data.serverNow < serverNow) return;
     serverNow = data.serverNow;
     lastPacket = Date.now();
+    if (data.unchanged) return;
     const key = JSON.stringify(data.messages);
     if (key !== JSON.stringify(messages)) {
       if (historyLoaded) {

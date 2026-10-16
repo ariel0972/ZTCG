@@ -86,7 +86,10 @@ export function gameTransport({
     let watchdog = setTimeout(() => controller?.abort(), 12000);
     try {
       const response = await fetchStream(streamPath, {
-        headers: { Authorization: `Bearer ${getToken()}` },
+        headers: {
+          Authorization: `Bearer ${getToken()}`,
+          "X-Match-Social-Heartbeat": "1",
+        },
         signal: controller.signal,
       });
       if (

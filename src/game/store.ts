@@ -1,5 +1,6 @@
 import { Schema, model } from "mongoose";
 import { ReadCache } from "../lib/read-cache";
+import { EventEmitter } from "node:events";
 import type { Game } from "./engine";
 import type { Card } from "../types/card";
 import type { DeckDefinition } from "./state";
@@ -41,6 +42,15 @@ export type LobbyState = Pick<Lobby, "active"> & {
   waiting: Pick<Waiting, "id" | "joinedAt">[];
 };
 export interface DurableStore {
+  roomContext?(
+    id: string,
+    withClaims: boolean,
+  ): Promise<{
+    room: DurableRoom;
+    active: Record<string, string>;
+    seen: Record<string, number>;
+  } | null>;
+  subscribeRoom?(id: string, changed: (revision: number) => void): () => void;
   lobbyState?(): Promise<LobbyState>;
   roomInfo(id: string): Promise<RoomInfo | null>;
   activeRooms(users: string[]): Promise<RoomInfo[]>;
@@ -95,8 +105,123 @@ export const emptyLobby = (): Lobby => ({
   generations: {},
   receipts: {},
 });
+// Keep the CAS on the entire document, but transmit only changed fields. Arrays
+// whose length changes are replaced atomically; equal-length arrays use indexes.
+export function roomChanges(
+  before: unknown,
+  after: unknown,
+  path: string,
+  set: Record<string, unknown>,
+  unset: Record<string, 1>,
+) {
+  if (after === undefined) {
+    if (before !== undefined) unset[path] = 1;
+    return;
+  }
+  if (Object.is(before, after)) return;
+  const record = (value: any) =>
+    value !== null &&
+    typeof value === "object" &&
+    (Array.isArray(value) || Object.getPrototypeOf(value) === Object.prototype);
+  if (
+    record(before) &&
+    record(after) &&
+    Array.isArray(before) === Array.isArray(after) &&
+    (!Array.isArray(after) || (before as any[]).length === after.length)
+  ) {
+    const keys = new Set([
+      ...Object.keys(before as object),
+      ...Object.keys(after as object),
+    ]);
+    if ([...keys].every((key) => !key.includes(".") && !key.startsWith("$"))) {
+      for (const key of keys)
+        roomChanges(
+          (before as any)[key],
+          (after as any)[key],
+          `${path}.${key}`,
+          set,
+          unset,
+        );
+      return;
+    }
+  }
+  set[path] = after;
+}
 export class MongoGameStore implements DurableStore {
   private revisions = new ReadCache<number | null>(500, 1000);
+  private changes = new EventEmitter().setMaxListeners(0);
+  private originals = new WeakMap<DurableRoom, DurableRoom>();
+  private entrySnapshots = new Map<
+    string,
+    { expires: number; value: Waiting[] }
+  >();
+  private remember(room: DurableRoom) {
+    this.originals.set(room, structuredClone(room));
+    return room;
+  }
+  subscribeRoom(id: string, changed: (revision: number) => void) {
+    this.changes.on(id, changed);
+    return () => {
+      this.changes.off(id, changed);
+    };
+  }
+  async roomContext(id: string, withClaims: boolean) {
+    const cached = this.entrySnapshots.get(id);
+    const entries =
+      cached && cached.expires > Date.now() ? cached.value : undefined;
+    // All lookups use _id indexes. Keep authoritative reads fresh while removing
+    // sequential network round trips between room, claims and combat presence.
+    const pipeline: any[] = [
+      { $match: { _id: id } },
+      {
+        $lookup: {
+          from: presenceModel.collection.name,
+          localField: "data.entries.id",
+          foreignField: "_id",
+          as: "seen",
+        },
+      },
+    ];
+    if (withClaims)
+      pipeline.push({
+        $lookup: {
+          from: lobbyModel.collection.name,
+          pipeline: [
+            { $match: { _id: "main" } },
+            { $project: { "data.active": 1 } },
+          ],
+          as: "claims",
+        },
+      });
+    // Only immutable deck/catalog snapshots are cached. Current game, claims,
+    // revision and combat presence are still read from MongoDB on every action.
+    if (entries) pipeline.push({ $project: { "data.entries": 0 } });
+    const [doc] = await roomModel.aggregate(pipeline);
+    if (doc) {
+      if (entries) doc.data.entries = structuredClone(entries);
+      else {
+        this.entrySnapshots.delete(id);
+        while (this.entrySnapshots.size >= 100)
+          this.entrySnapshots.delete(this.entrySnapshots.keys().next().value!);
+        this.entrySnapshots.set(id, {
+          expires: Date.now() + 60000,
+          value: structuredClone(doc.data.entries),
+        });
+      }
+    }
+    return doc
+      ? {
+          room: this.remember({
+            ...doc.data,
+            revision: doc.revision,
+          } as DurableRoom),
+          active: doc.claims?.[0]?.data?.active ?? {},
+          seen: Object.fromEntries(
+            doc.seen.map((entry: any) => [entry._id, entry.lastSeen]),
+          ),
+        }
+      : null;
+  }
   async lobbyState(): Promise<LobbyState> {
     const doc = await lobbyModel
       .findById("main")
@@ -183,19 +308,65 @@ export class MongoGameStore implements DurableStore {
   async room(id: string) {
     const doc = await roomModel.findById(id).lean();
     return doc
-      ? ({ ...doc.data, revision: doc.revision } as DurableRoom)
+      ? this.remember({ ...doc.data, revision: doc.revision } as DurableRoom)
       : null;
   }
   async saveRoom(revision: number, room: DurableRoom) {
+    // Entries (deck definitions and catalogs) are immutable after insertRoom.
+    // Optional clock fields must be explicitly unset when a pause/response ends.
+    const { entries: _entries, ...mutable } = room;
+    const set: Record<string, unknown> = {};
+    const unset: Record<string, 1> = {};
+    const original = this.originals.get(room);
+    for (const [key, value] of Object.entries({
+      ...mutable,
+      revision: revision + 1,
+    })) {
+      roomChanges(
+        original?.[key as keyof DurableRoom],
+        value,
+        `data.${key}`,
+        set,
+        unset,
+      );
+    }
+    // Large rewrites (e.g. mass effects) use one bounded update for game data.
+    if (Object.keys(set).length + Object.keys(unset).length > 100) {
+      for (const key of [...Object.keys(set), ...Object.keys(unset)])
+        if (key.startsWith("data.game.")) {
+          delete set[key];
+          delete unset[key];
+        }
+      set["data.game"] = room.game;
+    }
+    for (const key of [
+      "responseDeadline",
+      "remainingTurnMs",
+      "pausedAt",
+      "recoveryUntil",
+      "finishedAt",
+      "rematchId",
+      "seenResultBy",
+    ])
+      if ((room as any)[key] === undefined) unset[`data.${key}`] = 1;
     const result = await roomModel.updateOne(
       { _id: room.id, revision },
       {
-        $set: { data: { ...room, revision: revision + 1 } },
+        $set: set,
+        $unset: unset,
         $inc: { revision: 1 },
       },
       durableWrite,
     );
     this.revisions.clear(room.id);
+    if (result.modifiedCount === 1) {
+      this.originals.set(
+        room,
+        structuredClone({ ...room, revision: revision + 1 }),
+      );
+      void this.revisions.get(room.id, async () => revision + 1);
+      this.changes.emit(room.id, revision + 1);
+    }
     return result.modifiedCount === 1;
   }
   async touch(user: string, now: number) {

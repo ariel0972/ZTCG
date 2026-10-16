@@ -85,6 +85,67 @@ test(
       assert.equal(claims.waiting[0].id, "one");
       await service().join("two", "Two", "deck", randomUUID());
       const match = (await service().state("one")).match!;
+      const patchStore = new MongoGameStore();
+      const contextual = (await patchStore.roomContext(match.id, true))!;
+      assert.equal(contextual.active.one, match.id);
+      assert.equal(contextual.active.two, match.id);
+      assert.ok(contextual.seen.one);
+      assert.deepEqual(contextual.room, await patchStore.room(match.id));
+      const patchRoom = contextual.room;
+      const entries = structuredClone(patchRoom.entries);
+      let notifications = 0;
+      const unsubscribe = patchStore.subscribeRoom(match.id, () => {
+        notifications++;
+      });
+      patchRoom.pausedAt = 123;
+      patchRoom.responseDeadline = 456;
+      assert.equal(await patchStore.saveRoom(-1, patchRoom), false);
+      assert.equal(notifications, 0, "CAS recusado não emite atualização");
+      assert.equal(
+        await patchStore.saveRoom(patchRoom.revision, patchRoom),
+        true,
+      );
+      patchRoom.revision++;
+      assert.equal(notifications, 1);
+      delete patchRoom.pausedAt;
+      delete patchRoom.responseDeadline;
+      // Reusing the same object must diff against the last committed value.
+      patchRoom.game.state.players[0].hand.reverse();
+      assert.equal(
+        await patchStore.saveRoom(patchRoom.revision, patchRoom),
+        true,
+      );
+      patchRoom.revision++;
+      const persistedPatch = (await patchStore.room(match.id))!;
+      assert.deepEqual(persistedPatch.entries, entries);
+      assert.equal(persistedPatch.pausedAt, undefined);
+      assert.equal(persistedPatch.responseDeadline, undefined);
+      assert.deepEqual(persistedPatch.game, patchRoom.game);
+      assert.equal(notifications, 2);
+      unsubscribe();
+      // Exercise array growth/shrinkage, removed fields and the large-update
+      // fallback against MongoDB itself, including repeated saves of one object.
+      const copy = structuredClone(patchRoom);
+      copy.id = randomUUID();
+      copy.game.id = copy.id;
+      copy.revision = 0;
+      await patchStore.insertRoom(copy);
+      const edited = (await patchStore.room(copy.id))!;
+      for (let iteration = 0; iteration < 6; iteration++) {
+        edited.game = structuredClone(copy.game);
+        edited.game.state.players[0].deck.splice(0, iteration);
+        edited.game.state.players[0].mage.passiveCounters = Object.fromEntries(
+          Array.from({ length: iteration % 2 ? 130 : 2 }, (_, index) => [
+            `test${index}`,
+            iteration,
+          ]),
+        );
+        if (iteration % 2) edited.responseDeadline = iteration;
+        else delete edited.responseDeadline;
+        assert.equal(await patchStore.saveRoom(edited.revision, edited), true);
+        edited.revision++;
+        assert.deepEqual(await patchStore.room(copy.id), edited);
+      }
       const command = { type: "endTurn", version: 0, actionId: randomUUID() };
       const outcomes = await Promise.all(
         Array.from({ length: 8 }, () =>

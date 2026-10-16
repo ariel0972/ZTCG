@@ -1693,3 +1693,65 @@ por ataques e efeitos individuais inimigos; não impede áreas e é perdido ao
 atacar normalmente. Não equivale a invulnerabilidade.
 A ampliação não grava a segunda habilidade automaticamente no Assassino do
 banco, preservando o conteúdo que o administrador está editando.
+
+DESEMPENHO DAS PARTIDAS — 16/10/2026
+- scripts/measure-game.ts — Benchmark HTTP com duas instâncias e MongoDB real em banco sintético exclusivo; mede p50/p95, propagação SSE, comandos e bytes BSON.
+As ações usam leitura atual de sala, presença e vínculos no lobby numa agregação
+com buscas por _id. A comparação de revisão continua atômica e a gravação exige
+confirmação majority. Apenas campos alterados são enviados; mudanças no tamanho
+de arrays substituem o array inteiro. Mais de 100 campos usam fallback limitado
+para o estado completo. Campos de pausa/resposta são removidos explicitamente.
+Definições imutáveis dos decks são preservadas no documento e podem ser lidas
+por cache local de 60 s, limitado a 100 salas. Estado, permissões e presença não
+usam esse cache. Nenhuma migração é necessária para partidas em andamento.
+Streams da mesma instância recebem aviso somente após a gravação confirmada;
+outros processos continuam verificando a revisão a cada 750 ms. O chat compartilha
+leituras por até 1 s, invalida após alterações e confirma leituras sem reenviar
+mensagens repetidas; isso evita o fallback HTTP em salas silenciosas.
+Reprodução: definir MONGO_TEST_URL para um MongoDB de testes e executar
+npx tsx scripts/measure-game.ts before (código antigo) ou after (código novo).
+O script cria um banco ztcg_test_benchmark_* novo, verifica que está vazio e apaga
+somente esse banco ao terminar. Não carrega .env nem usa contas reais.
+São 16 comandos por cenário, decks sintéticos de 40 cartas, HTTP loopback e
+MongoDB 8 local; percentis não representam rede móvel, cold start ou CDN/Vercel.
+Os JSON locais em backups/game-performance-*.json preservam contadores e bytes;
+consultas internas dos lookups continuam existindo: menos chamadas não significa
+que o MongoDB deixou de consultar seus índices de presença e lobby.
+
+Medição final, mesmo hash de fixture 99f8383178c570dee9bd821bbde1e5edfb69928ee4f1e3bfe6807a4d3b88e7f0:
+Código original: 273e515514afa65c8511d1b7b0c9c96a3a07ad58, exportado com
+git archive HEAD src para backups/game-baseline-source; benchmark idêntico
+copiado para a pasta scripts dessa cópia. A aplicação original ficou intacta.
+Mesma instância, resposta HTTP p50/p95: 47,4/482,2 ms antes; 26,1/46,6 ms depois.
+Propagação ao oponente p50/p95: 406,1/774,3 ms antes; 37,9/64,3 ms depois.
+Outra instância, resposta HTTP p50/p95: 26,5/31,9 ms antes; 25,7/35,9 ms depois.
+Propagação entre instâncias p50/p95: 398,7/770,7 ms antes; 397,4/762,5 ms depois.
+A amostra é pequena (16 por cenário); p95 com 16 amostras é o maior valor e
+inclui aquecimento e ruído da máquina. Não promete melhora de cauda em produção.
+Chamadas de leitura de combate por jogada + atualização do oponente: 8 -> 4
+na mesma instância e 8 -> 5 entre instâncias. Inclui autorização da sessão;
+não inclui chat. Agregações ainda fazem buscas internas em índices do MongoDB.
+Bytes BSON enviados durante 16 jogadas + propagação, mesma instância:
+1.898.320 -> 44.064 (-97,7%). Bytes recebidos: 3.734.392 -> 2.837.035 (-24,0%).
+Em outra instância: enviados 1.898.320 -> 51.243; recebidos 3.734.392 -> 2.841.440.
+Sala sem ações, dois jogadores por 12 s: chamadas de leitura 45 -> 29 (-35,6%),
+bytes enviados 244.097 -> 9.803; recebidos 586.886 -> 269.763 (-54,0%).
+Presença continua em 5 s; releitura completa em 10 s, ou imediatamente quando
+uma revisão muda ou um prazo vence. Chat/espectadores confirmam leituras pelo
+stream sem reenviar o histórico; falhas sociais ainda permitem fallback HTTP.
+Resultados completos: backups/game-performance-before-final.json e
+backups/game-performance-after-final.json (ignorados no Git, sem dados reais).
+CDN verificada em produção: região gru1, JavaScript com Brotli e HIT; WebP com
+cache immutable de um ano. /ready confirmou MongoDB conectado. Esses pedidos
+públicos não medem partida autenticada nem latência celular. Streams privados
+usam no-store/no-transform, pois estados de jogo não devem ficar na CDN.
+Próximos limites observados: o intervalo de 750 ms ainda domina entre processos;
+removê-lo exige notificação compartilhada (pub/sub/change streams com fallback).
+Os estados completos das cartas em jogo continuam sendo lidos para validar
+cada ação. Reduzir mais exige normalizar definições e/ou protocolo de deltas,
+com testes próprios de retomada, cartas ocultas e versões do motor. Um cache
+público desses estados quebraria privacidade e consistência.
+Compatibilidade de publicação: apenas clientes que enviam o cabeçalho
+X-Match-Social-Heartbeat: 1 recebem pacotes sociais mínimos. Clientes antigos
+continuam recebendo o formato anterior; uma aba aberta durante o deploy não
+precisa interpretar campos novos. /game/state expõe Server-Timing do handler.
