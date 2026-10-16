@@ -226,6 +226,7 @@ test("Aprendiz devolve opcionalmente e espera uma rodada completa, persistindo a
   assert.equal(g.player("p2").mage.hpAtual, 14);
   g.state.round++;
   slot(g, "p1", 0).card!.attacked = false;
+  slot(g, "p1", 0).card!.attacksMade = 0;
   g.player("p1").counters.attacks = 0;
   act(g, { type: "attack", slotId: slot(g, "p1", 0).id, targetId });
   assert.equal(g.state.pendingAttack, undefined);
@@ -233,12 +234,14 @@ test("Aprendiz devolve opcionalmente e espera uma rodada completa, persistindo a
   g = Game.restore(g.exportState());
   g.state.round++;
   slot(g, "p1", 0).card!.attacked = false;
+  slot(g, "p1", 0).card!.attacksMade = 0;
   g.player("p1").counters.attacks = 0;
   act(g, { type: "attack", slotId: slot(g, "p1", 0).id, targetId });
   assert.ok(g.state.pendingAttack);
   respond(g, "p2", false);
   assert.equal(g.player("p2").mage.hpAtual, 6);
   slot(g, "p1", 0).card!.attacked = false;
+  slot(g, "p1", 0).card!.attacksMade = 0;
   g.player("p1").counters.attacks = 0;
   act(g, { type: "attack", slotId: slot(g, "p1", 0).id, targetId });
   assert.ok(g.state.pendingAttack, "recusar não inicia nova espera");

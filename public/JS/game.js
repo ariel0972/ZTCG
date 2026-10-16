@@ -8,6 +8,7 @@ import {
   slotTargetId,
   zoneCardAllowed,
   targetDescription,
+  displacementChoice,
 } from "./battle-targets.js";
 import { createHandNavigation } from "./hand-navigation.js";
 import { createTurnAnnouncement } from "./turn-announcement.js";
@@ -286,6 +287,8 @@ function dragBinding(element, source) {
         return;
       }
       selectSlot(state.slots.find((s) => s.id === id));
+      if (displacementChoice(targetAction(), targets, state.slots).required)
+        return;
       if (
         action === "play" &&
         from.card.tipo === "Feitico" &&
@@ -367,6 +370,12 @@ function selectSlot(slot, asStructure = false, asRider = false) {
     }
     if (selected.type === "play" || selected.type === "ability") {
       const action = targetAction();
+      const choice = displacementChoice(action, targets, state.slots);
+      if (choice.destinations.includes(slot.id)) {
+        selected.destinationId = slot.id;
+        render();
+        return;
+      }
       const destination = asRider
         ? { ...slot, card: slot.rider, structure: null }
         : asStructure && action.alvo !== "Estrutura"
@@ -377,6 +386,7 @@ function selectSlot(slot, asStructure = false, asRider = false) {
         !spellSlotTarget(action, destination, user.id)
       )
         return;
+      delete selected.destinationId;
       const id = slotTargetId(action, destination);
       if (targets.includes(id)) targets = targets.filter((t) => t !== id);
       else if (targets.length < (action.maxAlvos || 1)) targets.push(id);
@@ -533,6 +543,14 @@ function renderTargetZones() {
       .querySelector('[data-kind="Mago"]')
       ?.classList.add("spell-target");
 }
+function displacementBlockReason() {
+  const choice = displacementChoice(targetAction(), targets, state.slots);
+  return choice.required && !selected?.destinationId
+    ? choice.destinations.length
+      ? "Escolha um espaço vizinho destacado para o destino."
+      : "Não há espaço vizinho livre para deslocar esta tropa."
+    : "";
+}
 function renderActions() {
   const panel = $("action-panel"),
     menu = $("card-menu");
@@ -567,7 +585,10 @@ function renderActions() {
               ? "Escolha uma montaria destacada. Montar consome o ataque desta tropa."
               : selected.type === "play" && selected.card.tipo !== "Feitico"
                 ? "Escolha o campo onde deseja jogar a carta."
-                : targetDescription(targetAction());
+                : displacementBlockReason() ||
+                  (selected?.destinationId
+                    ? "Destino escolhido. Confirme o uso da carta."
+                    : targetDescription(targetAction()));
   if (!selected) return;
   const inspected = selected.card || selected.slot?.card;
   if (inspected) {
@@ -656,6 +677,7 @@ function renderActions() {
                   : card.statuses?.some((s) =>
                         [
                           "Incapacitado",
+                          "SemAtaque",
                           "Atordoado",
                           "Atordoamento",
                           "Congelado",
@@ -672,7 +694,10 @@ function renderActions() {
         card.tipo === "Tropa" &&
         fieldSource(card, slot) === "card" &&
         (state.phase === "PREPARATION" ||
-          card.palavrasChave.includes("Campo livre"))
+          card.palavrasChave.includes("Campo livre") ||
+          card.statuses?.some(
+            (s) => s.nome === "Campo livre" && s.turnosRestantes > 0,
+          ))
       )
         panel.append(
           actionButton("Reposicionar", () => {
@@ -820,8 +845,15 @@ function renderActions() {
       panel.append(
         actionButton(
           "Conjurar feitiço",
-          () => command({ type: "play", cardId: card.id, targets }),
+          () =>
+            command({
+              type: "play",
+              cardId: card.id,
+              targets,
+              destinationId: selected.destinationId,
+            }),
           handBlock(card) ||
+            displacementBlockReason() ||
             (!hasAutomaticTarget(card) && !targets.length
               ? "Selecione um alvo destacado."
               : ""),
@@ -848,14 +880,18 @@ function renderActions() {
         );
     } else
       panel.append(
-        actionButton("Usar habilidade", () =>
-          command({
-            type: "ability",
-            slotId: selected.slot.id,
-            abilityId: ability.id,
-            source: fieldSource(selected.card, selected.slot),
-            targets,
-          }),
+        actionButton(
+          "Usar habilidade",
+          () =>
+            command({
+              type: "ability",
+              slotId: selected.slot.id,
+              abilityId: ability.id,
+              source: fieldSource(selected.card, selected.slot),
+              targets,
+              destinationId: selected.destinationId,
+            }),
+          displacementBlockReason(),
         ),
       );
     panel.append(node("p", `Alvos selecionados: ${targets.length}`, "hint"));
@@ -957,7 +993,8 @@ function slotView(slot) {
     selected?.slot?.id === slot.id ||
     targets.includes(card?.id) ||
     targets.includes(slot.structure?.id) ||
-    targets.includes(slot.id)
+    targets.includes(slot.id) ||
+    selected?.destinationId === slot.id
   )
     button.classList.add("selected");
   button.dataset.actionsBlocked = String(!myTurn() || pending);
@@ -987,7 +1024,9 @@ function slotView(slot) {
     }
   }
   if (isChoosingSpell()) {
-    const valid = spellSlotTarget(targetAction(), slot, user.id);
+    const choice = displacementChoice(targetAction(), targets, state.slots);
+    const destination = choice.destinations.includes(slot.id);
+    const valid = destination || spellSlotTarget(targetAction(), slot, user.id);
     button.classList.add(valid ? "spell-target" : "spell-unavailable");
     button.dataset.targetSide = slot.ownerId === user.id ? "ally" : "enemy";
     button.setAttribute(
@@ -998,7 +1037,13 @@ function slotView(slot) {
       button.append(
         node(
           "span",
-          slot.kind === "Mago" ? "Mago" : slot.card ? "Alvo" : "Campo",
+          destination
+            ? "Destino"
+            : slot.kind === "Mago"
+              ? "Mago"
+              : slot.card
+                ? "Alvo"
+                : "Campo",
           "spell-target-label",
         ),
       );

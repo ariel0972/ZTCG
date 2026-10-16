@@ -29,6 +29,7 @@ export const commandSchema = z.discriminatedUnion("type", [
       type: z.literal("play"),
       cardId: id,
       slotId: id.optional(),
+      destinationId: id.optional(),
       targets: z.array(id).max(3).default([]),
     })
     .strict(),
@@ -47,6 +48,7 @@ export const commandSchema = z.discriminatedUnion("type", [
       type: z.literal("ability"),
       slotId: id,
       abilityId: id,
+      destinationId: id.optional(),
       source: z.enum(["card", "structure", "rider"]).optional(),
       targets: z.array(id).max(3).default([]),
       mode: z.enum(["cura", "escudo"]).optional(),

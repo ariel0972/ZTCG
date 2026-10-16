@@ -1811,3 +1811,41 @@ Arquivos desta funcionalidade:
 Evoluções futuras: formatação editorial mais rica, imagens próprias dos lugares,
 relacionamento entre personagens/lugares/facções e histórico de revisões. Fontes
 novas devem ser conferidas com o autor; novas histórias não mudam regras do jogo.
+
+
+Cartas de Ar jogáveis — 16/10/2026:
+- src/game/displacement.ts — Planeja deslocamentos forçados de uma tropa,
+  valida vizinhança, lado, ocupação, estruturas, Lama e devolução pela borda.
+  Não altera o estado: engine.ts executa o plano dentro da ação reversível.
+- scripts/update-air-cards.ts — Simula por padrão a atualização de 019/043/057/094
+  no Mongo configurado. --apply cria backup em backups/ antes das gravações,
+  exige a versão lida e altera só os campos das regras aprovadas. Preserva arte.
+- tests/air-cards.test.ts — Verifica atributos, duas ações de ataque, limites,
+  persistência, empurrões, montarias, estruturas, compras, Campo livre temporário,
+  bloqueio apenas na próxima rodada completa, reversão e atualização idempotente.
+- tests/air-cards-ui.test.ts — Confere destinos vizinhos válidos, exceção de
+  estruturas e indicadores de ataque duplo e efeito programado no tabuleiro.
+- 043 Beija-flor: 8 PV, ataque 2, gera 3 mana, custo 4, Animal/Ar, Universal,
+  Terra resistente e Fogo vulnerável. Dois ataques consomem dois usos do limite
+  geral do mago. Campo livre permite um reposicionamento por turno.
+  Bater das Asas (3): uma tropa avança uma coluna à direita do próprio dono;
+  ocupado ou estrutura impede uso. Na borda, devolve o grupo montado à mão.
+- 019 Mago de Ar: 20 PV, ataque 3, recupera 3; limites 2/2/4/2.
+  Compra uma carta por feitiço próprio de Ar. Não busca Lâmina quando tropa morre.
+  Mover livremente (3) concede Campo livre às tropas presentes até fim do turno,
+  respeita bloqueios voluntários e não renova movimento gasto.
+- 057 Lâmina de Vento: custo fixo 6, dano 5 a uma tropa/mago inimigo, compra 1.
+  Contra tropa Terra, agenda SemAtaque por uma rodada completa a partir da
+  próxima rodada. Permite movimento e habilidades. Mago de Ar compra mais 1.
+  Nenhum bônus antigo de custo ou dano foi mantido.
+- 094 Esfera de Vórtice: custo 4; escolhe tropa e vizinho vazio, desloca antes
+  de causar 2 de dano. Com estrutura: 5 na estrutura, sem mover a tropa, mesmo
+  que destrua a estrutura. Não exige vizinho livre nessa situação.
+- Montaria e ocupante são deslocados/devolvidos juntos. Deslocamento forçado
+  ignora Cego/Congelado/Incapacitado, mas não entra em Lama.
+- Os novos recursos são configuráveis pelo catálogo: attackLimit, displace,
+  valorEstrutura, filtroAlvo por efeito e início de status na próxima rodada.
+  Não há identificação dessas cartas dentro das regras do motor.
+- A fazer: atualizar as artes que ainda imprimem a busca de Lâmina do Mago de Ar
+  e o bônus antigo da Lâmina. O texto do catálogo mostra a regra atual.
+  Outras cartas podem usar os mesmos efeitos; veja MANUAL_EFEITOS_CATALOGO.txt.

@@ -134,6 +134,8 @@ export function cardFace(
     Congelado: "❄",
     Escudo: "◈",
     Incapacitado: "⊘",
+    SemAtaque: "⊘",
+    "Campo livre": "↔",
     Atordoado: "✦",
     Cego: "◉",
   };
@@ -150,13 +152,28 @@ export function cardFace(
     tag.setAttribute("aria-label", tag.title);
     effects.append(tag);
   }
+  for (const scheduled of card.scheduledStatuses || []) {
+    const tag = node("span", "◷", "effect-token");
+    tag.title = `Próxima rodada: ${scheduled.status.nome} por ${scheduled.status.turnosRestantes} rodada(s)`;
+    tag.setAttribute("aria-label", tag.title);
+    effects.append(tag);
+  }
   const footer = node(
     "div",
     `${labels[card.tipo] || card.tipo}${card.elemento ? " · " + (labels[card.elemento] || card.elemento) : ""}`,
     "live-type",
   );
   const usage = node("div", "", "live-usage");
-  if (card.attacked) usage.append(node("span", "Ataque usado", "usage-token"));
+  if ((card.limiteAtaques || 1) > 1)
+    usage.append(
+      node(
+        "span",
+        `Ataques: ${card.attacksMade || 0}/${card.limiteAtaques}`,
+        "usage-token",
+      ),
+    );
+  else if (card.attacked)
+    usage.append(node("span", "Ataque usado", "usage-token"));
   if (card.usedAbility)
     usage.append(node("span", "Habilidade usada", "usage-token"));
   face.append(art, heading, effects, footer, stats, usage);

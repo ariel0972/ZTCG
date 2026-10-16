@@ -57,7 +57,8 @@ export function abilityDescription(ability) {
 function effectDescription(effect) {
   const description =
     {
-      damage: `Causa ${effect.valor || 0} de dano.`,
+      damage: `Causa ${effect.valor || 0} de dano.${effect.valorEstrutura === undefined ? "" : " Contra estrutura, causa " + effect.valorEstrutura + "."}`,
+      displace: `Desloca uma tropa para ${effect.direcao === "direita" ? "o espaço à direita" : "um espaço vizinho vazio escolhido"}${effect.borda === "mao" ? "; na borda direita, devolve à mão" : ""}.`,
       heal: `Cura ${effect.valor || 0} de vida.`,
       spendAttack:
         "Consome o ataque da tropa e um uso do limite de ataques do mago.",
@@ -130,6 +131,7 @@ export function passiveDescription(h) {
             counterAttack:
               "retalia com ataque básico sem consumir o ataque normal",
             interceptAttack: `intercepta ataques básicos${e.colunaAtacante === undefined ? "" : " vindos da coluna " + (e.colunaAtacante + 1)}`,
+            attackLimit: `pode atacar até ${e.valor} vezes por rodada`,
             blockOwnAttack: "não pode atacar enquanto a condição valer",
             blockAttack: "impede ataques básicos que correspondam ao filtro",
             summonFromDeck:

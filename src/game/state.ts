@@ -25,11 +25,13 @@ export interface Instance extends Card {
   ownerId: string;
   hpAtual: number;
   attacked: boolean;
+  attacksMade?: number;
   usedAbility: boolean;
   moved?: boolean;
   revivedFromGraveyard?: boolean;
   appliedElement?: string;
   statuses: Status[];
+  scheduledStatuses?: { round: number; status: Status }[];
   fireSpellsCast?: number;
   fireDamageBonus?: number;
   passiveCounters?: Record<string, number>;
@@ -124,6 +126,7 @@ export interface State {
     card: Instance;
     targets: string[];
     bonus: number;
+    destinationId?: string;
   };
   version: number;
   turn: number;

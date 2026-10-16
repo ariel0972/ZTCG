@@ -334,14 +334,36 @@
   },
   {
     "numeroCatalogo": "057",
-    "nome": "Lâminas Aéreas",
+    "nome": "Lâmina de Vento",
     "tipo": "Feitico",
-    "custoMana": 2,
-    "descricao": "",
+    "custoMana": 6,
+    "descricao": "Causa 5 de dano a uma tropa ou ao mago inimigo e compra 1 carta. Se o alvo for uma tropa de Terra, ela não pode atacar durante a próxima rodada completa; movimento e habilidades continuam permitidos. Custa sempre 6 de mana.",
     "imgURL": "/assets/Cards/Lâmina de Vento.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
-    "alvo": "UnicoInimigo"
+    "alvo": "UnicoInimigo",
+    "elemento": "Ar",
+    "tiposAlvo": ["Tropa", "Mago"],
+    "efeitos": [
+      {
+        "id": "damage",
+        "valor": 5
+      },
+      {
+        "id": "status",
+        "status": "SemAtaque",
+        "duracao": 1,
+        "inicio": "proximaRodada",
+        "filtroAlvo": {
+          "tipo": "Tropa",
+          "elemento": "Terra"
+        }
+      },
+      {
+        "id": "draw",
+        "valor": 1
+      }
+    ]
   },
   {
     "numeroCatalogo": "087",
@@ -358,12 +380,26 @@
     "numeroCatalogo": "094",
     "nome": "Esfera de Vórtice",
     "tipo": "Feitico",
-    "custoMana": 2,
-    "descricao": "",
+    "custoMana": 4,
+    "descricao": "Escolha uma tropa inimiga e um espaço vizinho vazio: move a tropa e causa 2 de dano. Se ela estiver em uma estrutura, causa 5 de dano à estrutura em vez disso e não move a tropa. Montaria e ocupante são movidos juntos.",
     "imgURL": "/assets/Cards/Esfera de Vórtice.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
-    "alvo": "UnicoInimigo"
+    "alvo": "UnicoInimigo",
+    "elemento": "Ar",
+    "tiposAlvo": ["Tropa"],
+    "efeitos": [
+      {
+        "id": "displace",
+        "direcao": "vizinho",
+        "estrutura": "manter"
+      },
+      {
+        "id": "damage",
+        "valor": 2,
+        "valorEstrutura": 5
+      }
+    ]
   },
   {
     "numeroCatalogo": "039",
@@ -2258,17 +2294,55 @@
   },
   {
     "numeroCatalogo": "043",
-    "nome": "Beija flor de Fagniz",
+    "nome": "Beija-flor de Fagniz",
     "tipo": "Tropa",
     "custoMana": 4,
-    "descricao": "",
+    "descricao": "Ataca duas vezes por rodada e pode mudar de posição uma vez por turno com Campo livre. Bater das Asas (3 mana): empurra uma tropa inimiga um espaço para a direita, na visão do dono dela. Espaço ocupado ou estrutura impede o uso. Ao ultrapassar a borda direita, devolve a tropa à mão. Montaria e ocupante são movidos juntos.",
     "imgURL": "/assets/Cards/Beija-flor de Fagniz.png",
     "publicado": true,
     "versao": 1,
-    "hp": 1,
+    "hp": 8,
     "ataque": 2,
-    "manaGerada": 1,
-    "direcaoAtaque": "Frente"
+    "manaGerada": 3,
+    "direcaoAtaque": "Universal",
+    "elemento": "Ar",
+    "subtipo": "Animal",
+    "fraqueza": ["Fogo"],
+    "resistencia": ["Terra"],
+    "palavrasChave": ["Campo livre"],
+    "habilidadesPassivas": [
+      {
+        "gatilho": "continuous",
+        "escopo": "proprio",
+        "descricao": "Ataca duas vezes por rodada.",
+        "efeitos": [
+          {
+            "id": "attackLimit",
+            "valor": 2
+          }
+        ]
+      }
+    ],
+    "habilidadesAtivas": [
+      {
+        "id": "baterDasAsas",
+        "nome": "Bater das Asas",
+        "custoMana": 3,
+        "alvo": "UnicoInimigo",
+        "filtroAlvo": {
+          "tipo": "Tropa"
+        },
+        "descricao": "Empurra uma tropa um espaço para a direita, ou devolve à mão na borda. Não atravessa tropas nem estruturas.",
+        "efeitos": [
+          {
+            "id": "displace",
+            "direcao": "direita",
+            "borda": "mao",
+            "estrutura": "impedirUso"
+          }
+        ]
+      }
+    ]
   },
   {
     "numeroCatalogo": "028",
@@ -2433,19 +2507,60 @@
     "nome": "Mago de ar",
     "tipo": "Mago",
     "custoMana": 0,
-    "descricao": "",
+    "descricao": "Sempre que você conjura um feitiço de Ar, compra 1 carta. Mover livremente (3 mana): concede Campo livre às tropas aliadas até o fim do turno. Cada tropa pode se mover uma vez; não renova movimentos já usados.",
     "imgURL": "/assets/Cards/Mago de ar.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
-    "hp": 18,
-    "ataque": 0,
-    "recuperacaoMana": 0,
+    "hp": 20,
+    "ataque": 3,
+    "recuperacaoMana": 3,
     "limites": [
       {
-        "tropasMobilizadas": 0,
-        "tropaAtacam": 0,
-        "feiticosUsados": 0,
-        "feiticosUnicos": 0
+        "tropasMobilizadas": 2,
+        "tropaAtacam": 2,
+        "feiticosUsados": 4,
+        "feiticosUnicos": 2
+      }
+    ],
+    "elemento": "Ar",
+    "fraqueza": ["Fogo"],
+    "resistencia": ["Terra"],
+    "habilidadesPassivas": [
+      {
+        "gatilho": "onSpellCast",
+        "escopo": "aliado",
+        "filtroEvento": {
+          "tipo": "Feitico",
+          "elemento": "Ar"
+        },
+        "descricao": "Quando você conjura um feitiço de Ar, compra 1 carta.",
+        "efeitos": [
+          {
+            "id": "draw",
+            "jogador": "aliado",
+            "valor": 1
+          }
+        ]
+      }
+    ],
+    "habilidadesAtivas": [
+      {
+        "id": "moverLivremente",
+        "nome": "Mover livremente",
+        "custoMana": 3,
+        "alvo": "TodosAliados",
+        "filtroAlvo": {
+          "tipo": "Tropa"
+        },
+        "descricao": "Concede Campo livre às tropas aliadas em campo até o fim do turno, sem renovar movimentos já usados.",
+        "efeitos": [
+          {
+            "id": "status",
+            "status": "Campo livre",
+            "duracao": 1,
+            "unidade": "turno"
+          }
+        ]
       }
     ]
   },

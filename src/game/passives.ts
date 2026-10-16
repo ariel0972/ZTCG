@@ -26,6 +26,7 @@ export const passiveActionIds = [
   "counterAttack",
   "interceptAttack",
   "blockOwnAttack",
+  "attackLimit",
   "damage",
   "heal",
   "growMaxHp",
@@ -77,6 +78,8 @@ export function describePassiveActions(actions: PassiveAction[]) {
           return "Interceptou um ataque básico";
         case "blockOwnAttack":
           return "Não pode atacar sem a condição exigida";
+        case "attackLimit":
+          return `Pode atacar até ${a.valor} vezes por rodada`;
         case "damage":
           return `Causou ${a.valor} de dano`;
         case "heal":
@@ -216,6 +219,27 @@ export function passiveMatches(
         s.card,
     );
   });
+}
+export function basicAttackLimit(card: Instance, slots: Slot[]) {
+  return card.habilidadesPassivas
+    .map(normalizePassive)
+    .reduce((limit, rule) => {
+      if (
+        rule.gatilho !== "continuous" ||
+        !passiveMatches(
+          rule,
+          card,
+          { ownerId: card.ownerId, cardId: card.id, card },
+          slots,
+        )
+      )
+        return limit;
+      return rule.efeitos.reduce(
+        (value, action) =>
+          action.id === "attackLimit" ? Math.max(value, action.valor) : value,
+        limit,
+      );
+    }, 1);
 }
 export function blockedOwnAttack(card: Instance, slots: Slot[]) {
   return card.habilidadesPassivas
@@ -489,6 +513,14 @@ export function continuousPassiveActive(
 }
 export const passiveTemplates: { nome: string; passiva: DeclarativePassive }[] =
   [
+    {
+      nome: "Atacar duas vezes por rodada",
+      passiva: {
+        gatilho: "continuous",
+        escopo: "proprio",
+        efeitos: [{ id: "attackLimit", valor: 2 }],
+      },
+    },
     {
       nome: "Desviar opcionalmente de um golpe por rodada",
       passiva: {

@@ -1,3 +1,4 @@
+import { planDisplacement } from "./displacement";
 import { playableErrors } from "./capabilities";
 import type { Instance, Slot, Player, State, DeckDefinition } from "./state";
 import type { BattleEvent, BattleDamage } from "./state";
@@ -6,6 +7,7 @@ import {
   adjacentAttackBonus,
   targetAttackBonus,
   blockedOwnAttack,
+  basicAttackLimit,
   canMount,
   attackInterceptor,
   restrictedBasicAttack,
@@ -1011,6 +1013,8 @@ export class Game {
     card.hpAtual = card.hp ?? 0;
     card.statuses = [];
     card.attacked = false;
+    card.attacksMade = 0;
+    delete card.scheduledStatuses;
     card.usedAbility = false;
     card.moved = false;
     delete card.appliedElement;
@@ -1471,7 +1475,12 @@ export class Game {
       ? ids.map((id) => this.targetSlot(id)!.structure!.id)
       : ids;
   }
-  private relocateTroops(from: Slot, to: Slot) {
+  private relocateTroops(
+    from: Slot,
+    to: Slot,
+    carryStructure = true,
+    consumeMove = true,
+  ) {
     const before = this.weapons(from).reduce((n, w) => n + (w.bonusHp ?? 0), 0);
     const after = this.weapons(to).reduce((n, w) => n + (w.bonusHp ?? 0), 0);
     const leaving = from.rider ?? from.card,
@@ -1479,9 +1488,10 @@ export class Game {
     if (leaving) leaving.hpAtual += after - before;
     if (arriving) arriving.hpAtual += before - after;
     [from.card, to.card] = [to.card, from.card];
-    [from.structure, to.structure] = [to.structure, from.structure];
+    if (carryStructure)
+      [from.structure, to.structure] = [to.structure, from.structure];
     [from.rider, to.rider] = [to.rider, from.rider];
-    if (to.card) to.card.moved = true;
+    if (to.card && consumeMove) to.card.moved = true;
   }
   private mountActionError(
     user: string,
@@ -1494,6 +1504,7 @@ export class Game {
   }
   private spendMountAttack(user: string, card: Instance) {
     card.attacked = true;
+    card.attacksMade = basicAttackLimit(card, this.state.slots);
     this.player(user).counters.attacks++;
     this.player(user).combatStarted = true;
   }
@@ -1617,15 +1628,62 @@ export class Game {
     element?: Card["elemento"],
     source?: Instance,
     cause?: string,
+    destinationId?: string,
   ) {
     const player = this.player(ownerId);
+    if (destinationId && !effects.some((e) => e.id === "displace"))
+      this.fail("Este efeito não aceita destino de deslocamento.");
     for (const effect of effects) {
       if (effect.alvo === "Proprio" && (!source || !this.targetSlot(source.id)))
         this.fail(
           "Efeito na própria carta exige uma habilidade de origem em campo.",
         );
-      const ids = effect.alvo === "Proprio" ? [source!.id] : selection;
+      const ids = (effect.alvo === "Proprio" ? [source!.id] : selection).filter(
+        (id) =>
+          !effect.filtroAlvo ||
+          matchesPassiveFilter(
+            this.findCard(id) ?? this.targetSlot(id)?.card ?? undefined,
+            effect.filtroAlvo,
+          ),
+      );
       switch (effect.id) {
+        case "displace": {
+          if (ids.length !== 1)
+            this.fail("Deslocamento exige uma única tropa.");
+          const plan = planDisplacement(
+            effect,
+            this.targetSlot(ids[0]),
+            ids[0],
+            this.state.slots,
+            destinationId,
+          );
+          const troop = this.findCard(ids[0]) ?? plan.source.card!;
+          if (plan.stationary || !this.impactAllowed(troop.id)) break;
+          const group = [plan.source.card, plan.source.rider].filter(
+            (c): c is Instance => !!c,
+          );
+          if (plan.bounce) {
+            plan.source.card = null;
+            plan.source.rider = null;
+            for (const member of group) {
+              this.resetCard(member);
+              this.player(member.ownerId).hand.push(member);
+            }
+          } else
+            this.relocateTroops(plan.source, plan.destination!, false, false);
+          const message =
+            cause +
+            ": " +
+            group.map((c) => c.nome).join(" e ") +
+            (plan.bounce
+              ? " voltou para a mão ao sair pela borda direita."
+              : " foi deslocada para o espaço " +
+                (plan.destination!.column + 1) +
+                ".");
+          this.log(message);
+          this.event("notice", troop, message);
+          break;
+        }
         case "spendAttack":
           if (!source) this.fail("Consumir ataque exige a carta de origem.");
           const position = this.targetSlot(source.id)!;
@@ -1659,16 +1717,21 @@ export class Game {
           break;
         }
         case "damage":
-          for (const id of ids)
+          for (const id of ids) {
+            const structure =
+              effect.valorEstrutura !== undefined
+                ? this.targetSlot(id)?.structure
+                : undefined;
             this.damage(
-              id,
-              effect.valor!,
+              structure?.id ?? id,
+              structure ? effect.valorEstrutura! : effect.valor!,
               undefined,
               false,
               effect.elemento ?? element,
               source,
               cause,
             );
+          }
           break;
         case "heal":
           for (const id of ids) {
@@ -1683,6 +1746,30 @@ export class Game {
             const card = this.findCard(id) ?? this.targetSlot(id)?.card;
             if (!card) this.fail("Status exige uma carta.");
             if (!this.impactAllowed(card.id)) continue;
+            if (effect.inicio === "proximaRodada") {
+              const round = this.state.round + 1;
+              const scheduled = (card.scheduledStatuses ??= []);
+              const status: Status = {
+                requerStatus: effect.requerStatus,
+                nome: canonicalStatus(effect.status!),
+                valor: effect.valor,
+                turnosRestantes: effect.duracao!,
+                unidade: "rodada",
+                originOwnerId: source?.ownerId ?? ownerId,
+                origin: cause ?? source?.nome,
+              };
+              const existing = scheduled.find(
+                (s) => s.round === round && s.status.nome === status.nome,
+              );
+              if (existing) {
+                status.turnosRestantes = Math.max(
+                  existing.status.turnosRestantes,
+                  status.turnosRestantes,
+                );
+                existing.status = status;
+              } else scheduled.push({ round, status });
+              continue;
+            }
             const applied = applyStatus(
               card.statuses,
               effect.status!,
@@ -1927,6 +2014,8 @@ export class Game {
       index = player.hand.findIndex((c) => c.id === cmd.cardId),
       card = player.hand[index];
     if (!card) this.fail("Carta não está na sua mão.");
+    if (cmd.destinationId && !card.efeitos.some((e) => e.id === "displace"))
+      this.fail("Esta carta não aceita destino de deslocamento.");
     const limits = player.mage.limites[0];
     if (card.tipo === "Feitico") {
       if (hasStatus(player.mage.statuses, ["Cego"]))
@@ -1985,13 +2074,19 @@ export class Game {
         }) &&
         this.canRespondWithWater(this.opponent(user).id)
       ) {
-        this.state.pendingSpell = { casterId: user, card, targets: ids, bonus };
+        this.state.pendingSpell = {
+          casterId: user,
+          card,
+          targets: ids,
+          bonus,
+          destinationId: cmd.destinationId,
+        };
         this.log(
           `${player.nome} conjurou ${card.nome}. Aguardando resposta com Jato d'água.`,
         );
         return;
       }
-      this.resolveSpell(user, card, ids, bonus);
+      this.resolveSpell(user, card, ids, bonus, cmd.destinationId);
     } else {
       if (!cmd.slotId) this.fail("Selecione um slot.");
       const slot = this.ownSlot(cmd.slotId, user);
@@ -2089,9 +2184,10 @@ export class Game {
     card: Instance,
     ids: string[],
     bonus: number,
+    destinationId?: string,
   ) {
     return this.inImpact("spell", card.nome, () =>
-      this.resolveSpellOnce(user, card, ids, bonus),
+      this.resolveSpellOnce(user, card, ids, bonus, destinationId),
     );
   }
   private resolveSpellOnce(
@@ -2099,6 +2195,7 @@ export class Game {
     card: Instance,
     ids: string[],
     bonus: number,
+    destinationId?: string,
   ) {
     if (!this.specialSpell(user, card, ids, bonus)) {
       if (card.elemento) this.react(user, ids, card.elemento);
@@ -2111,6 +2208,7 @@ export class Game {
         card.elemento,
         card,
         `${card.nome} (${this.player(user).nome})`,
+        destinationId,
       );
     }
     const player = this.player(user);
@@ -2604,6 +2702,7 @@ export class Game {
       pending.card,
       pending.targets,
       pending.bonus,
+      pending.destinationId,
     );
     this.log(`${pending.card.nome} resolveu sem cancelamento.`);
     this.resolve();
@@ -2660,6 +2759,7 @@ export class Game {
         hasStatus(slot.card.statuses, [
           "Atordoado",
           "Incapacitado",
+          "SemAtaque",
           "Cego",
           "Congelado",
         ]))
@@ -2667,6 +2767,7 @@ export class Game {
       return "A tropa protegida não pode atacar com a estrutura neste estado.";
     if (
       card.attacked ||
+      (card.attacksMade ?? 0) >= basicAttackLimit(card, this.state.slots) ||
       (card.tipo !== "Mago" &&
         p.counters.attacks >= p.mage.limites[0].tropaAtacam)
     )
@@ -2675,6 +2776,7 @@ export class Game {
       card.statuses.some((s) =>
         [
           "Incapacitado",
+          "SemAtaque",
           "Atordoamento",
           "Atordoado",
           "Congelado",
@@ -2826,7 +2928,9 @@ export class Game {
       card,
       `Ataque: ${card.nome} (${p.nome}) atacou ${announcedDefender.nome} (${this.player(announcedDefender.ownerId).nome}).${interception}`,
     );
-    card.attacked = true;
+    card.attacksMade = (card.attacksMade ?? 0) + 1;
+    card.attacked =
+      card.attacksMade >= basicAttackLimit(card, this.state.slots);
     p.combatStarted = true;
     if (card.tipo !== "Mago") p.counters.attacks++;
     card.palavrasChave = card.palavrasChave.filter((k) => k !== "Esconder");
@@ -3091,6 +3195,8 @@ export class Game {
       );
     const ability = card.habilidadesAtivas.find((h) => h.id === cmd.abilityId);
     if (!ability) this.fail("Esta carta não possui a habilidade.");
+    if (cmd.destinationId && !ability.efeitos?.some((e) => e.id === "displace"))
+      this.fail("Esta habilidade não aceita destino de deslocamento.");
     if (
       ability.esperaRodadas &&
       card.abilityRounds?.[ability.id] !== undefined &&
@@ -3177,6 +3283,7 @@ export class Game {
         card.elemento,
         card,
         `${ability.nome} de ${card.nome}`,
+        cmd.destinationId,
       );
     } else {
       switch (ability.id) {
@@ -3358,6 +3465,7 @@ export class Game {
       .flatMap(slotCards))
       if (c) {
         c.attacked = false;
+        c.attacksMade = 0;
         c.usedAbility = false;
         c.moved = false;
       }
@@ -3490,7 +3598,47 @@ export class Game {
     if (this.state.status === "FINISHED") return;
     this.state.current = this.opponent(this.state.current).id;
     this.state.turn++;
-    if (roundEnded) this.state.round++;
+    if (roundEnded) {
+      this.state.round++;
+      for (const card of this.state.slots.flatMap(slotCards)) {
+        const due = (card.scheduledStatuses ?? []).filter(
+          (s) => s.round <= this.state.round,
+        );
+        card.scheduledStatuses = card.scheduledStatuses?.filter(
+          (s) => s.round > this.state.round,
+        );
+        for (const { status } of due) {
+          const applied = applyStatus(
+            card.statuses,
+            status.nome,
+            status.turnosRestantes,
+            status.valor,
+            this.state.turn,
+            status.unidade,
+          );
+          applied.origin = status.origin;
+          applied.originOwnerId = status.originOwnerId;
+          applied.requerStatus = status.requerStatus;
+          this.trigger("onStatusApplied", {
+            ownerId: card.ownerId,
+            cardId: card.id,
+            status: status.nome,
+          });
+          this.event(
+            "notice",
+            card,
+            (status.origin ?? "Efeito programado") +
+              ": " +
+              card.nome +
+              " recebeu " +
+              status.nome +
+              " por " +
+              status.turnosRestantes +
+              " rodada(s).",
+          );
+        }
+      }
+    }
     this.beginTurn();
   }
   private executeOnce(user: string, raw: unknown) {
@@ -3674,6 +3822,7 @@ export class Game {
         rider: slot.rider
           ? {
               ...slot.rider,
+              limiteAtaques: basicAttackLimit(slot.rider, this.state.slots),
               bonusAtaquePassivo:
                 adjacentAttackBonus(slot.rider, this.state.slots) +
                 slot.rider.statuses
@@ -3686,6 +3835,7 @@ export class Game {
         card: slot.card
           ? {
               ...slot.card,
+              limiteAtaques: basicAttackLimit(slot.card, this.state.slots),
               bonusAtaquePassivo:
                 adjacentAttackBonus(slot.card, this.state.slots) +
                 slot.card.statuses

@@ -87,6 +87,22 @@ export const effectSchema = z
     elemento: z.enum(elements).optional(),
     unidade: z.enum(["turno", "rodada"]).optional(),
     requerStatus: z.string().max(80).optional(),
+    inicio: z.enum(["proximaRodada"]).optional(),
+    valorEstrutura: number.optional(),
+    direcao: z.enum(["direita", "vizinho"]).optional(),
+    borda: z.enum(["mao"]).optional(),
+    estrutura: z.enum(["impedirUso", "manter"]).optional(),
+    filtroAlvo: z
+      .object({
+        tipo: z.enum(cardTypes).optional(),
+        elemento: z.enum(elements).optional(),
+      })
+      .strict()
+      .refine(
+        (f) => Object.values(f).some((v) => v !== undefined),
+        "Defina pelo menos um filtro.",
+      )
+      .optional(),
     carta: z
       .string()
       .regex(/^\d{3,6}$/)
@@ -167,6 +183,9 @@ export const passiveActionSchema = z.discriminatedUnion("id", [
     })
     .strict(),
   z.object({ id: z.literal("blockOwnAttack") }).strict(),
+  z
+    .object({ id: z.literal("attackLimit"), valor: number.min(1).max(10) })
+    .strict(),
   z
     .object({
       id: z.literal("damage"),

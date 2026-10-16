@@ -54,6 +54,13 @@ export function spellSlotTarget(action, slot, userId) {
   if (type === "TodosInimigos" && !["Tropa", "Mago"].includes(slot.card?.tipo))
     return false;
   const effects = action.efeitos || [];
+  const displacement = effects.find((e) => e.id === "displace");
+  if (
+    displacement &&
+    (target.tipo !== "Tropa" ||
+      (slot.structure && displacement.estrutura !== "manter"))
+  )
+    return false;
   if (action.alvoAutomatico && target.id !== action.automaticTargetId)
     return false;
   if (action.tiposAlvo && !action.tiposAlvo.includes(target.tipo)) return false;
@@ -103,6 +110,8 @@ export function zoneCardAllowed(action, card) {
   return true;
 }
 export function targetDescription(action) {
+  if (action?.efeitos?.some((e) => e.id === "displace"))
+    return "Escolha uma tropa inimiga destacada. Se o efeito pedir deslocamento, escolha depois um espaço vizinho vazio. Estruturas seguem a regra descrita na carta.";
   if (action?.filtroAlvo?.numeroCatalogo)
     return `Escolha a tropa aliada de catálogo ${action.filtroAlvo.numeroCatalogo} destacada, inclusive montada.`;
   if (action?.alvoAutomatico === "UltimoAtacanteTropa")
@@ -133,4 +142,30 @@ export function targetDescription(action) {
   return (
     descriptions[action?.alvo] || "Escolha os alvos destacados e confirme."
   );
+}
+
+// Destinos possíveis para o deslocamento escolhido; o servidor valida novamente.
+export function displacementChoice(action, targetIds, slots) {
+  const effect = action?.efeitos?.find(
+    (e) => e.id === "displace" && e.direcao === "vizinho",
+  );
+  const source = slots.find((s) =>
+    targetIds?.some((id) => [s.id, s.card?.id, s.rider?.id].includes(id)),
+  );
+  if (!effect || !source || (source.structure && effect.estrutura === "manter"))
+    return { required: false, destinations: [] };
+  return {
+    required: true,
+    destinations: slots
+      .filter(
+        (s) =>
+          s.ownerId === source.ownerId &&
+          s.kind === "Tropa" &&
+          Math.abs(s.column - source.column) === 1 &&
+          !s.card &&
+          !s.rider &&
+          !s.terrain,
+      )
+      .map((s) => s.id),
+  };
 }

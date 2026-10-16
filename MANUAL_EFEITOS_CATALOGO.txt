@@ -1593,3 +1593,42 @@ por ataques e efeitos individuais inimigos; não impede áreas e é perdido ao
 atacar normalmente. Não equivale a invulnerabilidade.
 A ampliação não grava a segunda habilidade automaticamente no Assassino do
 banco, preservando o conteúdo que o administrador está editando.
+
+
+RECURSOS GERAIS: ATAQUES MÚLTIPLOS E DESLOCAMENTO — 16/10/2026
+attackLimit: passiva continuous/proprio de Tropa com valor entre 1 e 10.
+  Define o limite individual, sem somar limites repetidos (vence o maior).
+  Cada ataque consome também um uso do limite geral do mago. O gasto persiste
+  em attacksMade e é renovado no início do turno do dono; retaliação não gasta.
+  Ex.: {"gatilho":"continuous","escopo":"proprio","efeitos":[{"id":"attackLimit","valor":2}]}
+
+displace: efeito de feitiço ou habilidade com alvo UnicoInimigo. Só uma Tropa.
+  direcao: direita (uma coluna, na visão do dono) ou vizinho (destino escolhido).
+  borda: mao é opcional e só aceita direita; sem ela, a borda impede o uso.
+  estrutura: impedirUso (padrão) ou manter (não desloca e continua outros efeitos).
+  Estruturas ficam no espaço. Montaria e ocupante se movem/devolvem juntos.
+  Espaço ocupado ou Lama impede entrada. Status de impedimento de movimento
+  voluntário não impedem deslocamento forçado. Não gasta movimento voluntário.
+  O comando play/ability envia destinationId quando direcao=vizinho e o alvo
+  não está em estrutura. Requer vizinho do mesmo dono, vazio e sem Lama.
+  Valores incoerentes e destinos inválidos revertem toda a ação, inclusive mana.
+  Use um único displace por carta/habilidade e ordene os efeitos na ordem desejada.
+  Ex.: {"id":"displace","direcao":"direita","borda":"mao","estrutura":"impedirUso"}
+
+valorEstrutura: parâmetro opcional de damage. Se o alvo possui estrutura,
+  direciona esse dano à estrutura no lugar do valor normal, inclusive com Abalo.
+  Mantém as proteções e os modificadores elementais da carta atingida.
+  Ex.: {"id":"damage","valor":2,"valorEstrutura":5}
+
+filtroAlvo por efeito: tipo/elemento opcionais, combinados com E. Só damage,
+  heal e status. Filtra esse efeito sem impedir os demais efeitos da conjuração.
+  draw e mana continuam afetando o jogador da origem e podem acompanhar efeitos
+  com alvo individual, sem exigir alvo Global para a carta toda.
+
+inicio: proximaRodada, em status, agenda o efeito para a próxima rodada completa.
+  Não aceita duração em turnos nem estados com duração elemental fixa.
+  O agendamento fica visível em scheduledStatuses e só dispara onStatusApplied
+  quando a rodada começar; a devolução da carta à mão limpa o agendamento.
+  SemAtaque impede somente ataques básicos (inclui estrutura vinculada à tropa).
+  Campo livre também pode ser concedido como status temporário, sem renovar moved.
+  Ex.: {"id":"status","status":"SemAtaque","duracao":1,"inicio":"proximaRodada","filtroAlvo":{"tipo":"Tropa","elemento":"Terra"}}

@@ -7,6 +7,7 @@ export const effectIds = [
   "revealStealHand",
   "bloodScent",
   "damage",
+  "displace",
   "heal",
   "status",
   "draw",
@@ -73,6 +74,8 @@ const statusIds = [
   "Abalo",
   "EscudoProtecao",
   "Incapacitado",
+  "SemAtaque",
+  "Campo livre",
   "Atordoamento",
   "Atordoado",
   "Congelado",
@@ -215,6 +218,40 @@ export function playableErrors(card: Card): string[] {
       }
       if (!(effectIds as readonly string[]).includes(e.id))
         errors.push(`Efeito ${e.id} não implementado.`);
+      if (e.valorEstrutura !== undefined && e.id !== "damage")
+        errors.push("valorEstrutura exige damage.");
+      if ((e.direcao || e.borda || e.estrutura) && e.id !== "displace")
+        errors.push("Direção, borda e estrutura exigem displace.");
+      if (
+        e.id === "displace" &&
+        (!e.direcao ||
+          target !== "UnicoInimigo" ||
+          e.alvo ||
+          (e.borda && e.direcao !== "direita"))
+      )
+        errors.push(
+          "Deslocamento exige UnicoInimigo, direção e borda compatível.",
+        );
+      if (
+        e.inicio &&
+        (e.id !== "status" ||
+          e.unidade === "turno" ||
+          ["Envenenado", "Queimado", "Sangrando", "Congelado"].includes(
+            canonicalStatus(e.status ?? ""),
+          ))
+      )
+        errors.push(
+          "Início na próxima rodada exige status com duração em rodadas sem duração elemental fixa.",
+        );
+      if (
+        e.id === "displace" &&
+        (e.valor !== undefined || e.status || e.duracao || e.elemento)
+      )
+        errors.push(
+          "displace não recebe valor, status, duração ou elemento próprio.",
+        );
+      if (e.filtroAlvo && !["damage", "heal", "status"].includes(e.id))
+        errors.push("Filtro por efeito exige damage, heal ou status.");
       if (e.id === "searchNamed" && !e.carta)
         errors.push("Busca por carta exige carta (numeroCatalogo).");
       if (e.id !== "searchNamed" && (e.carta || e.seNaoUsada))
@@ -256,6 +293,7 @@ export function playableErrors(card: Card): string[] {
         e.id !== "field" &&
         e.id !== "searchNamed" &&
         e.id !== "spendAttack" &&
+        e.id !== "displace" &&
         e.valor === undefined
       )
         errors.push(`Defina valor para ${e.id}.`);
@@ -296,10 +334,16 @@ export function playableErrors(card: Card): string[] {
         )
       )
         errors.push("Efeito de campo exige alvo CampoAliado ou CampoInimigo.");
-      if (["mana", "draw"].includes(e.id) && target !== "Global")
+      if (
+        ["mana", "draw"].includes(e.id) &&
+        target !== "Global" &&
+        !effects.some((other) => !["mana", "draw"].includes(other.id))
+      )
         errors.push(`${e.id} exige alvo Global.`);
     }
   };
+  if (card.efeitos.filter((e) => e.id === "displace").length > 1)
+    errors.push("Use um único deslocamento por feitiço.");
   checkEffects(card.efeitos, card.alvo);
   if (card.efeitos.some((e) => ["spendAttack", "guardTarget"].includes(e.id)))
     errors.push(
@@ -365,6 +409,8 @@ export function playableErrors(card: Card): string[] {
       errors.push(`Alvo automático incompatível na habilidade ${h.id}.`);
     if (h.alvoAutomatico === "Frontal" && card.tipo !== "Tropa")
       errors.push("Alvo frontal automático exige tropa.");
+    if ((h.efeitos ?? []).filter((e) => e.id === "displace").length > 1)
+      errors.push("Use um único deslocamento por habilidade.");
     if (h.efeitos?.length) {
       checkEffects(h.efeitos, h.alvo, true);
       if (h.efeitos.some((e) => specialTargets[e.id]))
@@ -419,6 +465,8 @@ export function playableErrors(card: Card): string[] {
         if (filter?.status && !statusIds.includes(filter.status))
           errors.push("Filtro de passiva usa status não implementado.");
       for (const effect of h.efeitos) {
+        if (effect.id === "attackLimit" && card.tipo !== "Tropa")
+          errors.push("Limite de ataques passivo exige Tropa.");
         if (effect.id === "attackLifesteal" && card.tipo !== "Armamento")
           errors.push("Cura por dano de ataque exige Armamento.");
         if (effect.id === "discardMana" && card.tipo !== "Feitico")
@@ -435,6 +483,7 @@ export function playableErrors(card: Card): string[] {
                 "attackBonus",
                 "manaRecovery",
                 "blockOwnAttack",
+                "attackLimit",
                 "attackLifesteal",
                 "discardMana",
               ]
@@ -454,6 +503,7 @@ export function playableErrors(card: Card): string[] {
                       "manaRecovery",
                       "reflectAttack",
                       "blockOwnAttack",
+                      "attackLimit",
                       "interceptAttack",
                       "dodgeImpact",
                       "attackLifesteal",

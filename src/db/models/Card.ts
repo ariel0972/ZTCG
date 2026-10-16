@@ -39,6 +39,21 @@ const effect = new Schema(
     carta: String,
     seNaoUsada: String,
     requerStatus: String,
+    inicio: { type: String, enum: ["proximaRodada"] },
+    valorEstrutura: n,
+    direcao: { type: String, enum: ["direita", "vizinho"] },
+    borda: { type: String, enum: ["mao"] },
+    estrutura: { type: String, enum: ["impedirUso", "manter"] },
+    filtroAlvo: {
+      type: new Schema(
+        {
+          tipo: { type: String, enum: cardTypes },
+          elemento: { type: String, enum: elements },
+        },
+        { _id: false, strict: "throw" },
+      ),
+      default: undefined,
+    },
     variantesMago: { type: [spellVariant], default: undefined },
   },
   { _id: false, strict: "throw" },

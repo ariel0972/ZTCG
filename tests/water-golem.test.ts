@@ -344,6 +344,7 @@ test("desvio não refaz sorteios, aceite é idempotente e o timeout recusa", () 
   assert.equal(slot(g, "p2:front:1").card!.hpAtual, 15);
   g.state.round++;
   slot(g, "p1:front:1").card!.attacked = false;
+  slot(g, "p1:front:1").card!.attacksMade = 0;
   slot(g, "p1:front:1").card!.statuses = [];
   act(g, { type: "attack", slotId: "p1:front:1", targetId: "p2:front:1" });
   g.resolvePendingChoice();
