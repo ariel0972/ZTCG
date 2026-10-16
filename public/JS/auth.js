@@ -28,7 +28,11 @@ async function fetchApi(path, options, renewed) {
     timeout = setTimeout(() => controller.abort(), 10000);
   try {
     const headers = { "Content-Type": "application/json", ...options.headers };
-    if (token()) headers.Authorization = `Bearer ${token()}`;
+    // Public resources share the browser/CDN cache across pages and sessions.
+    const publicRead =
+      (!options.method || options.method === "GET") &&
+      /^(\/cards(?:\/schema)?|\/rules-data|\/rankings)(?:\?|$)/.test(path);
+    if (token() && !publicRead) headers.Authorization = `Bearer ${token()}`;
     const response = await fetch(path, {
       ...options,
       headers,
@@ -38,6 +42,7 @@ async function fetchApi(path, options, renewed) {
     if (
       response.status === 401 &&
       !renewed &&
+      !publicRead &&
       !path.startsWith("/auth/log") &&
       !path.startsWith("/auth/refresh")
     ) {

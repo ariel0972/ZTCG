@@ -11,7 +11,11 @@ import initial from "../../src/data/catalog.json";
 import bcrypt from "bcrypt";
 import { playerNameKey } from "../../src/services/player-name";
 import { socialModels } from "../../src/game/social";
+import { invalidateCatalog } from "../../src/services/catalog";
+import { invalidateRankings } from "../../src/services/ranking-cache";
 export async function fakeDatabase() {
+  invalidateRankings();
+  invalidateCatalog();
   const users: any[] = [],
     decks: any[] = [],
     cards: any[] = [],
@@ -385,6 +389,10 @@ export async function fakeDatabase() {
     friendships,
     invitations,
     catalog,
-    restore: () => mock.restoreAll(),
+    restore: () => {
+      invalidateCatalog();
+      invalidateRankings();
+      mock.restoreAll();
+    },
   };
 }

@@ -1,3 +1,4 @@
+import { setImageSource } from "./image-sources.js";
 import { node } from "./auth.js";
 import { describe } from "./card-view.js";
 import { renderCardDetails } from "./card-details.js";
@@ -35,11 +36,11 @@ export function createCardInspector({ reactions = () => ({}) } = {}) {
     hide();
     returnToDetails = sourceDialog.open ? sourceDialog : null;
     if (sourceDialog.open) sourceDialog.close();
-    artworkImage.src = card.imgURL || "/assets/avatar.png";
+    setImageSource(artworkImage, card.imgURL || "/assets/avatar.png");
     artworkImage.alt = card.nome;
     artworkImage.onerror = () => {
       artworkImage.onerror = null;
-      artworkImage.src = "/assets/avatar.png";
+      setImageSource(artworkImage, "/assets/avatar.png");
     };
     if (!artwork.open) artwork.showModal();
   }
@@ -47,11 +48,11 @@ export function createCardInspector({ reactions = () => ({}) } = {}) {
 
   function fill(host, card) {
     const image = document.createElement("img");
-    image.src = card.imgURL || "/assets/avatar.png";
+    setImageSource(image, card.imgURL || "/assets/avatar.png");
     image.alt = card.nome;
     image.onerror = () => {
       image.onerror = null;
-      image.src = "/assets/avatar.png";
+      setImageSource(image, "/assets/avatar.png");
     };
     const details = node("div", "", "inspection-details");
     if (host === content) {

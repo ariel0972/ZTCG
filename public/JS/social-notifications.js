@@ -327,8 +327,16 @@ export function createSocialNotifications({
       busy = false;
     }
   }
-  function wake() {
+  let backgroundAt = 0;
+  function scheduledPoll() {
+    if (doc.hidden) {
+      if (!saved.enabled || Date.now() - backgroundAt < 60000) return;
+      backgroundAt = Date.now();
+    }
     void poll();
+  }
+  function wake() {
+    if (!doc.hidden) void poll();
   }
   function closeAll() {
     closed = true;
@@ -349,6 +357,6 @@ export function createSocialNotifications({
   win.addEventListener("pagehide", closeAll, { once: true });
   render();
   void poll();
-  timer = win.setInterval(poll, 5000);
+  timer = win.setInterval(scheduledPoll, 15000);
   return { poll, close: closeAll };
 }

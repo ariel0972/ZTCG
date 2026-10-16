@@ -117,6 +117,8 @@ for (const outage of ["none", "decks", "invites"])
     );
     const selectorModule = "../public/JS/deck-selector.js";
     const { createDeckSelector } = await import(selectorModule);
+    const imageModule = "../public/JS/image-sources.js";
+    const { setImageSource } = await import(imageModule);
     new Function(
       "document",
       "window",
@@ -133,6 +135,7 @@ for (const outage of ["none", "decks", "invites"])
       "createSocialTabs",
       "setInterval",
       "createDeckSelector",
+      "setImageSource",
       source,
     )(
       doc,
@@ -150,6 +153,7 @@ for (const outage of ["none", "decks", "invites"])
       helpers.createSocialTabs,
       () => 0,
       createDeckSelector,
+      setImageSource,
     );
     await tick();
     await tick();

@@ -1,3 +1,4 @@
+import { setImageSource } from "./image-sources.js";
 import { node } from "./auth.js";
 export const labels = {
   Feitico: "Feitiço",
@@ -167,12 +168,12 @@ export function cardTile(card, callback, count = 0) {
     `${card.nome}, ${labels[card.tipo]}, ${card.custoMana} mana. ${count ? count + " cópias." : ""}`,
   );
   const image = document.createElement("img");
-  image.src = card.imgURL || "/assets/avatar.png";
+  setImageSource(image, card.imgURL || "/assets/avatar.png", true);
   image.alt = "";
   image.loading = "lazy";
   image.onerror = () => {
     image.onerror = null;
-    image.src = "/assets/avatar.png";
+    setImageSource(image, "/assets/avatar.png");
     button.classList.add("missing-art");
   };
   button.append(

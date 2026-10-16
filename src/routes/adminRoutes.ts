@@ -3,7 +3,11 @@ import { z } from "zod";
 import User from "../db/models/user";
 import CardModel from "../db/models/Card";
 import { cardSchema } from "../types/card";
-import { getCatalog, catalogWithDiagnostics } from "../services/catalog";
+import {
+  getCatalog,
+  catalogWithDiagnostics,
+  invalidateCatalog,
+} from "../services/catalog";
 import { playableErrors } from "../game/capabilities";
 import { AppError } from "../lib/errors";
 const router = Router();
@@ -12,7 +16,7 @@ router.get("/users", async (_req, res) => {
   res.json({ success: true, users });
 });
 router.get("/cards", async (_req, res) => {
-  res.json({ success: true, ...(await catalogWithDiagnostics()) });
+  res.json({ success: true, ...(await catalogWithDiagnostics(true)) });
 });
 router.put("/cards/:catalog", async (req, res) => {
   const body = z
@@ -54,6 +58,7 @@ router.put("/cards/:catalog", async (req, res) => {
     if (!updated)
       throw new AppError(409, "A carta foi alterada. Recarregue.", "CONFLICT");
   } else await CardModel.create(next);
+  invalidateCatalog();
   res.json({
     success: true,
     card: next,

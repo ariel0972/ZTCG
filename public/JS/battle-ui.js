@@ -1,3 +1,4 @@
+import { setImageSource, optimizedImageUrl } from "./image-sources.js";
 import { node } from "./auth.js";
 import { labels } from "./card-view.js";
 import { hasAutomaticTarget, spellSlotTarget } from "./battle-targets.js";
@@ -62,12 +63,12 @@ export function cardFace(
   if (card.id) face.dataset.liveCardId = card.id;
   const art = node("div", "", "live-art");
   const img = document.createElement("img");
-  img.src = card.imgURL || "/assets/avatar.png";
+  setImageSource(img, card.imgURL || "/assets/avatar.png");
   img.alt = "";
   img.draggable = false;
   img.onerror = () => {
     img.onerror = null;
-    img.src = "/assets/avatar.png";
+    setImageSource(img, "/assets/avatar.png");
   };
   // As imagens do catálogo são cartas completas. Mostra apenas a janela da
   // ilustração, preservando sua proporção, sem repetir números impressos.
@@ -81,7 +82,7 @@ export function cardFace(
     illustration.setAttribute("width", "1000");
     illustration.setAttribute("height", "1400");
     illustration.setAttribute("preserveAspectRatio", "none");
-    illustration.setAttribute("href", card.imgURL);
+    illustration.setAttribute("href", optimizedImageUrl(card.imgURL));
     illustration.addEventListener("error", () => art.replaceChildren(img));
     crop.append(illustration);
     art.append(crop);

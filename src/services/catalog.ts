@@ -2,6 +2,11 @@ import model from "../db/models/Card";
 import { Card, cardSchema } from "../types/card";
 import initial from "../data/catalog.json";
 import { cardReference } from "../domain/deck";
+import { ReadCache } from "../lib/read-cache";
+const catalogCache = new ReadCache<ReturnType<typeof mergeCatalog>>(60000, 1);
+export function invalidateCatalog() {
+  catalogCache.clear();
+}
 export function cleanCard(raw: Record<string, unknown>): Card {
   const { _id, __v, createdAt, updatedAt, ...card } = raw;
   const parsed = cardSchema.parse(card);
@@ -47,10 +52,15 @@ export function mergeCatalog(records: Record<string, unknown>[]) {
     issues,
   };
 }
-export async function catalogWithDiagnostics() {
-  return mergeCatalog(
-    (await model.find().lean()) as unknown as Record<string, unknown>[],
+export async function catalogWithDiagnostics(fresh = false) {
+  if (fresh) invalidateCatalog();
+  const catalog = await catalogCache.get("catalog", async () =>
+    mergeCatalog(
+      (await model.find().lean()) as unknown as Record<string, unknown>[],
+    ),
   );
+  // Callers (including games) must never mutate the shared definitions.
+  return structuredClone(catalog);
 }
 export async function getCatalog(): Promise<Card[]> {
   return (await catalogWithDiagnostics()).cards;

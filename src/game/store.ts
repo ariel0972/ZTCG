@@ -1,4 +1,5 @@
 import { Schema, model } from "mongoose";
+import { ReadCache } from "../lib/read-cache";
 import type { Game } from "./engine";
 import type { Card } from "../types/card";
 import type { DeckDefinition } from "./state";
@@ -36,7 +37,11 @@ export interface DurableRoom {
   rematchClosed: boolean;
   rematchId?: string;
 }
+export type LobbyState = Pick<Lobby, "active"> & {
+  waiting: Pick<Waiting, "id" | "joinedAt">[];
+};
 export interface DurableStore {
+  lobbyState?(): Promise<LobbyState>;
   roomInfo(id: string): Promise<RoomInfo | null>;
   activeRooms(users: string[]): Promise<RoomInfo[]>;
   roomRevision?(id: string): Promise<number | null>;
@@ -91,6 +96,18 @@ export const emptyLobby = (): Lobby => ({
   receipts: {},
 });
 export class MongoGameStore implements DurableStore {
+  private revisions = new ReadCache<number | null>(500, 1000);
+  async lobbyState(): Promise<LobbyState> {
+    const doc = await lobbyModel
+      .findById("main")
+      .select({
+        "data.active": 1,
+        "data.waiting.id": 1,
+        "data.waiting.joinedAt": 1,
+      })
+      .lean();
+    return (doc?.data as LobbyState | undefined) ?? { active: {}, waiting: [] };
+  }
   async roomInfo(id: string) {
     const doc = await roomModel
       .findById(id)
@@ -126,8 +143,10 @@ export class MongoGameStore implements DurableStore {
     return docs.map((d) => roomInfo(d.data as DurableRoom));
   }
   async roomRevision(id: string) {
-    const doc = await roomModel.findById(id).select({ revision: 1 }).lean();
-    return doc?.revision ?? null;
+    return this.revisions.get(id, async () => {
+      const doc = await roomModel.findById(id).select({ revision: 1 }).lean();
+      return doc?.revision ?? null;
+    });
   }
   async lobby() {
     let doc = await lobbyModel.findById("main").lean();
@@ -159,6 +178,7 @@ export class MongoGameStore implements DurableStore {
       { $setOnInsert: { revision: room.revision, data: room } },
       { upsert: true, ...durableWrite },
     );
+    this.revisions.clear(room.id);
   }
   async room(id: string) {
     const doc = await roomModel.findById(id).lean();
@@ -175,6 +195,7 @@ export class MongoGameStore implements DurableStore {
       },
       durableWrite,
     );
+    this.revisions.clear(room.id);
     return result.modifiedCount === 1;
   }
   async touch(user: string, now: number) {

@@ -4,6 +4,7 @@ import { createServer } from "node:http";
 import mongoose from "mongoose";
 import { createApp } from "../src/application";
 import { fakeDatabase } from "./support/database";
+import { invalidateRankings } from "../src/services/ranking-cache";
 test("rankings públicos usam histórico real, desempates, mínimo de 10 e paginação sem expor a conta", async () => {
   const db = await fakeDatabase();
   db.users.length = 0;
@@ -95,8 +96,10 @@ test("rankings públicos usam histórico real, desempates, mínimo de 10 e pagin
     assert.equal(rules.experience.thresholds[30].xp, 82100);
     assert.equal(rules.experience.titles.at(-1).max, null);
     db.matches.length = 0;
+    invalidateRankings();
     assert.equal((await read("/rankings?mode=rate")).total, 0);
     db.users.length = 0;
+    invalidateRankings();
     const empty = await read("/rankings");
     assert.deepEqual(empty.podium, []);
     assert.deepEqual(empty.players, []);
@@ -202,6 +205,7 @@ test("baralhos públicos: mínimo por deck, dono correto, desempates, histórico
     assert.equal(hidden.total, 26);
     assert.ok(![...hidden.podium, ...hidden.decks].some((d) => d.id === id(1)));
     db.matches.length = 0;
+    invalidateRankings();
     assert.deepEqual((await read()).podium, []);
     assert.deepEqual((await read()).decks, []);
   } finally {

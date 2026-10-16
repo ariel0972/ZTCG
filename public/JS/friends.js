@@ -1,3 +1,4 @@
+import { setImageSource } from "./image-sources.js";
 import { api, navbar, message, node, profilePath } from "./auth.js";
 import { createDeckSelector } from "./deck-selector.js";
 import {
@@ -26,7 +27,7 @@ function person(player) {
   const identity = node("div", "", "social-person"),
     avatar = node("img"),
     link = node("a", player.nome);
-  avatar.src = player.avatarURL || "/assets/avatar.png";
+  setImageSource(avatar, player.avatarURL || "/assets/avatar.png");
   avatar.alt = "";
   avatar.className = "social-avatar";
   link.href = profilePath(player.id);
@@ -283,7 +284,7 @@ async function init() {
   });
   const timer = setInterval(() => {
     if (!document.hidden) void refresh().catch((e) => message(e.message, true));
-  }, 5000);
+  }, 15000);
   window.addEventListener("beforeunload", () => clearInterval(timer), {
     once: true,
   });

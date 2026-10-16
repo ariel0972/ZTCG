@@ -20,9 +20,11 @@ import {
 export const cardRoutes = Router();
 cardRoutes.get("/", async (_req, res) => {
   const cards = await getCatalog();
+  res.setHeader("Cache-Control", "public, max-age=60, s-maxage=60");
   res.json({ success: true, cards, rules: deckRules });
 });
 cardRoutes.get("/schema", (_req, res) => {
+  res.setHeader("Cache-Control", "public, max-age=3600");
   res.json({
     success: true,
     tipos: cardTypes,

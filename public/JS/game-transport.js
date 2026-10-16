@@ -134,10 +134,14 @@ export function gameTransport({
           return;
         }
       }
-      // HTTP fallback also refreshes an expired session before reconnecting.
+      // HTTP fallback refreshes expired sessions; backoff avoids database storms
+      // during outages. Jitter prevents clients from retrying together.
       timer = setTimeout(
         stream,
-        active ? 1000 : Math.min(10000, 2000 * failures),
+        Math.min(
+          active ? 10000 : 30000,
+          (active ? 1000 : 2000) * 2 ** Math.min(failures - 1, 5),
+        ) + Math.floor(Math.random() * 250),
       );
     } finally {
       clearTimeout(watchdog);

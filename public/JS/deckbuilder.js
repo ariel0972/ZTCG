@@ -1,3 +1,4 @@
+import { setImageSource } from "./image-sources.js";
 import { api, token, navbar, message, node } from "./auth.js";
 import { cardTile, labels } from "./card-view.js";
 import { renderCardDetails } from "./card-details.js";
@@ -72,7 +73,7 @@ function renderList() {
         ),
       );
       const icon = document.createElement("img");
-      icon.src = normalizeAppearance(d).icone;
+      setImageSource(icon, normalizeAppearance(d).icone);
       icon.alt = "";
       icon.className = "deck-list-icon";
       button.prepend(icon);
@@ -255,7 +256,7 @@ function details(card) {
   detailCard = card;
   $("detail-name").textContent = card.nome;
   renderCardDetails($("detail-text"), card);
-  $("detail-image").src = card.imgURL || "/assets/avatar.png";
+  setImageSource($("detail-image"), card.imgURL || "/assets/avatar.png");
   $("detail-image").alt = card.nome;
   $("detail-image").tabIndex = 0;
   $("detail-image").setAttribute("role", "button");
@@ -273,7 +274,7 @@ function details(card) {
   };
   $("detail-image").onerror = () => {
     $("detail-image").onerror = null;
-    $("detail-image").src = "/assets/avatar.png";
+    setImageSource($("detail-image"), "/assets/avatar.png");
   };
   $("detail-add").onclick = () => add(card);
   $("detail-remove").onclick = () => remove(card);
@@ -481,9 +482,12 @@ window.addEventListener("beforeunload", (e) => {
   }
 });
 async function load() {
-  await navbar();
   try {
-    const { cards } = await api("/cards");
+    const [, { cards }, accountDecks] = await Promise.all([
+      navbar(),
+      api("/cards"),
+      token() ? api("/decks") : Promise.resolve({ decks: [] }),
+    ]);
     catalog = cards;
     byId = new Map(cards.map((c) => [c.numeroCatalogo, c]));
     try {
@@ -492,10 +496,7 @@ async function load() {
     } catch {
       decks = [];
     }
-    if (token()) {
-      const data = await api("/decks");
-      decks = [...data.decks, ...decks];
-    }
+    decks = [...accountDecks.decks, ...decks];
     if (!decks.length) decks.push(fresh());
     const selected = localStorage.getItem("ztcg:selected-deck");
     let pending;

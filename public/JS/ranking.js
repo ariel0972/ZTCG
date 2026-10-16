@@ -1,3 +1,4 @@
+import { setImageSource } from "./image-sources.js";
 import { api, navbar, node, profilePath } from "./auth.js";
 import { cardTile } from "./card-view.js";
 import { createCardInspector } from "./card-inspection.js";
@@ -88,12 +89,18 @@ function entry(player, podium = false) {
     "rank-position",
   );
   const avatar = node("img", "", "rank-avatar");
-  avatar.src = deck ? player.icone : player.avatarURL || "/assets/avatar.png";
+  setImageSource(
+    avatar,
+    deck ? player.icone : player.avatarURL || "/assets/avatar.png",
+  );
   avatar.alt = "";
   avatar.loading = "lazy";
   avatar.onerror = () => {
     avatar.onerror = null;
-    avatar.src = deck ? "/assets/icons/neutro.svg" : "/assets/avatar.png";
+    setImageSource(
+      avatar,
+      deck ? "/assets/icons/neutro.svg" : "/assets/avatar.png",
+    );
   };
   const identity = node("div", "", "rank-identity");
   identity.append(

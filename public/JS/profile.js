@@ -1,3 +1,4 @@
+import { setImageSource } from "./image-sources.js";
 import { api, token, navbar, message, node, profilePath } from "./auth.js";
 import { cardTile } from "./card-view.js";
 import { createCardInspector } from "./card-inspection.js";
@@ -84,7 +85,7 @@ function renderDecks() {
         open = node("button", "", "profile-deck-open"),
         img = node("img"),
         text = node("span");
-      img.src = deck.icone;
+      setImageSource(img, deck.icone);
       img.alt = "";
       text.append(
         node("strong", deck.nome),
@@ -219,7 +220,7 @@ async function load() {
     catalog = cards.cards;
     $("player-name").textContent = data.user.nome;
     document.title = `${data.user.nome} · Zacornia`;
-    $("avatar").src = data.user.avatarURL || "/assets/avatar.png";
+    setImageSource($("avatar"), data.user.avatarURL || "/assets/avatar.png");
     $("profile-subtitle").textContent = data.owner
       ? "Seu perfil de duelista"
       : "Perfil do duelista";
@@ -325,7 +326,7 @@ $("profile-form").onsubmit = async (e) => {
       body: JSON.stringify({ nome: $("name").value, avatarURL }),
     });
     user = result.user;
-    $("avatar").src = user.avatarURL;
+    setImageSource($("avatar"), user.avatarURL);
     $("player-name").textContent = user.nome;
     message("Perfil atualizado.");
     await navbar();

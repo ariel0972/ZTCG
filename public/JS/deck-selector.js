@@ -1,3 +1,4 @@
+import { setImageSource } from "./image-sources.js";
 export function createDeckSelector(
   select,
   { userId, storage, label = "Seu baralho", catalog = [] } = {},
@@ -59,10 +60,10 @@ export function createDeckSelector(
   const art = (deck) =>
     cards.get(deck?.mago)?.imgURL || deck?.icone || "/assets/avatar.png";
   function setImage(img, url) {
-    img.src = url;
+    setImageSource(img, url);
     img.onerror = () => {
       img.onerror = null;
-      img.src = "/assets/avatar.png";
+      setImageSource(img, "/assets/avatar.png");
     };
   }
   function sync() {

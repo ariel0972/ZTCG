@@ -1,3 +1,4 @@
+import { setImageSource } from "./image-sources.js";
 import { cardBacks } from "./card-backs.js";
 export const deckIcons = [
   ["neutro", "Neutro"],
@@ -42,7 +43,7 @@ export function renderDeckAppearance(container, deck, changed) {
       const value = key === "icone" ? url(id) : id;
       button.setAttribute("aria-pressed", String(appearance[key] === value));
       const img = doc.createElement("img");
-      img.src = url(id);
+      setImageSource(img, url(id));
       img.alt = "";
       const name = doc.createElement("span");
       name.textContent = label;

@@ -59,14 +59,30 @@ export function createApp(
       transport: "http-durable",
     });
   });
-  app.use(express.static(path.join(__dirname, "..", "public")));
-  app.get("/rules-data", (_req, res) =>
+  app.use(
+    express.static(path.join(__dirname, "..", "public"), {
+      setHeaders(res, file) {
+        const asset = file.includes(`${path.sep}assets${path.sep}`);
+        const versioned = asset && /[.-][a-f0-9]{12}\.webp$/.test(file);
+        res.setHeader(
+          "Cache-Control",
+          versioned
+            ? "public, max-age=31536000, immutable"
+            : asset
+              ? "public, max-age=86400"
+              : "public, max-age=0, must-revalidate",
+        );
+      },
+    }),
+  );
+  app.get("/rules-data", (_req, res) => {
+    res.setHeader("Cache-Control", "public, max-age=3600");
     res.json({
       success: true,
       reactions: reactionDescriptions,
       experience: experienceRules(),
-    }),
-  );
+    });
+  });
   app.get(["/ranking", "/regras"], (req, res) => {
     res.sendFile(
       path.join(

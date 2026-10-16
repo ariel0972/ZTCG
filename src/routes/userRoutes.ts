@@ -10,6 +10,7 @@ import { rateLimit } from "../middlewares/rateLimit";
 import { passwordRoutes } from "./passwordRoutes";
 import { playerName, playerNameKey } from "../services/player-name";
 import { profileStats } from "../services/profiles";
+import { invalidateRankings } from "../services/ranking-cache";
 const router = Router();
 router.use(passwordRoutes());
 const refreshCookie = "ztcg_refresh";
@@ -205,6 +206,7 @@ router.put("/user/edit", checkToken, async (req: AuthRequest, res) => {
     { new: true, runValidators: true },
   );
   if (!user) throw new AppError(404, "Conta não encontrada.");
+  invalidateRankings();
   res.json({
     success: true,
     user: await publicUser(user),

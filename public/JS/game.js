@@ -1,3 +1,4 @@
+import { setImageSource } from "./image-sources.js";
 import {
   automaticTargets,
   hasAutomaticTarget,
@@ -576,7 +577,7 @@ function renderActions() {
       `Ver somente a imagem de ${inspected.nome}`,
     );
     const image = document.createElement("img");
-    image.src = inspected.imgURL || "/assets/avatar.png";
+    setImageSource(image, inspected.imgURL || "/assets/avatar.png");
     image.alt = inspected.nome;
     imageButton.append(image);
     imageButton.onclick = () => inspector.art(inspected);
@@ -903,13 +904,6 @@ function slotView(slot) {
     button.classList.add("occupied");
     if (card.attacked) button.classList.add("exhausted");
     inspector.bind(button, card);
-    const img = document.createElement("img");
-    img.src = card.imgURL || "/assets/avatar.png";
-    img.alt = "";
-    img.onerror = () => {
-      img.onerror = null;
-      img.src = "/assets/avatar.png";
-    };
     const oldFace = document.querySelector(`[data-live-card-id="${card.id}"]`);
     const previous = oldFace
       ? {
@@ -1147,7 +1141,7 @@ function hud(id, player) {
   );
   if (player.deckAppearance) {
     const icon = document.createElement("img");
-    icon.src = player.deckAppearance.icone;
+    setImageSource(icon, player.deckAppearance.icone);
     icon.alt = "";
     icon.className = "duelist-avatar deck-icon";
     identity.firstChild.replaceWith(icon);

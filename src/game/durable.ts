@@ -11,6 +11,7 @@ import { ownedDeck } from "../services/decks";
 import Match from "../db/models/match";
 import { AppError } from "../lib/errors";
 import { log } from "../lib/observability";
+import { invalidateRankings } from "../services/ranking-cache";
 export const TURN_MS = 120_000,
   LEASE_MS = 15_000,
   RECONNECT_MS = 90_000;
@@ -211,12 +212,18 @@ export class DurableGame {
       return (await this.store.saveLobby(revision, data)) ? result : undefined;
     });
   }
-  private async authorized(id: string, user?: string, claims?: Lobby) {
+  private async authorized(
+    id: string,
+    user?: string,
+    claims?: Pick<Lobby, "active">,
+  ) {
     const [room, data] = await Promise.all([
       this.store.room(id),
       claims
         ? Promise.resolve(claims)
-        : this.store.lobby().then((lobby) => lobby.data),
+        : this.store.lobbyState
+          ? this.store.lobbyState()
+          : this.store.lobby().then((lobby) => lobby.data),
     ]);
     if (!room) throw new AppError(404, "Partida não encontrada.");
     if (user && !room.entries.some((e) => e.id === user))
@@ -393,8 +400,10 @@ export class DurableGame {
   }
   async state(user: string, heartbeat = true) {
     // Resolve expiration using previous heartbeats, then acknowledge this client's return.
-    const { data } = await this.store.lobby(),
-      id = data.active[user];
+    const data = this.store.lobbyState
+      ? await this.store.lobbyState()
+      : (await this.store.lobby()).data;
+    const id = data.active[user];
     let room: DurableRoom | null = null;
     if (id)
       room = await this.retry(async () => {
@@ -471,6 +480,7 @@ export class DurableGame {
     if (room.game.state.status !== "FINISHED" || room.resultSaved) return;
     try {
       await this.record(room);
+      invalidateRankings();
       await this.retry(async () => {
         const current = await this.store.room(room.id);
         if (!current || current.resultSaved) return true;

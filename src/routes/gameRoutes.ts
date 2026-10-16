@@ -44,7 +44,7 @@ export function gameRoutes(game: DurableGame, social: MatchSocial) {
         const changed =
           match?.status === "ACTIVE" && game.store.roomRevision
             ? (await game.store.roomRevision(match.id)) !== match.revision
-            : true;
+            : Date.now() - lastRead >= (snapshot.queued ? 2000 : 5000);
         if (closed) return;
         const due =
           match?.status === "ACTIVE" &&

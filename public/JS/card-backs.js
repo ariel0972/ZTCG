@@ -1,3 +1,4 @@
+import { setImageSource } from "./image-sources.js";
 export const cardBacks = [
   ["common", "Comum"],
   ["zarcos", "Zarcos"],
@@ -27,9 +28,9 @@ export function createCardBacks({
     footer.hidden = onField;
     toggle.checked = onField;
     for (const image of field.querySelectorAll("img"))
-      image.src = `/assets/card-backs/${chosen}.png`;
+      setImageSource(image, `/assets/card-backs/${chosen}.png`);
     const preview = picker.querySelector("img");
-    if (preview) preview.src = `/assets/card-backs/${chosen}.png`;
+    if (preview) setImageSource(preview, `/assets/card-backs/${chosen}.png`);
   }
   picker.replaceChildren();
   const preview = doc.createElement("img");
@@ -59,7 +60,7 @@ export function createCardBacks({
       if (!enemyField) return;
       const chosen = cardBacks.some(([id]) => id === back) ? back : "common";
       for (const image of enemyField.querySelectorAll("img"))
-        image.src = `/assets/card-backs/${chosen}.png`;
+        setImageSource(image, `/assets/card-backs/${chosen}.png`);
       enemyField.querySelector("#enemy-deck-pile-count").textContent =
         String(deckCount);
       enemyField.querySelector("#enemy-graveyard-pile-count").textContent =

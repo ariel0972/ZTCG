@@ -8,6 +8,16 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:8.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping:1}).ok'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     environment: production
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -23,6 +33,8 @@ jobs:
       - run: npm run check
         env:
           NODE_OPTIONS: --max-old-space-size=2048
+          MONGO_TEST_URL: mongodb://127.0.0.1:27017
+          MONGO_TEST_DATABASE: ztcg_test_ci_${{ github.run_id }}_${{ github.run_attempt }}
       - name: Check credentials
         run: test -n "$VERCEL_TOKEN" && test -n "$VERCEL_ORG_ID" && test -n "$VERCEL_PROJECT_ID"
       - run: npx --yes vercel@62.4.0 pull --yes --environment=production --token="$VERCEL_TOKEN"

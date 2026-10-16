@@ -66,6 +66,13 @@ test(
       safeToDrop = true;
       await service().join("one", "One", "deck", randomUUID());
       assert.equal((await service().state("one")).queued, true);
+      const claims = await service().store.lobbyState!();
+      assert.deepEqual(Object.keys(claims).sort(), ["active", "waiting"]);
+      assert.deepEqual(Object.keys(claims.waiting[0]).sort(), [
+        "id",
+        "joinedAt",
+      ]);
+      assert.equal(claims.waiting[0].id, "one");
       await service().join("two", "Two", "deck", randomUUID());
       const match = (await service().state("one")).match!;
       const command = { type: "endTurn", version: 0, actionId: randomUUID() };

@@ -175,3 +175,43 @@ test("evento confirmado não é reenviado nem reportado como falha por erro post
     transport.close();
   }
 });
+
+test("transporte reduz tentativas consecutivas durante indisponibilidade e encerra ao fechar", async (t) => {
+  const path = "../public/JS/game-transport.js";
+  const { gameTransport } = await import(path);
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  let attempts = 0;
+  const transport = gameTransport({
+    getToken: () => "fixture",
+    fetchStream: async () => {
+      attempts++;
+      throw Error("offline");
+    },
+    request: async () => ({ success: true, queued: false, match: null }),
+  });
+  const settle = () => new Promise<void>((resolve) => setImmediate(resolve));
+  try {
+    t.mock.timers.tick(0);
+    await settle();
+    assert.equal(attempts, 1);
+    t.mock.timers.tick(1999);
+    await settle();
+    assert.equal(attempts, 1);
+    t.mock.timers.tick(251);
+    await settle();
+    assert.equal(attempts, 2);
+    t.mock.timers.tick(3999);
+    await settle();
+    assert.equal(attempts, 2);
+    t.mock.timers.tick(251);
+    await settle();
+    assert.equal(attempts, 3);
+    transport.close();
+    t.mock.timers.tick(60000);
+    await settle();
+    assert.equal(attempts, 3);
+  } finally {
+    transport.close();
+    t.mock.timers.reset();
+  }
+});

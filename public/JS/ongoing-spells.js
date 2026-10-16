@@ -1,3 +1,4 @@
+import { setImageSource } from "./image-sources.js";
 import { node } from "./auth.js";
 const legacyCards = {
   tornado: { nome: "Furacão", imgURL: "/assets/Cards/Furacão.png" },
@@ -32,7 +33,10 @@ export function createOngoingSpells(ownHost, enemyHost) {
   });
   function describe(effect) {
     heading.textContent = effect.card.nome;
-    image.src = effect.card.imgURL || "/assets/card-backs/common.png";
+    setImageSource(
+      image,
+      effect.card.imgURL || "/assets/card-backs/common.png",
+    );
     image.alt = effect.card.nome;
     details.replaceChildren(
       node("p", `Ativado por ${effect.ownerName}`),
@@ -85,7 +89,7 @@ export function createOngoingSpells(ownHost, enemyHost) {
           "aria-label",
           `${card.nome}, ${mine ? "seu efeito" : "efeito do oponente"}: ${spell.damage} de dano, ${spell.rounds} rodada(s) restante(s). Ver detalhes.`,
         );
-        art.src = card.imgURL || "/assets/card-backs/common.png";
+        setImageSource(art, card.imgURL || "/assets/card-backs/common.png");
         art.alt = "";
         button.append(art, counter, node("small", card.nome));
         button.onclick = () => {
