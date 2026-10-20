@@ -1,3 +1,4 @@
+import { createCoinToss } from "./coin-toss.js";
 import { setImageSource } from "./image-sources.js";
 import {
   automaticTargets,
@@ -70,6 +71,10 @@ const turnAnnouncement = createTurnAnnouncement(
   $("battle-arena"),
   $("turn-announcement"),
 );
+const coinToss = createCoinToss(document.body, {
+  getViewerId: () => user?.id,
+  onChoose: (face) => command({ type: "chooseCoin", face }),
+});
 const acknowledgedResults = new Set();
 const matchConnection = node("p", "Conectando…", "match-connection");
 $("match-title").after(matchConnection);
@@ -180,6 +185,7 @@ function myTurn() {
     !state?.pendingHandChoice &&
     !state?.pendingRevive &&
     state?.status === "ACTIVE" &&
+    state.phase !== "COIN_TOSS" &&
     (state.phase === "PREPARATION"
       ? !myPlayer().preparation.ready
       : state.current === user.id)
@@ -665,6 +671,16 @@ function renderActions() {
         handBlock(card),
       ),
     );
+    if (card.canDiscard)
+      panel.append(
+        actionButton(
+          "Descartar · recuperar " + card.custoMana + " mana",
+          () => command({ type: "discardHand", cardId: card.id }),
+          state.phase !== "BATTLE" || state.turn < 2
+            ? "Descarte disponível no seu turno a partir do turno 2."
+            : "",
+        ),
+      );
     panel.append(
       node(
         "p",
@@ -1286,6 +1302,7 @@ function hud(id, player) {
   $(id).replaceChildren(identity, resources, actions);
 }
 function render() {
+  coinToss.update(state);
   document.body.classList.toggle("in-match", !!state && !!user);
   responsePanel.replaceChildren();
   responsePanel.hidden =
@@ -1473,7 +1490,9 @@ function render() {
           : "Empate"
       : state.phase === "PREPARATION"
         ? "Rodada 1 · Preparação simultânea"
-        : `Rodada ${state.round} · Turno ${state.turn} · ${state.current === user.id ? "Sua vez" : "Vez do oponente"}`;
+        : state.phase === "COIN_TOSS"
+          ? "Cara ou coroa · Escolhendo quem começa"
+          : `Rodada ${state.round} · Turno ${state.turn} · ${state.current === user.id ? "Sua vez" : "Vez do oponente"}`;
   $("end-turn").textContent =
     state.phase === "PREPARATION" ? "Confirmar preparação" : "Passar turno";
   $("end-turn").disabled = !myTurn() || pending;
@@ -1853,6 +1872,7 @@ window.addEventListener("pagehide", () => {
   battleEvents.close();
   handNavigation.close();
   turnAnnouncement.close();
+  coinToss.close();
 });
 
 window.addEventListener("pageshow", (event) => {

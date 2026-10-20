@@ -1,3 +1,4 @@
+import { completeCoin } from "./support/coin";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -91,6 +92,7 @@ test("janela de Jato dura 20 segundos, persiste após reinício e preserva tempo
       actionId: randomUUID(),
       version: g.state.version,
     });
+  completeCoin(g);
   g.state.current = "p1";
   g.state.turn = 3;
   const instantiate = (id: string, ownerId: string) => ({

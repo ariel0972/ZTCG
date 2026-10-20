@@ -5,6 +5,11 @@ import { canonicalStatus } from "./status";
 import { reactionDescriptions } from "./reactions";
 
 export const effectIds = [
+  "spellBoost",
+  "stealMana",
+  "attachMana",
+  "periodicDamage",
+  "returnOnElement",
   "revealStealHand",
   "bloodScent",
   "damage",
@@ -262,6 +267,61 @@ export function playableErrors(card: Card): string[] {
           }
         }
       }
+      if (
+        (e.descontoMana !== undefined && e.id !== "spellBoost") ||
+        (e.elementos && e.id !== "spellBoost")
+      )
+        errors.push("Desconto e elementos exigem spellBoost.");
+      if (
+        (e.fracao !== undefined || e.limiteManaOrigem !== undefined) &&
+        e.id !== "stealMana"
+      )
+        errors.push("Fração e limite de mana exigem stealMana.");
+      if (
+        (e.removerAoUsarElemento || e.janelaTurnos !== undefined) &&
+        !["attachMana", "returnOnElement"].includes(e.id)
+      )
+        errors.push("Vínculo e janela exigem attachMana.");
+      if (
+        e.id === "spellBoost" &&
+        (ability ||
+          card.tipo !== "Feitico" ||
+          target !== "Global" ||
+          !e.elementos?.length ||
+          !e.duracao ||
+          e.valor === undefined ||
+          e.descontoMana === undefined)
+      )
+        errors.push(
+          "spellBoost exige feitiço Global, elementos, valor, descontoMana e duração.",
+        );
+      if (
+        e.id === "stealMana" &&
+        (target !== "Global" || e.fracao === undefined)
+      )
+        errors.push("stealMana exige Global e fracao.");
+      if (
+        e.id === "attachMana" &&
+        (ability ||
+          card.tipo !== "Feitico" ||
+          target !== "UnicoAliado" ||
+          !e.valor ||
+          !e.janelaTurnos)
+      )
+        errors.push(
+          "attachMana exige feitiço UnicoAliado, valor e janelaTurnos.",
+        );
+      if (
+        e.id === "periodicDamage" &&
+        (ability ||
+          card.tipo !== "Feitico" ||
+          !["TodosInimigos", "TodasTropasInimigas"].includes(target ?? "") ||
+          !e.duracao ||
+          !e.valor)
+      )
+        errors.push("periodicDamage exige feitiço de área, valor e duração.");
+      if (e.id === "returnOnElement" && (!e.elemento || target !== "Global"))
+        errors.push("returnOnElement exige Global e elemento.");
       if (!(effectIds as readonly string[]).includes(e.id))
         errors.push(`Efeito ${e.id} não implementado.`);
       if (
@@ -368,6 +428,7 @@ export function playableErrors(card: Card): string[] {
         e.id !== "spendAttack" &&
         e.id !== "displace" &&
         e.id !== "revive" &&
+        e.id !== "returnOnElement" &&
         e.valor === undefined
       )
         errors.push(`Defina valor para ${e.id}.`);

@@ -33,6 +33,7 @@ Abra `http://127.0.0.1:3187`. Contas `p1@test.local`, `p2@test.local`, `p3@test.
 
 - Sem login, é possível montar, importar e exportar rascunhos locais. Com login, salve os decks na conta e entre na fila ou aceite um convite de amigo.
 - Deck jogável: 40 cartas publicadas e executáveis, mais um mago; até três cópias de tropas/feitiços e duas de estruturas/armamentos. Rascunhos incompletos podem ser salvos.
+- Após ambos confirmarem a preparação, cara ou coroa define quem começa: um jogador escolhe e o outro recebe a face oposta; prazo de 20 segundos, resultado do servidor e animação antes do primeiro turno.
 - Preparação simultânea: cinco cartas e cinco de mana por jogador; mobilização de tropas gratuita, manual e limitada pelo mago. Cada jogador confirma quando quiser; compras opcionais de reembaralhamento também precisam ser resolvidas.
 - Na preparação, nenhum feitiço é permitido; ataques, habilidades e dano também ficam bloqueados. No primeiro turno após ela, só se mobilizam tropas. No segundo, ataques e habilidades/feitiços sem dano são permitidos. Armamentos e estruturas ficam bloqueados nos dois primeiros turnos; a partir do terceiro, valem os limites normais.
 - Jogue no máximo um armamento por turno: os espaços da frente exigem tropa receptora na coluna correspondente; os de trás continuam equipando o mago.

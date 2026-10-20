@@ -3,7 +3,7 @@ export function createTurnAnnouncement(arena, banner) {
   const win = arena.ownerDocument.defaultView;
   return {
     update(state, userId) {
-      const battle = state.status === "ACTIVE" && state.phase !== "PREPARATION";
+      const battle = state.status === "ACTIVE" && state.phase === "BATTLE";
       arena.dataset.activeSide = battle
         ? state.current === userId
           ? "me"

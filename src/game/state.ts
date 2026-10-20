@@ -1,3 +1,4 @@
+import type { CoinToss } from "./coin-toss";
 import type { Card, Effect } from "../types/card";
 import type { Status } from "./status";
 import type { EffectClock } from "./effect-clock";
@@ -48,6 +49,7 @@ export interface Instance extends Card {
     ownerId: string;
     origin: string;
   }[];
+  appliedSpellBonus?: number;
   fireSpellsCast?: number;
   fireDamageBonus?: number;
   passiveCounters?: Record<string, number>;
@@ -75,12 +77,19 @@ export const troopPositions = (slots: Slot[]): Slot[] =>
   );
 export interface Player {
   revealHandRound?: number;
+  revealHandUntilTurn?: number;
   piranhaBleedingBonus?: number;
   castCards?: string[];
   lastTroopAttacker?: { cardId: string; turn: number };
   roundSpells?: string[];
   comboTriggered?: boolean;
-  zarcosWatchers?: { cardId: string; kind: "flow" | "tear" }[];
+  zarcosWatchers?: {
+    cardId: string;
+    kind: "flow" | "tear" | "return";
+    elemento?: Card["elemento"];
+    throughTurn?: number;
+  }[];
+  returnUsedUntil?: Record<string, number>;
   zarcosTriggered?: string[];
   id: string;
   nome: string;
@@ -121,6 +130,14 @@ export interface AttackField extends EffectClock {
   card: Pick<Instance, "id" | "ownerId" | "numeroCatalogo" | "nome" | "imgURL">;
 }
 export interface State {
+  attachments?: {
+    source: Instance;
+    targetId: string;
+    ownerId: string;
+    manaBonus: number;
+    removerAoUsarElemento?: Card["elemento"];
+    watchThroughTurn: number;
+  }[];
   fieldEffects?: AttackField[];
   pendingImpact?: {
     base: State;
@@ -150,7 +167,8 @@ export interface State {
   ongoingSpells?: {
     id: string;
     ownerId: string;
-    kind: "tornado" | "arrowRain" | "sandstorm";
+    kind: "tornado" | "arrowRain" | "sandstorm" | "periodicDamage";
+    target?: "TodosInimigos" | "TodasTropasInimigas";
     nextTickTurn?: number;
     rounds: number;
     damage: number;
@@ -169,7 +187,8 @@ export interface State {
   version: number;
   turn: number;
   round: number;
-  phase: "PREPARATION" | "BATTLE";
+  phase: "PREPARATION" | "COIN_TOSS" | "BATTLE";
+  coinToss?: CoinToss;
   current: string;
   status: "ACTIVE" | "FINISHED";
   winner: string | null;

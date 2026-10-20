@@ -140,6 +140,12 @@ export function cardFace(
     tag.setAttribute("aria-label", tag.title);
     effects.append(tag);
   }
+  for (const attached of card.manaAttachments || []) {
+    const tag = node("span", `+${attached.mana} mana`, "effect-token");
+    tag.title = `${attached.nome} · +${attached.mana} de recuperação de mana enquanto vinculada`;
+    tag.setAttribute("aria-label", tag.title);
+    effects.append(tag);
+  }
   const symbols = {
     Envenenado: "☠",
     Queimado: "♨",

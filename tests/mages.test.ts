@@ -1,3 +1,4 @@
+import { completeCoin } from "./support/coin";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -33,6 +34,7 @@ function make(mage = "016") {
   );
   act(g, "p1", { type: "endTurn" });
   act(g, "p2", { type: "endTurn" });
+  completeCoin(g);
   turn(g, "p1");
   return g;
 }

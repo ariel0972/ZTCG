@@ -83,6 +83,12 @@ export const effectSchema = z
     id: identifier,
     alvo: z.literal("Proprio").optional(),
     valor: number.optional(),
+    descontoMana: number.optional(),
+    elementos: z.array(z.enum(elements)).min(1).max(6).optional(),
+    fracao: z.number().min(0).max(1).optional(),
+    limiteManaOrigem: number.max(20).optional(),
+    removerAoUsarElemento: z.enum(elements).optional(),
+    janelaTurnos: number.min(1).max(20).optional(),
     status: z.string().max(80).optional(),
     duracao: number.optional(),
     elemento: z.enum(elements).optional(),
@@ -210,7 +216,13 @@ export const passiveActionSchema = z.discriminatedUnion("id", [
   z
     .object({ id: z.literal("attackLifesteal"), excedente: number.optional() })
     .strict(),
-  z.object({ id: z.literal("discardMana"), valor: number }).strict(),
+  z
+    .object({
+      id: z.literal("discardMana"),
+      valor: number,
+      custoAtual: z.boolean().optional(),
+    })
+    .strict(),
   z
     .object({
       id: z.literal("counterAttack"),

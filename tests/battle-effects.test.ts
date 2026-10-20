@@ -391,7 +391,7 @@ test("animações cobrem reações, sobrevivem à morte do alvo e respeitam movi
     dom.window.close();
   }
 });
-test("snapshots repetidos não reproduzem efeitos; cada golpe recebe feedback mesmo com seis avisos", async () => {
+test("snapshots repetidos não reproduzem efeitos; cada golpe recebe feedback mesmo com seis avisos", async (t) => {
   const path = "../public/JS/battle-events.js";
   const { createBattleEvents } = await import(path);
   const dom = browserFixture(),
@@ -401,6 +401,7 @@ test("snapshots repetidos não reproduzem efeitos; cada golpe recebe feedback me
     value: dom.window.document,
   });
   const view = createBattleEvents(dom.window.document.body);
+  t.mock.timers.enable({ apis: ["Date", "setTimeout"], now: 100000 });
   const events = Array.from({ length: 8 }, (_, i) => ({
     sequence: i + 1,
     kind: "damage",
@@ -411,6 +412,7 @@ test("snapshots repetidos não reproduzem efeitos; cada golpe recebe feedback me
     view.update({ id: "a", events: [] });
     view.update({ id: "a", events });
     view.update({ id: "a", events });
+    t.mock.timers.tick(420);
     assert.equal(
       dom.window.document.querySelectorAll(".battle-effect").length,
       8,
@@ -431,6 +433,7 @@ test("snapshots repetidos não reproduzem efeitos; cada golpe recebe feedback me
     );
   } finally {
     view.close();
+    t.mock.timers.reset();
     if (old) Object.defineProperty(globalThis, "document", old);
     else delete (globalThis as any).document;
     dom.window.close();
@@ -519,6 +522,86 @@ test("avisos usam cor da origem, duram pelo menos 3 segundos e saem um por vez",
     for (let i = 0; i < 40; i++) t.mock.timers.tick(500);
     assert.equal(
       dom.window.document.querySelectorAll(".battle-event").length,
+      0,
+    );
+  } finally {
+    view.close();
+    t.mock.timers.reset();
+    if (old) Object.defineProperty(globalThis, "document", old);
+    else delete (globalThis as any).document;
+    dom.window.close();
+  }
+});
+
+test("reações e danos têm intervalo visual de 60 ms e troca de partida cancela a fila", async (t) => {
+  const modulePath = "../public/JS/battle-events.js";
+  const { createBattleEvents } = await import(modulePath);
+  const dom = browserFixture();
+  const old = Object.getOwnPropertyDescriptor(globalThis, "document");
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: dom.window.document,
+  });
+  t.mock.timers.enable({ apis: ["Date", "setTimeout"], now: 100000 });
+  const view = createBattleEvents(dom.window.document.body);
+  const events = [
+    {
+      sequence: 1,
+      kind: "damage",
+      card: { id: "c", nome: "Alvo" },
+      damage: { amount: 3 },
+      summary: "Ataque causou 3",
+    },
+    {
+      sequence: 2,
+      kind: "elementalReaction",
+      reaction: "Lava",
+      card: { id: "c", nome: "Alvo" },
+    },
+    {
+      sequence: 3,
+      kind: "damage",
+      card: { id: "c", nome: "Alvo" },
+      damage: { amount: 2 },
+      summary: "Lava causou 2",
+    },
+  ];
+  try {
+    view.update({ id: "a", events: [] });
+    view.update({ id: "a", events });
+    assert.equal(
+      dom.window.document.querySelectorAll(".battle-effect").length,
+      1,
+    );
+    t.mock.timers.tick(59);
+    assert.equal(
+      dom.window.document.querySelectorAll('[data-kind="reaction"]').length,
+      0,
+    );
+    t.mock.timers.tick(1);
+    assert.equal(
+      dom.window.document.querySelectorAll('[data-kind="reaction"]').length,
+      1,
+    );
+    t.mock.timers.tick(60);
+    assert.equal(
+      dom.window.document.querySelectorAll('[data-kind="damage"]').length,
+      2,
+    );
+    assert.equal(
+      dom.window.document
+        .querySelectorAll(".battle-effect__label")[2]
+        .getAttribute("title"),
+      "Lava causou 2",
+    );
+    view.update({
+      id: "a",
+      events: [...events, { ...events[2], sequence: 4 }],
+    });
+    view.update({ id: "b", events: [] });
+    t.mock.timers.tick(1000);
+    assert.equal(
+      dom.window.document.querySelectorAll(".battle-effect").length,
       0,
     );
   } finally {

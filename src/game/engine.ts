@@ -1,3 +1,5 @@
+import { modifiedSpell, currentSpellCost } from "./spell-modifiers";
+import { createCoinToss, resolveCoinToss, type CoinFace } from "./coin-toss";
 import { effectRoundDue, nextEffectRound } from "./effect-clock";
 import { reviveDestinations, spellTurnBonusStatus } from "./resurrection";
 import { fieldElementResult } from "./field-effects";
@@ -563,7 +565,11 @@ export class Game {
         this.log(`${p.nome}: tempo esgotado, turno passado.`);
       }
     };
-    if (this.state.phase === "PREPARATION") {
+    if (this.state.phase === "COIN_TOSS") {
+      if (!this.state.coinToss?.result)
+        this.chooseCoin(this.state.coinToss!.chooserId, "heads");
+      else this.beginBattle();
+    } else if (this.state.phase === "PREPARATION") {
       for (const p of this.state.players) {
         if (!p.preparation.ready || p.preparation.bonusDraws > 0) {
           record(p);
@@ -588,7 +594,10 @@ export class Game {
     return this.state.phase === "PREPARATION" || this.state.turn <= 1;
   }
   private manaRecovery(mage: Instance) {
-    if (mage.tipo !== "Mago") return mage.manaGerada ?? 0;
+    const attached = (this.state.attachments ?? [])
+      .filter((a) => a.targetId === mage.id)
+      .reduce((n, a) => n + a.manaBonus, 0);
+    if (mage.tipo !== "Mago") return (mage.manaGerada ?? 0) + attached;
     const player = this.player(mage.ownerId);
     let recovery = mage.recuperacaoMana ?? 0;
     for (const passive of mage.habilidadesPassivas) {
@@ -606,7 +615,7 @@ export class Game {
       for (const action of rule.efeitos)
         if (action.id === "manaRecovery") recovery = action.valor;
     }
-    return recovery;
+    return recovery + attached;
   }
   private recoverMana(player: Player) {
     this.gainMana(
@@ -617,7 +626,7 @@ export class Game {
           .flatMap(slotCards)
           .reduce(
             (sum, c) =>
-              sum + (c && c.tipo !== "Mago" ? (c.manaGerada ?? 0) : 0),
+              sum + (c && c.tipo !== "Mago" ? this.manaRecovery(c) : 0),
             0,
           ),
     );
@@ -848,6 +857,7 @@ export class Game {
           : [
               "damage",
               "attackField",
+              "periodicDamage",
               "stoneVolley",
               "tornado",
               "arrowRain",
@@ -1251,6 +1261,7 @@ export class Game {
     delete card.reviveBonuses;
   }
   private resetCard(card: Instance) {
+    this.clearAttachments(card.id);
     this.removeReviveBonuses(card);
     card.hpAtual = card.hp ?? 0;
     card.statuses = [];
@@ -1320,6 +1331,7 @@ export class Game {
         for (const dead of [slot.card, slot.rider].filter(
           (c): c is Instance => !!c && c.tipo === "Tropa" && c.hpAtual <= 0,
         )) {
+          this.clearAttachments(dead.id);
           const killedBy = dead.killedBy;
           this.event("death", dead);
           if (slot.rider?.id === dead.id) {
@@ -1381,6 +1393,13 @@ export class Game {
         }
       }
     }
+    for (const a of [...(this.state.attachments ?? [])])
+      if (
+        !this.targetSlot(a.targetId) ||
+        !this.findCard(a.targetId) ||
+        this.findCard(a.targetId)!.hpAtual <= 0
+      )
+        this.removeAttachment(a);
     if (guard >= 100) this.fail("Ciclo de efeitos excedeu o limite.");
     this.state.pendingRevives = this.state.pendingRevives?.filter(
       (choice) =>
@@ -1817,6 +1836,58 @@ export class Game {
     }
     delete this.state.pendingHandChoice;
   }
+  private removeAttachment(
+    attachment: NonNullable<State["attachments"]>[number],
+  ) {
+    this.state.attachments = this.state.attachments?.filter(
+      (a) => a !== attachment,
+    );
+    this.player(attachment.ownerId).graveyard.push(attachment.source);
+    this.event(
+      "notice",
+      attachment.source,
+      "Vínculo encerrado; a carta foi para o cemitério.",
+    );
+  }
+  private clearAttachments(targetId: string) {
+    for (const a of [...(this.state.attachments ?? [])])
+      if (a.targetId === targetId) this.removeAttachment(a);
+  }
+  private manaAttachments(card: Instance) {
+    return (this.state.attachments ?? [])
+      .filter((a) => a.targetId === card.id)
+      .map((a) => ({
+        id: a.source.id,
+        nome: a.source.nome,
+        mana: a.manaBonus,
+      }));
+  }
+  private canDiscard(card: Instance) {
+    return card.habilidadesPassivas
+      .map(normalizePassive)
+      .some(
+        (p) =>
+          p.gatilho === "continuous" &&
+          p.efeitos.some((e) => e.id === "discardMana"),
+      );
+  }
+  private discardHand(user: string, cardId: string) {
+    const p = this.player(user),
+      index = p.hand.findIndex((c) => c.id === cardId),
+      card = p.hand[index];
+    if (
+      this.state.phase !== "BATTLE" ||
+      this.state.turn < 2 ||
+      this.state.current !== user
+    )
+      this.fail(
+        "Descarte voluntário só é permitido no seu turno a partir do segundo turno após a preparação.",
+      );
+    if (!card || !this.canDiscard(card))
+      this.fail("Esta carta não permite descarte voluntário.");
+    const discarded = this.discardFromHand(p, index);
+    this.log(`${p.nome} descartou ${discarded.nome} da mão.`);
+  }
   private discardFromHand(player: Player, index: number) {
     const card = player.hand.splice(index, 1)[0];
     player.graveyard.push(card);
@@ -1833,7 +1904,12 @@ export class Game {
         continue;
       for (const effect of passive.efeitos)
         if (effect.id === "discardMana") {
-          const recovered = this.gainMana(player, effect.valor);
+          const recovered = this.gainMana(
+            player,
+            effect.custoAtual
+              ? currentSpellCost(card, player.mage)
+              : effect.valor,
+          );
           this.event(
             "passive",
             card,
@@ -1942,6 +2018,100 @@ export class Game {
           ),
       );
       switch (effect.id) {
+        case "spellBoost":
+          player.mage.statuses.push({
+            nome: source?.nome ?? "Amplificação",
+            valor: effect.valor,
+            turnosRestantes: effect.duracao!,
+            unidade: "rodada",
+            nextTickTurn: nextEffectRound(this.state.turn),
+            spellBoost: {
+              elementos: effect.elementos!,
+              bonus: effect.valor!,
+              descontoMana: effect.descontoMana!,
+            },
+          });
+          break;
+        case "stealMana": {
+          const enemy = this.opponent(ownerId);
+          const amount = Math.min(
+            enemy.mana,
+            20 - player.mana,
+            Math.floor(enemy.mana * effect.fracao!) + (effect.valor ?? 0),
+          );
+          enemy.mana -= amount;
+          const gained = this.gainMana(player, amount);
+          this.event(
+            "notice",
+            source ?? player.mage,
+            `Roubou ${gained} de mana de ${enemy.nome}.`,
+          );
+          break;
+        }
+        case "returnOnElement":
+          if (
+            source &&
+            (player.returnUsedUntil?.[source.id] ?? -1) < this.state.turn
+          )
+            (player.zarcosWatchers ??= []).push({
+              cardId: source.id,
+              kind: "return",
+              elemento: effect.elemento,
+              throughTurn: this.state.turn + (effect.janelaTurnos ?? 2) - 1,
+            });
+          break;
+        case "attachMana": {
+          const target = this.findCard(ids[0]) ?? this.targetSlot(ids[0])?.card;
+          if (
+            ids.length !== 1 ||
+            !target ||
+            target.ownerId !== ownerId ||
+            !["Tropa", "Mago"].includes(target.tipo) ||
+            !this.targetSlot(target.id)
+          )
+            this.fail("Vínculo de mana exige tropa ou mago aliado em campo.");
+          if (!source) this.fail("Vínculo exige carta de origem.");
+          const index = player.graveyard.findIndex((c) => c.id === source.id);
+          if (index < 0) this.fail("Origem do vínculo ausente.");
+          if ((this.state.attachments?.length ?? 0) >= 32)
+            this.fail("Limite de vínculos em campo atingido.");
+          (this.state.attachments ??= []).push({
+            source: player.graveyard.splice(index, 1)[0],
+            targetId: target.id,
+            ownerId,
+            manaBonus: effect.valor!,
+            removerAoUsarElemento: effect.removerAoUsarElemento,
+            watchThroughTurn: this.state.turn + effect.janelaTurnos! - 1,
+          });
+          break;
+        }
+        case "periodicDamage":
+          if (!source) this.fail("Dano periódico exige carta de origem.");
+          if (
+            this.state.ongoingSpells?.some(
+              (s) =>
+                s.ownerId === ownerId &&
+                s.card?.numeroCatalogo === source.numeroCatalogo &&
+                s.rounds > 0,
+            )
+          )
+            this.fail("Você já tem este feitiço ativo em campo.");
+          (this.state.ongoingSpells ??= []).push({
+            id: source.id,
+            ownerId,
+            kind: "periodicDamage",
+            target: source.alvo as "TodosInimigos",
+            rounds: effect.duracao!,
+            damage: effect.valor!,
+            nextTickTurn: nextEffectRound(this.state.turn),
+            element: effect.elemento ?? element,
+            card: {
+              numeroCatalogo: source.numeroCatalogo,
+              nome: source.nome,
+              imgURL: source.imgURL,
+            },
+          });
+          break;
         case "displace": {
           if (ids.length !== 1)
             this.fail("Deslocamento exige uma única tropa.");
@@ -2172,6 +2342,22 @@ export class Game {
               this.state.turn,
               effect.unidade,
             );
+            if (
+              source?.appliedSpellBonus &&
+              [
+                "Envenenado",
+                "Queimado",
+                "Sangrando",
+                "Peste Negra",
+                "Leptospirose",
+              ].includes(canonicalStatus(effect.status!))
+            ) {
+              applied.turnosRestantes = Math.max(
+                applied.turnosRestantes,
+                effect.duracao!,
+              );
+              applied.valor = Math.max(applied.valor ?? 0, effect.valor ?? 0);
+            }
             if (applied && effect.requerStatus)
               applied.requerStatus = effect.requerStatus;
             applied.originOwnerId = source?.ownerId ?? ownerId;
@@ -2427,7 +2613,8 @@ export class Game {
   private play(user: string, cmd: Extract<Command, { type: "play" }>) {
     const player = this.player(user),
       index = player.hand.findIndex((c) => c.id === cmd.cardId),
-      card = player.hand[index];
+      physical = player.hand[index],
+      card = physical ? modifiedSpell(physical, player.mage) : undefined;
     if (!card) this.fail("Carta não está na sua mão.");
     if (
       cmd.destinationId &&
@@ -2435,11 +2622,20 @@ export class Game {
     )
       this.fail("Esta carta não aceita destino de deslocamento.");
     const limits = player.mage.limites[0];
+    if (card.tipo === "Feitico" && this.state.phase === "PREPARATION")
+      this.fail("Feitiços são bloqueados durante a preparação.");
     const openingReason = this.openingCardBlockReason(card);
     if (openingReason) this.fail(openingReason);
+    if (
+      card.efeitos.some(
+        (e) =>
+          e.id === "stealMana" &&
+          e.limiteManaOrigem !== undefined &&
+          player.mana > e.limiteManaOrigem,
+      )
+    )
+      this.fail("Mana acima do limite permitido para usar este efeito.");
     if (card.tipo === "Feitico") {
-      if (this.state.phase === "PREPARATION")
-        this.fail("Feitiços são bloqueados durante a preparação.");
       if (
         card.requerElementoMago &&
         player.mage.elemento !== card.requerElementoMago
@@ -2487,7 +2683,7 @@ export class Game {
         ? this.takeActionBonus(user)
         : 0;
       player.hand.splice(index, 1);
-      player.graveyard.push(card);
+      player.graveyard.push(physical);
       (player.castCards ??= []).push(card.numeroCatalogo);
       player.castCards = [...new Set(player.castCards)];
       this.event("spell", card);
@@ -2675,7 +2871,7 @@ export class Game {
       this.effects(
         user,
         addActionDamage(card.efeitos, bonus + actionBonus).map((e) =>
-          e.id === "attackField"
+          ["attackField", "periodicDamage"].includes(e.id)
             ? {
                 ...e,
                 valor: e.valor! - temporaryBonus,
@@ -2769,6 +2965,17 @@ export class Game {
   }
   private spellBlockReason(card: Instance, user: string) {
     if (card.tipo !== "Feitico") return "";
+    if (this.state.phase === "PREPARATION")
+      return "Feitiços são bloqueados durante a preparação.";
+    if (
+      card.efeitos.some(
+        (e) =>
+          e.id === "stealMana" &&
+          e.limiteManaOrigem !== undefined &&
+          this.player(user).mana > e.limiteManaOrigem,
+      )
+    )
+      return "Mana acima do limite permitido para usar este efeito.";
     const openingReason = this.openingCardBlockReason(card);
     if (openingReason) return openingReason;
     if (
@@ -2781,8 +2988,6 @@ export class Game {
       )
     )
       return "Feitiços que causam dano são bloqueados nos dois primeiros turnos após a preparação.";
-    if (this.state.phase === "PREPARATION")
-      return "Feitiços são bloqueados durante a preparação.";
     if (
       card.requerElementoMago &&
       this.player(user).mage.elemento !== card.requerElementoMago
@@ -2801,7 +3006,12 @@ export class Game {
     if (
       card.efeitos?.some((e) =>
         this.state.ongoingSpells?.some(
-          (s) => s.ownerId === user && s.kind === e.id && s.rounds > 0,
+          (s) =>
+            s.ownerId === user &&
+            s.rounds > 0 &&
+            (e.id === "periodicDamage"
+              ? s.card?.numeroCatalogo === card.numeroCatalogo
+              : s.kind === e.id),
         ),
       )
     )
@@ -2836,11 +3046,31 @@ export class Game {
       : card.alvo;
   }
   private zarcosPlayed(user: string, card: Instance) {
-    if (card.elemento !== "Zarcos") return;
+    for (const attachment of [...(this.state.attachments ?? [])])
+      if (
+        attachment.source.id !== card.id &&
+        attachment.removerAoUsarElemento &&
+        attachment.removerAoUsarElemento === card.elemento &&
+        this.state.turn <= attachment.watchThroughTurn
+      )
+        this.removeAttachment(attachment);
     const player = this.player(user),
       watchers = player.zarcosWatchers ?? [];
-    player.zarcosWatchers = watchers.filter((w) => w.cardId === card.id);
-    for (const watcher of watchers.filter((w) => w.cardId !== card.id)) {
+    const triggered = watchers.filter(
+      (w) =>
+        w.cardId !== card.id &&
+        (w.elemento ?? "Zarcos") === card.elemento &&
+        (w.throughTurn === undefined || w.throughTurn >= this.state.turn),
+    );
+    player.zarcosWatchers = watchers.filter(
+      (w) =>
+        !triggered.includes(w) &&
+        (w.throughTurn === undefined || w.throughTurn >= this.state.turn),
+    );
+    for (const watcher of triggered) {
+      if (watcher.kind === "return")
+        (player.returnUsedUntil ??= {})[watcher.cardId] =
+          watcher.throughTurn ?? this.state.turn;
       (player.zarcosTriggered ??= []).push(watcher.cardId);
       if (watcher.kind === "flow") this.draw(player, 1);
       else {
@@ -2964,7 +3194,16 @@ export class Game {
               delete applied.expiraNoTurno;
               applied.nextTickTurn = nextEffectRound(this.state.turn);
             }
-            if (value !== undefined) applied.valor = value;
+            if (value !== undefined)
+              applied.valor = [
+                "Envenenado",
+                "Queimado",
+                "Sangrando",
+                "Peste Negra",
+                "Leptospirose",
+              ].includes(canonicalStatus(name))
+                ? Math.max(applied.valor ?? 0, value)
+                : value;
           }
           applied.originOwnerId = user;
           applied.origin = card.nome;
@@ -2979,6 +3218,8 @@ export class Game {
     switch (effect.id) {
       case "revealStealHand":
         player.revealHandRound = this.state.round;
+        player.revealHandUntilTurn =
+          this.state.turn + 2 * (effect.duracao ?? 1);
         if (enemy.hand.length)
           this.state.pendingHandChoice = {
             ownerId: user,
@@ -2999,7 +3240,7 @@ export class Game {
         }
         player.piranhaBleedingBonus = Math.max(
           player.piranhaBleedingBonus ?? 0,
-          1,
+          effect.bonusAtaque ?? 1,
         );
         break;
       case "stoneVolley":
@@ -3081,7 +3322,7 @@ export class Game {
         break;
       }
       case "protectionShield":
-        status(ids, "EscudoProtecao", 2, 3);
+        status(ids, "EscudoProtecao", effect.duracao ?? 2, effect.valor ?? 3);
         break;
       case "tremor": {
         const targets = this.enemyTargets(user, mageElement === "Terra");
@@ -3095,11 +3336,11 @@ export class Game {
               expiraNoTurno: this.state.turn,
             });
         }
-        hit(targets, mageElement === "Terra" ? 6 : 4);
+        hit(targets, (effect.valor ?? 4) + (mageElement === "Terra" ? 2 : 0));
         status(
           this.enemyTargets(user),
           mageElement === "Terra" ? "Atordoado" : "Incapacitado",
-          2,
+          effect.duracao ?? 2,
         );
         break;
       }
@@ -3161,10 +3402,10 @@ export class Game {
       case "meteors":
         if (ids.some((id) => this.targetSlot(id)?.card?.tipo !== "Tropa"))
           this.fail("Chuva de Meteoros atinge somente tropas.");
-        hit(ids, 2);
+        hit(ids, effect.valor ?? 2);
         break;
       case "zarcosTear":
-        this.gainMana(player, 3);
+        this.gainMana(player, effect.valor ?? 3);
         if (!player.zarcosTriggered?.includes(card.id))
           (player.zarcosWatchers ??= []).push({
             cardId: card.id,
@@ -3172,7 +3413,7 @@ export class Game {
           });
         break;
       case "strongFlow":
-        this.draw(player, 3);
+        this.draw(player, effect.valor ?? 3);
         if (!player.zarcosTriggered?.includes(card.id))
           (player.zarcosWatchers ??= []).push({
             cardId: card.id,
@@ -3192,7 +3433,10 @@ export class Game {
         const targets =
           spell.kind === "tornado"
             ? [this.opponent(spell.ownerId).mage.id]
-            : this.enemyTargets(spell.ownerId, true);
+            : this.enemyTargets(
+                spell.ownerId,
+                spell.target !== "TodasTropasInimigas",
+              );
         const name =
           spell.card?.nome ??
           (spell.kind === "tornado"
@@ -4071,6 +4315,29 @@ export class Game {
       )
     )
       return;
+    this.state.phase = "COIN_TOSS";
+    this.state.coinToss = createCoinToss(this.state.players, () =>
+      this.random(),
+    );
+    this.log(
+      `${this.player(this.state.coinToss.chooserId).nome} escolhe cara ou coroa.`,
+    );
+  }
+  private chooseCoin(user: string, face: CoinFace) {
+    const toss = this.state.coinToss;
+    if (this.state.phase !== "COIN_TOSS" || !toss || toss.result)
+      this.fail("Não há escolha de moeda disponível.");
+    if (toss.chooserId !== user)
+      this.fail("Aguarde o jogador sorteado escolher cara ou coroa.");
+    resolveCoinToss(toss, this.state.players, face, () => this.random());
+    this.log(
+      `${toss.result === "heads" ? "Cara" : "Coroa"}: ${this.player(toss.winnerId!).nome} começa a partida.`,
+    );
+  }
+  private beginBattle() {
+    const winner = this.state.coinToss?.winnerId;
+    if (!winner) this.fail("Aguarde o resultado da moeda.");
+    this.state.current = winner;
     this.state.phase = "BATTLE";
     this.state.round = 2;
     for (const p of this.state.players) {
@@ -4107,7 +4374,11 @@ export class Game {
       for (const player of this.state.players) {
         player.roundSpells = [];
         player.comboTriggered = false;
-        player.zarcosWatchers = [];
+        player.zarcosWatchers =
+          player.zarcosWatchers?.filter(
+            (w) =>
+              w.throughTurn !== undefined && w.throughTurn > this.state.turn,
+          ) ?? [];
         player.zarcosTriggered = [];
       }
     }
@@ -4292,10 +4563,21 @@ export class Game {
       this.fail(
         "No primeiro turno após a preparação, só é permitido mobilizar tropas.",
       );
+    if (
+      this.state.phase === "COIN_TOSS" &&
+      !["chooseCoin", "surrender"].includes(cmd.type)
+    )
+      this.fail("Aguarde o sorteio de cara ou coroa.");
     const previous = this.state;
     this.state = structuredClone(previous);
     try {
       switch (cmd.type) {
+        case "discardHand":
+          this.discardHand(user, cmd.cardId);
+          break;
+        case "chooseCoin":
+          this.chooseCoin(user, cmd.face);
+          break;
         case "chooseRevive":
           this.chooseRevive(user, cmd.cardId, cmd.destinationId);
           break;
@@ -4420,8 +4702,8 @@ export class Game {
         )
           this.fail("Nenhuma ação pode causar dano durante a preparação.");
       }
-      this.player(user).inactivityStreak = 0;
-      if (!["endTurn", "surrender"].includes(cmd.type))
+      if (cmd.type !== "chooseCoin") this.player(user).inactivityStreak = 0;
+      if (!["endTurn", "surrender", "chooseCoin"].includes(cmd.type))
         this.player(user).turnActions++;
       this.state.version++;
       this.processed.set(key, this.state.version);
@@ -4491,6 +4773,7 @@ export class Game {
       turn: this.state.turn,
       round: this.state.round,
       phase: this.state.phase,
+      coinToss: this.state.coinToss,
       current: this.state.current,
       status: this.state.status,
       winner: this.state.winner,
@@ -4501,12 +4784,14 @@ export class Game {
           ? {
               ...slot.structure,
               manaRecovery: this.manaRecovery(slot.structure),
+              manaAttachments: this.manaAttachments(slot.structure),
             }
           : null,
         rider: slot.rider
           ? {
               ...slot.rider,
               manaRecovery: this.manaRecovery(slot.rider),
+              manaAttachments: this.manaAttachments(slot.rider),
               limiteAtaques: basicAttackLimit(slot.rider, this.state.slots),
               bonusAtaquePassivo:
                 adjacentAttackBonus(slot.rider, this.state.slots) +
@@ -4521,6 +4806,7 @@ export class Game {
           ? {
               ...slot.card,
               manaRecovery: this.manaRecovery(slot.card),
+              manaAttachments: this.manaAttachments(slot.card),
               limiteAtaques: basicAttackLimit(slot.card, this.state.slots),
               bonusAtaquePassivo:
                 adjacentAttackBonus(slot.card, this.state.slots) +
@@ -4592,16 +4878,21 @@ export class Game {
         forgotten: p.forgotten,
         ...(user &&
         p.id !== user &&
-        this.player(user).revealHandRound === this.state.round
-          ? { revealedHand: p.hand }
+        (this.player(user).revealHandUntilTurn !== undefined
+          ? this.state.turn < this.player(user).revealHandUntilTurn!
+          : this.player(user).revealHandRound === this.state.round)
+          ? { revealedHand: p.hand.map((c) => modifiedSpell(c, p.mage)) }
           : {}),
         ...(p.id === user
           ? {
               hand: p.hand.map((c) => {
-                const reason = this.spellBlockReason(c, p.id);
+                const effective = modifiedSpell(c, p.mage);
+                const reason = this.spellBlockReason(effective, p.id);
                 return {
-                  ...c,
-                  alvo: this.spellTarget(c, p.id),
+                  ...effective,
+                  custoManaBase: c.custoMana,
+                  canDiscard: this.canDiscard(c),
+                  alvo: this.spellTarget(effective, p.id),
                   spellBlockedReason: reason,
                   handBlockedReason: this.openingCardBlockReason(c),
                   ...(c.alvoAutomatico && !reason

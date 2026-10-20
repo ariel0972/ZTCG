@@ -1,3 +1,4 @@
+import { createCoinToss } from "./coin-toss.js";
 import { navbar, node, profilePath } from "./auth.js";
 import { gameTransport } from "./game-transport.js";
 import { createCardInspector } from "./card-inspection.js";
@@ -19,6 +20,7 @@ const battleEvents = createBattleEvents(document.body, {
   getViewerId: () => state?.players[0]?.id,
   noticeDurationMs: 8000,
 });
+const coinToss = createCoinToss(document.body);
 const noticeContent = node("section");
 const fieldNotice = createFieldMenu(document.querySelector(".battle-board"), {
   label: "Turno pausado",
@@ -32,6 +34,7 @@ function deny(text) {
   transport?.close();
   chat?.close();
   battleEvents.close();
+  coinToss.close();
   fieldNotice.close();
   document.body.classList.remove("in-match");
 }
@@ -113,6 +116,7 @@ function hud(player, host) {
 function render(data) {
   if (stopped) return;
   state = data;
+  coinToss.update(state);
   document.body.classList.add("in-match");
   $("watch-field").hidden = false;
   const [first, second] = state.players,
@@ -122,7 +126,7 @@ function render(data) {
       ? state.winner
         ? `${state.players.find((p) => p.id === state.winner)?.nome} venceu`
         : "Partida encerrada · empate"
-      : `Rodada ${state.round} · ${state.phase === "PREPARATION" ? "Preparação" : `Vez de ${current?.nome || "jogar"}`}`;
+      : `Rodada ${state.round} · ${state.phase === "PREPARATION" ? "Preparação" : state.phase === "COIN_TOSS" ? "Cara ou coroa" : `Vez de ${current?.nome || "jogar"}`}`;
   $("watch-status").textContent =
     state.status === "FINISHED"
       ? "Partida encerrada. O chat permanece disponível por até 24 horas."

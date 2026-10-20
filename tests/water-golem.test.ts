@@ -253,7 +253,9 @@ test("Olho revela somente ao conjurador, transfere identidade/dono, inclui compr
   assert.equal(g.player("p1").hand.at(-1)?.ownerId, "p1");
   g.player("p2").hand.push(card("041", "p2"));
   assert.equal(g.snapshot("p1").players[1].revealedHand?.length, 1);
-  g.state.round++;
+  act(g, { type: "endTurn" });
+  assert.equal(g.snapshot("p1").players[1].revealedHand?.length, 2);
+  act(g, { type: "endTurn" });
   assert.equal(g.snapshot("p1").players[1].revealedHand, undefined);
 });
 

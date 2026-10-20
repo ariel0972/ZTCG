@@ -4,6 +4,11 @@ import {
   type EffectClock,
 } from "./effect-clock";
 export interface Status extends EffectClock {
+  spellBoost?: {
+    elementos: import("../types/card").Card["elemento"][];
+    bonus: number;
+    descontoMana: number;
+  };
   originOwnerId?: string;
   origin?: string;
   nome: string;

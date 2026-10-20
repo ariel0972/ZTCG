@@ -32,6 +32,12 @@ const effect = new Schema(
     id: { type: String, required: true },
     alvo: { type: String, enum: ["Proprio"] },
     valor: n,
+    descontoMana: n,
+    elementos: { type: [{ type: String, enum: elements }], default: undefined },
+    fracao: { type: Number, min: 0, max: 1 },
+    limiteManaOrigem: { ...n, max: 20 },
+    removerAoUsarElemento: { type: String, enum: elements },
+    janelaTurnos: { ...n, min: 1, max: 20 },
     status: String,
     duracao: n,
     elemento: { type: String, enum: elements },
@@ -155,6 +161,7 @@ const passiveCondition = new Schema(
 const passiveAction = new Schema(
   {
     id: { type: String, required: true },
+    custoAtual: Boolean,
     alvo: String,
     valor: n,
     jogador: { type: String, enum: ["aliado", "inimigo"] },

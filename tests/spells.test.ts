@@ -1,3 +1,4 @@
+import { completeCoin } from "./support/coin";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -251,6 +252,7 @@ function make(element: Card["elemento"] = "Neutro") {
   );
   act(g, "p1", { type: "endTurn" });
   act(g, "p2", { type: "endTurn" });
+  completeCoin(g);
   g.state.current = "p1";
   g.state.turn = 3;
   g.state.round = 2;

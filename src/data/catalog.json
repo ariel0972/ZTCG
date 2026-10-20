@@ -226,14 +226,22 @@
   },
   {
     "numeroCatalogo": "120",
-    "nome": "Chuva acida",
+    "nome": "Chuva Ácida",
     "tipo": "Feitico",
-    "custoMana": 2,
-    "descricao": "",
+    "custoMana": 5,
+    "descricao": "Tropas e mago inimigos recebem 2 de dano de Água a cada ciclo completo por 2 rodadas. Estruturas absorvem normalmente. Apenas uma Chuva Ácida sua pode estar ativa por vez.",
     "imgURL": "/assets/Cards/Chuva Acida.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
-    "alvo": "UnicoInimigo"
+    "alvo": "TodosInimigos",
+    "elemento": "Agua",
+    "efeitos": [
+      {
+        "id": "periodicDamage",
+        "valor": 2,
+        "duracao": 2
+      }
+    ]
   },
   {
     "numeroCatalogo": "121",
@@ -454,12 +462,26 @@
     "numeroCatalogo": "039",
     "nome": "Sifão de Mana",
     "tipo": "Feitico",
-    "custoMana": 2,
-    "descricao": "",
+    "custoMana": 1,
+    "descricao": "Com 4 ou menos de mana antes de pagar o custo, rouba metade da mana atual do adversário, arredondada para baixo. Se você usar outra carta Zarcos nesse ciclo, volta do cemitério à mão uma vez por cópia.",
     "imgURL": "/assets/Cards/Sifão de Mana.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
-    "alvo": "UnicoInimigo"
+    "alvo": "Global",
+    "elemento": "Zarcos",
+    "efeitos": [
+      {
+        "id": "stealMana",
+        "valor": 0,
+        "fracao": 0.5,
+        "limiteManaOrigem": 4
+      },
+      {
+        "id": "returnOnElement",
+        "elemento": "Zarcos",
+        "janelaTurnos": 2
+      }
+    ]
   },
   {
     "numeroCatalogo": "040",
@@ -484,12 +506,22 @@
     "numeroCatalogo": "079",
     "nome": "Raiz Roxa",
     "tipo": "Feitico",
-    "custoMana": 2,
-    "descricao": "",
+    "custoMana": 3,
+    "descricao": "Vincula-se a uma tropa ou mago aliado, concedendo +1 de recuperação de mana. Se qualquer jogador usar outra carta Zarcos no turno da aplicação ou no seguinte, a Raiz vai ao cemitério e o bônus termina. Fora dessa janela, permanece até o alvo sair do campo. Múltiplas Raízes acumulam.",
     "imgURL": "/assets/Cards/Raiz Roxa.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
-    "alvo": "UnicoInimigo"
+    "alvo": "UnicoAliado",
+    "elemento": "Zarcos",
+    "tiposAlvo": ["Tropa", "Mago"],
+    "efeitos": [
+      {
+        "id": "attachMana",
+        "valor": 1,
+        "removerAoUsarElemento": "Zarcos",
+        "janelaTurnos": 2
+      }
+    ]
   },
   {
     "numeroCatalogo": "090",
@@ -547,12 +579,22 @@
     "numeroCatalogo": "127",
     "nome": "Amplificar",
     "tipo": "Feitico",
-    "custoMana": 2,
-    "descricao": "",
+    "custoMana": 6,
+    "descricao": "Durante 2 rodadas completas, seus próximos feitiços Neutros e de Zarcos recebem +1 em dano, cura, compra, ganho/roubo de mana e duração, e custam 2 de mana a menos, até zero. Cópias acumulam. Não altera quantidade de alvos, custos de vida, recompensas condicionais, nem o bônus/desconto de outra Amplificação.",
     "imgURL": "/assets/Cards/amplificar.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
-    "alvo": "UnicoInimigo"
+    "alvo": "Global",
+    "elemento": "Zarcos",
+    "efeitos": [
+      {
+        "id": "spellBoost",
+        "valor": 1,
+        "descontoMana": 2,
+        "elementos": ["Neutro", "Zarcos"],
+        "duracao": 2
+      }
+    ]
   },
   {
     "numeroCatalogo": "005",
@@ -689,7 +731,7 @@
     "nome": "Olho da Verdade",
     "tipo": "Feitico",
     "custoMana": 4,
-    "descricao": "Veja a mão adversária durante esta rodada, incluindo novas compras, e transfira uma carta escolhida para sua mão. Se este feitiço for descartado da mão, recupere 4 mana; conjurá-lo não conta como descarte.",
+    "descricao": "Veja a mão adversária durante um ciclo completo, incluindo novas compras, e transfira uma carta escolhida para sua mão. Pode ser descartada voluntariamente da mão no seu turno a partir do turno 2; ao ser descartada, recupera mana igual ao seu custo atual, incluindo descontos. Conjurar não conta como descarte.",
     "imgURL": "/assets/Cards/Olho da Verdade.png",
     "publicado": true,
     "versao": 2,
@@ -708,7 +750,8 @@
         "efeitos": [
           {
             "id": "discardMana",
-            "valor": 4
+            "valor": 4,
+            "custoAtual": true
           }
         ]
       }

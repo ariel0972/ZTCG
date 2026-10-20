@@ -1,0 +1,103 @@
+.coin-toss[hidden] {
+  display: none;
+}
+.coin-toss {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: #050c15dd;
+}
+.coin-toss__panel {
+  width: min(100%, 420px);
+  box-sizing: border-box;
+  padding: 28px;
+  border: 1px solid #ccb16e;
+  border-radius: 20px;
+  background: #142331;
+  color: #edf3f7;
+  text-align: center;
+  box-shadow: 0 24px 80px #0008;
+}
+.coin-toss__panel h2 {
+  margin: 0 0 12px;
+  color: #e1c587;
+}
+.coin-toss__choices {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+.coin-toss__choices p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.coin-toss__buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 20px;
+}
+.coin-toss__buttons[hidden],
+.coin-toss__coin[hidden] {
+  display: none;
+}
+.coin-toss__buttons button {
+  min-width: 110px;
+  padding: 12px 20px;
+}
+.coin-toss__coin {
+  width: 112px;
+  height: 112px;
+  margin: 24px auto;
+  perspective: 600px;
+}
+.coin-toss__disc {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+.coin-toss__face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 6px double #ffe3a0;
+  background: radial-gradient(circle at 35% 30%, #f5d990, #a98037);
+  color: #35260e;
+  backface-visibility: hidden;
+  font: bold 17px system-ui;
+  box-shadow: 0 8px 24px #0006;
+}
+.coin-toss__face--tails {
+  transform: rotateY(180deg);
+}
+.coin-toss__coin[data-result="tails"] .coin-toss__disc {
+  --coin-end: 1260deg;
+  transform: rotateY(180deg);
+}
+.coin-toss__coin[data-result="heads"] .coin-toss__disc {
+  --coin-end: 1080deg;
+}
+.coin-toss__coin--spinning .coin-toss__disc {
+  animation: coin-toss-spin 1800ms cubic-bezier(0.2, 0.6, 0.2, 1) both;
+}
+@keyframes coin-toss-spin {
+  from {
+    transform: rotateY(0deg) scale(0.85);
+  }
+  to {
+    transform: rotateY(var(--coin-end)) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .coin-toss__coin--spinning .coin-toss__disc {
+    animation: none;
+  }
+}

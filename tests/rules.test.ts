@@ -1,3 +1,4 @@
+import { completeCoin } from "./support/coin";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -57,6 +58,7 @@ function slot(g: Game, id: string) {
 function battle(g = make()) {
   command(g, "p2", { type: "endTurn" });
   command(g, "p1", { type: "endTurn" });
+  completeCoin(g);
   return g;
 }
 function later(g = battle()) {
@@ -131,6 +133,7 @@ test("preparação simultânea mantém cinco cartas privadas e mobilização man
   command(g, "p2", { type: "endTurn" });
   assert.equal(g.state.phase, "PREPARATION");
   command(g, "p1", { type: "endTurn" });
+  completeCoin(g);
   assert.equal(g.state.phase, "BATTLE");
   assert.equal(g.state.round, 2);
   assert.equal(g.state.turn, 1);
@@ -193,6 +196,7 @@ test("reembaralhamento limitado a três, compensação opcional individual e con
   assert.equal(g.player("p2").hand.length, count + 1);
   command(g, "p2", { type: "endTurn" });
   command(g, "p1", { type: "endTurn" });
+  completeCoin(g);
   assert.equal(g.state.phase, "BATTLE");
 });
 
@@ -204,11 +208,13 @@ test("confirmação antecipada permite resolver compensação nova e o timeout p
   command(g, "p1", { type: "endTurn" });
   assert.equal(g.state.phase, "PREPARATION");
   command(g, "p2", { type: "preparationBonus", accept: true });
+  completeCoin(g);
   assert.equal(g.state.phase, "BATTLE");
   const h = make();
   command(h, "p2", { type: "endTurn" });
   h.timeout();
   assert.equal(h.state.status, "ACTIVE");
+  completeCoin(h);
   assert.equal(h.state.phase, "BATTLE");
   assert.equal(h.player("p1").inactivityStreak, 1);
   assert.equal(h.player("p2").inactivityStreak, 0);
@@ -1171,6 +1177,7 @@ test("timeout inclui compensação pendente mesmo após os dois confirmarem", ()
   assert.equal(g.state.phase, "PREPARATION");
   g.timeout();
   assert.equal(g.state.status, "ACTIVE");
+  completeCoin(g);
   assert.equal(g.state.phase, "BATTLE");
   assert.equal(g.player("p2").preparation.bonusDraws, 0);
   assert.equal(g.player("p2").inactivityStreak, 1);
@@ -1403,6 +1410,7 @@ test("abertura bloqueia dano não originado de ataques; mana só cresce após pr
     if (phase === "prep") {
       command(g, "p1", { type: "endTurn" });
       command(g, "p2", { type: "endTurn" });
+      completeCoin(g);
       assert.equal(
         g.player("p1").mana,
         5 +

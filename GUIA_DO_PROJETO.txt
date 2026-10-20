@@ -1979,3 +1979,53 @@ não preencha nextTickTurn manualmente. Para testar, aplique nos turnos 3 e 4,
 passe duas vezes, exporte/restaure a partida e confira que não antecipa nem
 repete o efeito. Balanceamento da vantagem inicial deve ser observado em
 partidas reais; esta revisão aplica a regra solicitada sem inventar bônus.
+
+
+REVISÃO — 20/10/2026: SORTEIO E CARTAS ADICIONAIS
+- public/JS/coin-toss.js — Componente visual de cara/coroa, com escolhas públicas,
+  foco de teclado, animação sem repetição por snapshot e anúncio do vencedor.
+  O servidor define escolha/resultado; a interface não sorteia nem reinicia a moeda.
+- public/CSS/coin-toss.css — Moeda em CSS, painel responsivo e movimento reduzido.
+- tests/coin-toss-ui.test.ts — Verifica escolhas públicas, segurança do texto,
+  botão exclusivo do jogador correto e preservação da mesma moeda em atualizações.
+- public/JS/battle-events.js — Agenda indicadores em ordem com intervalo visual
+  de 60 ms; não repete eventos nem mantém a fila ao trocar de partida.
+- public/JS/battle-effects.js — Separa rótulos do mesmo alvo e informa a origem
+  do dano no título. Reações usam a mesma referência de deslocamento dos danos.
+- tests/battle-effects.test.ts — Inclui relógio simulado dos intervalos de 60 ms,
+  ordem de reação/dano e cancelamento da fila ao sair da partida.
+- src/game/coin-toss.ts — Face, escolha/oposto, resultado autoritativo e prazos
+  de 20 segundos para escolha e 2,5 segundos para animação/revelação.
+- src/game/spell-modifiers.ts — Calcula custo atual e cópia dos efeitos sob
+  Amplificar, preservando a carta física, alvos, custos de vida e recompensas.
+- tests/support/coin.ts — Conclui a seleção e revelação reais nas fixtures
+  antigas que testam o combate depois da preparação.
+- tests/coin-toss.test.ts — Sorteio antes de renda/compra, autorização,
+  idempotência, timeout sem punição e prazos duráveis após reinício.
+- tests/zarcos-spells.test.ts — Catálogo/Mongo, Sifão, Raiz, Amplificar,
+  descarte do Olho e Chuva Ácida; cobre custo atual, relógio e restauração.
+- scripts/update-zarcos-expansion.ts — Dry-run ou --apply com backup/CAS;
+  sincroniza 039/079/120/127 e a passiva/descrição de 030 sem trocar artes.
+
+Regras confirmadas: ambos confirmam a preparação, um jogador sorteado escolhe
+uma face e o outro recebe a oposta. Sem resposta em 20 s, o servidor escolhe
+Cara automaticamente. A moeda tem chances iguais e o vencedor recebe o
+primeiro turno somente após a animação. Inatividade anterior não é apagada
+por escolher a moeda, nem o sorteio cria punição.
+Sifão exige até 4 mana ANTES do custo 1, transfere metade arredondada para
+baixo e pode voltar uma vez por cópia no ciclo por outra carta Zarcos própria.
+Raiz pode acumular +1 de recuperação em tropa/mago aliado. Qualquer jogador
+usando outra carta Zarcos no turno de aplicação ou no seguinte encerra esse
+vínculo. Depois da janela, permanece até o receptor sair do campo. A Raiz
+permanece entre os vínculos públicos, não no cemitério, enquanto estiver ativa.
+Amplificar dura 2 ciclos e acumula. Cada cópia mantém +1 nos efeitos e -2 no
+custo, mínimo zero; outra amplificação pode aumentar sua duração. A quantidade
+de alvos, os custos de vida e as recompensas condicionais não aumentam.
+Olho pode ser descartado da mão no próprio turno a partir do turno 2: não gasta
+mana/limite de feitiços e recupera o custo ATUAL, incluindo descontos.
+Chuva Ácida custa 5, causa 2 de Água a tropas e mago por 2 ciclos completos;
+proteções normais valem e só uma cópia própria pode estar ativa.
+
+A fazer: acompanhar o balanceamento das amplificações acumuladas; revisar as
+artes quando desejar refletir as regras digitais. Para novos efeitos, use
+os recursos genéricos descritos no manual, sem condicionar pelo número da carta.

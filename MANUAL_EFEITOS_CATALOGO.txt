@@ -1833,3 +1833,51 @@ antigas de 5 de dano ou devolução do Beija-flor estão substituídas.
 scripts/update-opening-air-cards.ts faz dry-run sem argumentos e aplica com
 --apply. Só sincroniza descricao/habilidadesAtivas de 043 e
 descricao/tiposAlvo/efeitos de 057; preserva arte, publicação e custos do banco.
+
+
+RECURSOS GENÉRICOS — 20/10/2026
+
+spellBoost / Global, só Feitico: valor é o bônus dos efeitos; descontoMana é
+o desconto de custo; elementos é a lista de elementos beneficiados e duracao
+conta ciclos completos. Ex.: {"id":"spellBoost","valor":1,"descontoMana":2,
+"elementos":["Neutro","Zarcos"],"duracao":2}. Cópias acumulam; a própria
+spellBoost só recebe aumento de duração, preservando bônus e desconto.
+O motor modifica cópias ao conjurar e ao mostrar a mão, sem gravar custo ou
+efeitos aumentados na carta física. Alvos, vida paga e recompensas condicionais
+não mudam. Aumenta dano, cura, compra/ganho de mana, durações, intensidade de
+status de dano/escudo/bônus e bônus de ataque/vida da ressurreição.
+
+stealMana / Global: fracao (0..1) da mana atual do inimigo, arredondada para
+baixo, mais valor fixo (pode ser 0). limiteManaOrigem opcional é verificado
+ANTES de pagar o custo. Transfere só mana disponível e cabe no máximo de 20.
+Ex.: {"id":"stealMana","fracao":0.5,"valor":0,"limiteManaOrigem":4}.
+
+returnOnElement / Global: elemento obrigatório, janelaTurnos (padrão 2) conta
+o turno de conjuração e o seguinte. Outra carta daquele elemento, do próprio
+jogador, devolve a origem do cemitério à mão uma vez por cópia nesse ciclo.
+Ex.: {"id":"returnOnElement","elemento":"Zarcos","janelaTurnos":2}.
+
+attachMana / UnicoAliado, só Feitico: valor positivo é recuperação adicional
+do receptor, que deve ser tropa ou mago aliado em campo. removerAoUsarElemento
+e janelaTurnos definem quando OUTRA carta daquele elemento, de QUALQUER
+jogador, encerra o vínculo. Sem acontecer na janela, o vínculo permanece.
+Ex.: {"id":"attachMana","valor":1,"removerAoUsarElemento":"Zarcos",
+"janelaTurnos":2}. Vínculos acumulam e deixam de existir ao sair do campo.
+
+periodicDamage / TodosInimigos ou TodasTropasInimigas, só Feitico: valor e
+duracao positivos. O primeiro dano espera dois encerramentos, como os demais
+efeitos. Usa elemento da carta, modificadores, estruturas e reações normais.
+Duas cartas diferentes coexistem; duplicata do mesmo numeroCatalogo/dono é
+recusada enquanto ativa. Ex.: {"id":"periodicDamage","valor":2,"duracao":2}.
+
+discardMana aceita custoAtual:true para recuperar o custo atual em vez do
+valor fixo (valor continua obrigatório por compatibilidade). Cartas com essa
+passiva podem ser descartadas voluntariamente do próprio turno 2 em diante,
+sem pagar mana nem gastar limite de feitiços. Desconto considera efeitos ativos.
+Conjuração e descarte são operações diferentes; não altere carta física ao
+aplicar descontos. O botão mostra o valor que será recuperado.
+
+039 Sifão custa 1; 079 Raiz custa 3; 127 Amplificar custa 6; 120 Chuva Ácida
+custa 5. 030 Olho usa custo atual ao ser descartado. As cartas do banco são
+atualizadas por scripts/update-zarcos-expansion.ts, com --apply apenas após
+validar o deploy compatível e o dry-run.

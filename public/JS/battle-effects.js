@@ -165,13 +165,11 @@ export function createBattleEffects(host = document.body) {
       effect.dataset.kind = reaction ? "reaction" : mana ? "mana" : "damage";
       effect.dataset.anchor = event.card?.id || event.slotId || "";
       const simultaneous = [...active.keys()].filter(
-        (other) =>
-          other.dataset.kind === effect.dataset.kind &&
-          other.dataset.anchor === effect.dataset.anchor,
+        (other) => other.dataset.anchor === effect.dataset.anchor,
       ).length;
       effect.style.setProperty(
         "--label-offset",
-        `${Math.min(2, simultaneous) * 20}px`,
+        `${Math.min(5, simultaneous) * 30}px`,
       );
       effect.style.setProperty("--effect-color", color);
       place(effect, rect);
@@ -205,7 +203,8 @@ export function createBattleEffects(host = document.body) {
         : mana
           ? `+${mana.amount} mana`
           : `${name ? name + " · " : ""}${damage.amount === 0 ? "Bloqueado" : "−" + damage.amount}`;
-      if (damage?.element && name)
+      label.title = event.summary || event.message || (reaction ? name : "");
+      if (damage?.element && name && !label.title)
         label.title = `${name} a ${damage.element === "Agua" ? "Água" : damage.element}`;
       effect.append(symbol, label);
       while (active.size >= 12) remove(active.keys().next().value);

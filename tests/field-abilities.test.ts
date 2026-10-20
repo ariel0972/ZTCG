@@ -1,3 +1,4 @@
+import { completeCoin } from "./support/coin";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -33,6 +34,7 @@ function make() {
   );
   act(g, "p1", { type: "endTurn" });
   act(g, "p2", { type: "endTurn" });
+  completeCoin(g);
   g.state.turn = 3;
   g.state.current = "p1";
   for (const p of g.state.players) {

@@ -57,6 +57,11 @@ export function abilityDescription(ability) {
 function effectDescription(effect) {
   const description =
     {
+      spellBoost: `Fortalece feitiços dos elementos indicados em +${effect.valor}, reduz seu custo em ${effect.descontoMana}, por ${effect.duracao} rodada(s).`,
+      stealMana: `Rouba ${Math.round((effect.fracao ?? 0) * 100)}% da mana adversária, arredondada para baixo${effect.valor ? ", mais " + effect.valor : ""}.`,
+      returnOnElement: `Volta do cemitério à mão ao usar outra carta de ${effect.elemento}, uma vez nesse ciclo.`,
+      attachMana: `Vincula-se ao aliado, concedendo +${effect.valor} de recuperação de mana.`,
+      periodicDamage: `Causa ${effect.valor} de dano aos inimigos a cada ciclo completo por ${effect.duracao} rodada(s).`,
       revive: `Revive uma tropa do próprio cemitério em um espaço livre, com +${effect.bonusAtaque ?? 0} de ataque e +${effect.bonusHp ?? 0} de vida.`,
       shuffleGraveyard: `Embaralha até ${effect.valor} tropas escolhidas do próprio cemitério no baralho.`,
       attackField: `Cria um efeito no campo inimigo por ${effect.duracao} rodadas, causando ${effect.valor} de dano após cada ataque.`,
@@ -136,7 +141,9 @@ export function passiveDescription(h) {
               ? `pode desviar de um golpe e aguarda ${e.esperaRodadas} rodada(s) completa(s) entre usos; escolha gratuita em 20 segundos`
               : "pode desviar de dano e efeitos de um golpe por rodada, com escolha gratuita em 20 segundos",
             attackLifesteal: `ataques básicos curam o dano efetivo, até ${e.excedente ?? 0} de sobrevida`,
-            discardMana: `recupera ${e.valor} mana ao ser descartada da mão`,
+            discardMana: e.custoAtual
+              ? "recupera o custo atual de mana ao ser descartada da mão"
+              : `recupera ${e.valor} mana ao ser descartada da mão`,
             reflectAttack: `pode devolver um ataque básico${e.esperaRodadas ? `; aguarda ${e.esperaRodadas} rodada(s) completa(s) entre usos` : " por rodada"}; resposta opcional em 20 segundos, sem custo`,
             growMaxHp: `ganha ${e.valor} de vida máxima`,
             status: `aplica ${e.status}`,

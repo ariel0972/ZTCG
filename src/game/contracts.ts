@@ -5,6 +5,14 @@ export const commandSchema = z.discriminatedUnion("type", [
   z
     .object({
       ...base,
+      type: z.literal("chooseCoin"),
+      face: z.enum(["heads", "tails"]),
+    })
+    .strict(),
+  z.object({ ...base, type: z.literal("discardHand"), cardId: id }).strict(),
+  z
+    .object({
+      ...base,
       type: z.literal("chooseRevive"),
       cardId: id.optional(),
       destinationId: id.optional(),

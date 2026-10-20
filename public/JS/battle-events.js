@@ -15,6 +15,24 @@ export function createBattleEvents(
   const timers = new Map();
   const pending = [];
   let lastFadeAt = 0;
+  let nextVisualAt = 0;
+  const visualTimers = new Set();
+  function showFieldEffect(event) {
+    if (!["damage", "block", "mana", "elementalReaction"].includes(event.kind))
+      return;
+    if (host.ownerDocument.hidden) return;
+    const now = Date.now();
+    const at = Math.max(now, nextVisualAt);
+    nextVisualAt = at + 60;
+    if (at === now) effects.show(event);
+    else {
+      const timer = setTimeout(() => {
+        visualTimers.delete(timer);
+        effects.show(event);
+      }, at - now);
+      visualTimers.add(timer);
+    }
+  }
   function remove(item) {
     for (const timer of timers.get(item) ?? []) clearTimeout(timer);
     timers.delete(item);
@@ -22,6 +40,9 @@ export function createBattleEvents(
     if (pending.length && panel.children.length < 6) show(pending.shift());
   }
   function clear() {
+    for (const timer of visualTimers) clearTimeout(timer);
+    visualTimers.clear();
+    nextVisualAt = 0;
     pending.length = 0;
     for (const item of timers.keys()) remove(item);
     lastFadeAt = 0;
@@ -103,7 +124,7 @@ export function createBattleEvents(
   return {
     notify(event) {
       show(event);
-      effects.show(event);
+      showFieldEffect(event);
     },
     update(snapshot) {
       const events = snapshot.events || [];
@@ -118,7 +139,7 @@ export function createBattleEvents(
       if (!fresh.length) return;
       sequence = fresh.at(-1).sequence;
       // Keep field feedback for every hit, even when the toast list is capped.
-      for (const event of fresh) effects.show(event);
+      for (const event of fresh) showFieldEffect(event);
       for (const event of fresh) {
         show(event);
       }

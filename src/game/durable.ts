@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { Game } from "./engine";
+import { phaseDuration } from "./coin-toss";
 import {
   DurableRoom,
   DurableStore,
@@ -317,8 +318,14 @@ export class DurableGame {
         n < 10;
         n++
       ) {
+        const previousPhase = game.state.phase,
+          previousCoin = game.state.coinToss?.result;
         game.timeout();
-        room.deadline += TURN_MS;
+        room.deadline =
+          previousPhase !== game.state.phase ||
+          previousCoin !== game.state.coinToss?.result
+            ? now + phaseDuration(game.state)
+            : room.deadline + phaseDuration(game.state);
         if (game.responseKey()) {
           room.remainingTurnMs = TURN_MS;
           room.responseDeadline = now + 20000;
@@ -344,6 +351,7 @@ export class DurableGame {
       stage = performance.now();
       const turn = game.state.turn,
         phase = game.state.phase,
+        coinResult = game.state.coinToss?.result,
         responding = game.responseKey();
       let response: unknown, error: unknown;
       try {
@@ -351,8 +359,12 @@ export class DurableGame {
       } catch (e) {
         error = e;
       }
-      if (game.state.turn !== turn || game.state.phase !== phase) {
-        room.deadline = this.now() + TURN_MS;
+      if (
+        game.state.turn !== turn ||
+        game.state.phase !== phase ||
+        game.state.coinToss?.result !== coinResult
+      ) {
+        room.deadline = this.now() + phaseDuration(game.state);
         if (responding) room.remainingTurnMs = TURN_MS;
       }
       if (game.responseKey() && responding !== game.responseKey()) {

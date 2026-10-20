@@ -80,7 +80,9 @@ export function describePassiveActions(actions: PassiveAction[]) {
         case "attackLifesteal":
           return `Ataques curam o dano efetivo, até ${a.excedente ?? 0} de sobrevida`;
         case "discardMana":
-          return `Recupera ${a.valor} mana ao ser descartada da mão`;
+          return a.custoAtual
+            ? "Recupera o custo atual de mana ao ser descartada da mão"
+            : `Recupera ${a.valor} mana ao ser descartada da mão`;
         case "counterAttack":
           return "Retaliou com seu ataque básico";
         case "interceptAttack":

@@ -1891,7 +1891,7 @@
   animation: battle-particle 2100ms var(--delay) ease-out both;
 }
 .battle-effect[data-kind="reaction"] .battle-effect__label {
-  top: 84%;
+  top: calc(64% + var(--label-offset, 0px));
 }
 .battle-effect--lava .battle-effect__wash,
 .battle-effect--lama .battle-effect__wash {
