@@ -356,7 +356,7 @@ test("desvio não refaz sorteios, aceite é idempotente e o timeout recusa", () 
   assert.equal(slot(g, "p2:front:1").card!.hpAtual, 12);
 });
 
-test("desvio do dano de fim de rodada concede turno seguinte completo após resposta", async () => {
+test("desvio do dano de fim de ciclo concede turno seguinte completo após resposta", async () => {
   let now = 1_000_000;
   const g = game(),
     store = new MemoryDurableStore();
@@ -368,6 +368,7 @@ test("desvio do dano de fim de rodada concede turno seguinte completo após resp
       ownerId: "p1",
       kind: "arrowRain",
       rounds: 2,
+      nextTickTurn: 4,
       damage: 3,
       element: "Neutro",
     },

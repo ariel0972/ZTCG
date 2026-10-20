@@ -288,3 +288,67 @@ test("arraste mobiliza na montaria, monta em campo e distingue ataque do ocupant
     "attack",
   );
 });
+
+test("arraste recusa feitiços de qualquer alvo durante preparação", async () => {
+  const modulePath = "../public/JS/battle-ui.js";
+  const { dropAction } = await import(modulePath);
+  const state = {
+    status: "ACTIVE",
+    phase: "PREPARATION",
+    players: [{ id: "p1" }],
+    slots: [],
+  };
+  for (const alvo of ["Global", "UnicoAliado", "TodosInimigos"])
+    assert.equal(
+      dropAction(
+        { type: "play", card: { tipo: "Feitico", alvo } },
+        {
+          id: "ally",
+          ownerId: "p1",
+          kind: "Mago",
+          card: { tipo: "Mago", hp: 18 },
+        },
+        state,
+        "p1",
+      ),
+      null,
+    );
+});
+
+test("mana mostra custo na mão e recuperação nas cartas em campo", async () => {
+  const dom = new JSDOM("<body></body>");
+  const previous = Object.getOwnPropertyDescriptor(globalThis, "document");
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: dom.window.document,
+  });
+  try {
+    const modulePath = "../public/JS/battle-ui.js";
+    const { cardFace } = await import(modulePath);
+    for (const tipo of ["Tropa", "Estrutura", "Armamento", "Mago"]) {
+      const card = {
+        nome: "Teste",
+        tipo,
+        custoMana: 6,
+        manaGerada: 2,
+        recuperacaoMana: 4,
+        manaRecovery: tipo === "Mago" ? 7 : 2,
+        statuses: [],
+      };
+      const slot = { kind: tipo, ownerId: "p1", column: 0 };
+      const field = cardFace(card, { slot, slots: [] }).querySelector(
+        ".live-cost",
+      )!;
+      assert.equal(field.textContent, tipo === "Mago" ? "+7" : "+2");
+      assert.match(field.getAttribute("aria-label")!, /Recupera/);
+      assert.equal(
+        cardFace(card, { hand: true }).querySelector(".live-cost")!.textContent,
+        "6",
+      );
+    }
+  } finally {
+    if (previous) Object.defineProperty(globalThis, "document", previous);
+    else delete (globalThis as any).document;
+    dom.window.close();
+  }
+});

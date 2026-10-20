@@ -181,7 +181,7 @@ test("aviso de bloqueio identifica a habilidade protetora e a origem do dano per
     version: g.state.version,
   });
   const periodic = g.state
-    .events!.filter((e) => e.message?.includes("Queimado (fim da rodada)"))
+    .events!.filter((e) => e.message?.includes("Queimado (fim do ciclo)"))
     .at(-1)!;
   assert.equal(periodic.originOwnerId, "p1");
 });

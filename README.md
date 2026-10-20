@@ -34,7 +34,10 @@ Abra `http://127.0.0.1:3187`. Contas `p1@test.local`, `p2@test.local`, `p3@test.
 - Sem login, é possível montar, importar e exportar rascunhos locais. Com login, salve os decks na conta e entre na fila ou aceite um convite de amigo.
 - Deck jogável: 40 cartas publicadas e executáveis, mais um mago; até três cópias de tropas/feitiços e duas de estruturas/armamentos. Rascunhos incompletos podem ser salvos.
 - Preparação simultânea: cinco cartas e cinco de mana por jogador; mobilização de tropas gratuita, manual e limitada pelo mago. Cada jogador confirma quando quiser; compras opcionais de reembaralhamento também precisam ser resolvidas.
-- Ataques, habilidades e dano ficam bloqueados na preparação **e nos dois primeiros turnos de combate**, um de cada jogador. Essa é a decisão mais recente, já aplicada no motor. Mobilização e feitiços sem dano seguem seus limites.
+- Na preparação, nenhum feitiço é permitido; ataques, habilidades e dano também ficam bloqueados. No primeiro turno após ela, só se mobilizam tropas. No segundo, ataques e habilidades/feitiços sem dano são permitidos. Armamentos e estruturas ficam bloqueados nos dois primeiros turnos; a partir do terceiro, valem os limites normais.
+- Jogue no máximo um armamento por turno: os espaços da frente exigem tropa receptora na coluna correspondente; os de trás continuam equipando o mago.
+- Um efeito de uma rodada permanece quando você passa e termina quando o oponente passa. Dano periódico e cura agendada de Cauterizar esperam esse ciclo completo, independentemente de quem começou. O número da rodada e os intervalos entre habilidades continuam separados dessas durações.
+- Cartas em campo mostram a recuperação de mana no indicador superior; na mão, mostram o custo. Lâmina de Vento causa 3 de dano apenas a tropas; Bater das Asas mantém o alvo em campo na borda direita.
 - Após atacar, não se mobilizam mais tropas nesse turno. Habilidade: uma por carta por rodada. Limites de feitiços comuns e assinaturas são separados. Mana máxima: 20.
 - Feitiços 001–010, Lágrima de Zarcos e Fluxo Forte, reações elementais e passivas reutilizáveis estão implementados. Jato d’água permite resposta de 20 segundos, persistida, a feitiços comuns de Fogo dirigidos a tropas/magos; o relógio normal fica pausado.
 - Turno/preparação: 120 segundos. Três turnos consecutivos sem ação válida causam derrota. Desconexão: após 15 segundos sem presença, há 90 segundos de tolerância. A fila e os convites expiram em cinco minutos.
@@ -45,7 +48,7 @@ Abra `http://127.0.0.1:3187`. Contas `p1@test.local`, `p2@test.local`, `p3@test.
 - Amigos exibem presença e um botão para assistir às partidas. Basta ser amigo de um dos jogadores; espectadores veem somente o campo e as informações públicas. Os jogadores veem o contador de espectadores.
 - O chat da partida aceita texto e emojis de jogadores e espectadores. Mensagens expiram após 24 horas; a tela mantém apenas as 50 mais recentes. Chat e presença ficam separados das gravações das jogadas e usam atualizações compactas no mesmo SSE.
 
-O catálogo local tem 130 definições, 44 publicadas nesta revisão. `npm run audit` informa as quantidades atuais; registros válidos do banco prevalecem sobre a definição local. Publicação técnica não comprova fidelidade à arte nem balanceamento.
+O catálogo local tem 130 definições. `npm run audit` informa as quantidades atuais; registros válidos do banco prevalecem sobre a definição local. Publicação técnica não comprova fidelidade à arte nem balanceamento.
 
 ## Administração e qualidade
 

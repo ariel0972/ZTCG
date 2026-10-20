@@ -88,10 +88,23 @@ export function cardFace(
     art.append(crop);
   } else art.append(img);
   const heading = node("div", "", "live-heading");
-  heading.append(
-    node("span", card.nome, "live-name"),
-    node("span", String(card.custoMana), "live-cost"),
+  const recovery = !hand && !!slot;
+  const mana = recovery
+    ? (card.manaRecovery ??
+      (card.tipo === "Mago" ? card.recuperacaoMana : card.manaGerada) ??
+      0)
+    : card.custoMana;
+  const resource = node(
+    "span",
+    recovery ? `+${mana}` : String(mana),
+    "live-cost",
   );
+  resource.title = recovery
+    ? `Recupera ${mana} de mana por turno`
+    : `Custo: ${mana} de mana`;
+  resource.setAttribute("aria-label", resource.title);
+  resource.dataset.resource = recovery ? "recovery" : "cost";
+  heading.append(node("span", card.nome, "live-name"), resource);
   const stats = node("div", "", "live-stats");
   function stat(value, type, label) {
     const badge = node("span", String(value), `live-stat ${type}`);
@@ -160,7 +173,7 @@ export function cardFace(
   }
   for (const scheduled of card.scheduledHeals || []) {
     const tag = node("span", "♡", "effect-token");
-    tag.title = `Cura programada: ${scheduled.amount} de vida na rodada ${scheduled.round}`;
+    tag.title = `Cura programada: ${scheduled.amount} de vida após um ciclo completo`;
     tag.setAttribute("aria-label", tag.title);
     effects.append(tag);
   }
@@ -192,6 +205,10 @@ export function dropAction(source, slot, state, userId) {
   if (
     !source ||
     state.status !== "ACTIVE" ||
+    (source.type === "play" &&
+      (source.card.handBlockedReason ||
+        source.card.spellBlockedReason ||
+        (source.card.tipo === "Feitico" && state.phase === "PREPARATION"))) ||
     (slot?.terrain?.nome === "Lama" &&
       source.type === "play" &&
       source.card.tipo === "Tropa")
@@ -225,7 +242,9 @@ export function dropAction(source, slot, state, userId) {
             card.palavrasChave.includes("Flanquear")))
         ? "play"
         : null;
-    return card.tipo === "Armamento" && slot.kind === "Armamento"
+    return card.tipo === "Armamento" &&
+      slot.kind === "Armamento" &&
+      state.equipmentTargets?.includes(slot.id)
       ? "play"
       : null;
   }

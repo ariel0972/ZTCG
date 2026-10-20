@@ -1,4 +1,9 @@
-export interface Status {
+import {
+  effectRoundDue,
+  nextEffectRound,
+  type EffectClock,
+} from "./effect-clock";
+export interface Status extends EffectClock {
   originOwnerId?: string;
   origin?: string;
   nome: string;
@@ -85,14 +90,22 @@ export function applyStatus(
     if (unit === "turno") applied.expiraNoTurno = turn + duration - 1;
     else delete applied.expiraNoTurno;
   }
+  if (applied.unidade === "turno") delete applied.nextTickTurn;
+  else if (
+    applied.nextTickTurn === undefined ||
+    !["Envenenado", "Queimado", "Sangrando"].includes(nome)
+  )
+    applied.nextTickTurn = nextEffectRound(turn);
   if (previousFreeze) {
     const expires = (s: Status) =>
       s.unidade === "turno"
         ? (s.expiraNoTurno ?? turn + s.turnosRestantes - 1)
-        : turn + (turn % 2) + 2 * (s.turnosRestantes - 1);
+        : (s.nextTickTurn ?? nextEffectRound(turn)) +
+          2 * (s.turnosRestantes - 1);
     if (expires(previousFreeze) > expires(applied)) {
       Object.assign(applied, previousFreeze);
       if (previousFreeze.unidade !== "turno") delete applied.expiraNoTurno;
+      else delete applied.nextTickTurn;
     }
   }
   return applied;
@@ -101,10 +114,12 @@ export function applyStatus(
 export function tickRound(
   statuses: Status[],
   onDamage?: (status: Status, value: number) => void,
+  turn?: number,
 ) {
   let damage = 0;
   for (const status of statuses) {
-    if (status.unidade === "turno") continue;
+    if (status.unidade === "turno" || status.turnosRestantes <= 0) continue;
+    if (turn !== undefined && !effectRoundDue(status, turn)) continue;
     const name = canonicalStatus(status.nome);
     const value = ["Sangrando", "Queimado", "Envenenado"].includes(name)
       ? (status.valor ?? 1)

@@ -103,7 +103,7 @@ test("ataques adicionais respeitam limite geral, incapacitação e bloqueio inic
   assert.equal(troop(other).attacksMade, undefined);
   troop(other).statuses = [];
   other.state.turn = 1;
-  assert.throws(() => command(other, attack), /bloqueados/);
+  assert.throws(() => command(other, attack), /só é permitido mobilizar/);
 });
 test("passiva de limite é validada, persistida e exclusiva de tropas e gatilho contínuo", async () => {
   const card = troop(setup());
@@ -222,7 +222,7 @@ test("Beija-flor tem atributos finais, ataca duas vezes e reposiciona uma vez", 
     /movimento por turno/,
   );
 });
-test("Bater das Asas empurra um espaço e devolve montaria e ocupante juntos pela borda", () => {
+test("Bater das Asas empurra um espaço e mantém montaria e ocupante na borda", () => {
   const g = ready();
   position(g, "p1:front:0").card = card("043");
   position(g, "p2:front:2").card = null;
@@ -245,13 +245,13 @@ test("Bater das Asas empurra um espaço e devolve montaria e ocupante juntos pel
   command(g, { type: "endTurn" });
   command(g, { type: "endTurn" });
   command(g, ability(target.id));
-  assert.equal(position(g, "p2:front:2").card, null);
-  assert.ok(g.player("p2").hand.some((c) => c.id === target.id));
-  assert.ok(g.player("p2").hand.some((c) => c.id === rider.id));
-  assert.equal(
-    g.player("p2").hand.find((c) => c.id === target.id)!.hpAtual,
-    target.hp,
+  assert.equal(position(g, "p2:front:2").card!.id, target.id);
+  assert.equal(position(g, "p2:front:2").rider!.id, rider.id);
+  assert.ok(
+    !g.player("p2").hand.some((c) => [target.id, rider.id].includes(c.id)),
   );
+  assert.equal(position(g, "p1:front:0").card!.usedAbility, true);
+  assert.equal(g.player("p1").mana, 17);
 });
 test("empurrão rejeita espaço ocupado, estrutura, alvo mago e Lama sem gastar habilidade ou mana", () => {
   for (const kind of ["ocupado", "estrutura", "mago", "lama"]) {
@@ -285,6 +285,8 @@ test("deslocamento forçado aceita tropas cegas, congeladas e incapacitadas", ()
     const g = ready();
     position(g, "p1:front:0").card = card("043");
     const target = position(g, "p2:front:2").card!;
+    position(g, "p2:front:1").card = target;
+    position(g, "p2:front:2").card = null;
     target.statuses = [{ nome: name, turnosRestantes: 2 }];
     command(g, {
       type: "ability",
@@ -292,7 +294,8 @@ test("deslocamento forçado aceita tropas cegas, congeladas e incapacitadas", ()
       abilityId: "baterDasAsas",
       targets: [target.id],
     });
-    assert.ok(g.player("p2").hand.some((c) => c.id === target.id));
+    assert.equal(position(g, "p2:front:2").card!.id, target.id);
+    assert.ok(!g.player("p2").hand.some((c) => c.id === target.id));
   }
 });
 test("Esfera move para vizinho escolhido, leva ocupante e causa somente 2 de dano ao alvo", () => {
@@ -432,7 +435,7 @@ test("Lâmina custa 6 e aplica impedimento só na próxima rodada completa sem b
   ];
   cast(g, "057", target.id);
   assert.equal(g.player("p1").mana, 14);
-  assert.equal(position(g, "p2:front:2").card!.hpAtual, 35);
+  assert.equal(position(g, "p2:front:2").card!.hpAtual, 37);
   assert.equal(
     position(g, "p2:front:2").card!.statuses.some(
       (s) => s.nome === "SemAtaque",
@@ -475,12 +478,13 @@ test("Lâmina custa 6 e aplica impedimento só na próxima rodada completa sem b
     ),
   );
 });
-test("Lâmina não bloqueia tropa de outro elemento nem mago Terra", () => {
+test("Lâmina não bloqueia tropa de outro elemento e rejeita mago Terra", () => {
   for (const mage of [false, true]) {
     const g = ready();
     const target = mage ? g.player("p2").mage : position(g, "p2:front:2").card!;
     target.elemento = mage ? "Terra" : "Ar";
-    cast(g, "057", target.id);
+    if (mage) assert.throws(() => cast(g, "057", target.id), /Tipo de alvo/);
+    else cast(g, "057", target.id);
     assert.equal(
       (mage ? g.player("p2").mage : position(g, "p2:front:2").card!)
         .scheduledStatuses,
@@ -526,4 +530,37 @@ test("atualização das quatro cartas preserva imagem e versão, remove passivas
     assert.equal(after.versao, 17);
   }
   assert.throws(() => airCardPatch({ ...catalog[0] }));
+});
+
+test("atualização de equilíbrio altera só as duas cartas e preserva metadados administrativos", async () => {
+  const { openingAirCardPatch } =
+    await import("../scripts/update-opening-air-cards");
+  for (const id of ["043", "057"]) {
+    const original = catalog.find((c) => c.numeroCatalogo === id)!;
+    const record = {
+      ...structuredClone(original),
+      imgURL: "/custom.png",
+      versao: 25,
+      publicado: false,
+      custoMana: 11,
+      descricao: "anterior",
+      ...(id === "043"
+        ? { habilidadesAtivas: [] }
+        : {
+            tiposAlvo: ["Tropa", "Mago"],
+            efeitos: [{ id: "damage", valor: 5 }],
+          }),
+    };
+    const plan = openingAirCardPatch(record);
+    const result = { ...record, ...plan.patch };
+    assert.equal(result.imgURL, "/custom.png");
+    assert.equal(result.custoMana, 11);
+    assert.equal(result.publicado, false);
+    assert.equal(result.versao, 25);
+    assert.deepEqual(openingAirCardPatch(result).patch, {});
+  }
+  assert.throws(
+    () => openingAirCardPatch(catalog.find((c) => c.numeroCatalogo === "019")!),
+    /fora/,
+  );
 });

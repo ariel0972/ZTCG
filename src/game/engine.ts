@@ -1,3 +1,4 @@
+import { effectRoundDue, nextEffectRound } from "./effect-clock";
 import { reviveDestinations, spellTurnBonusStatus } from "./resurrection";
 import { fieldElementResult } from "./field-effects";
 import { nextActionBonusStatus, addActionDamage } from "./action-bonus";
@@ -401,7 +402,13 @@ export class Game {
         inactivityStreak: 0,
         turnActions: 0,
         mana: 5,
-        counters: { summons: 0, attacks: 0, spells: 0, unique: 0 },
+        counters: {
+          summons: 0,
+          attacks: 0,
+          spells: 0,
+          unique: 0,
+          equipment: 0,
+        },
       } as Player;
     });
     const slots: Slot[] = [];
@@ -578,10 +585,11 @@ export class Game {
     this.state.version++;
   }
   private openingBlocked() {
-    return this.state.phase === "PREPARATION" || this.state.turn <= 2;
+    return this.state.phase === "PREPARATION" || this.state.turn <= 1;
   }
-  private recoverMana(player: Player) {
-    const mage = player.mage;
+  private manaRecovery(mage: Instance) {
+    if (mage.tipo !== "Mago") return mage.manaGerada ?? 0;
+    const player = this.player(mage.ownerId);
     let recovery = mage.recuperacaoMana ?? 0;
     for (const passive of mage.habilidadesPassivas) {
       const rule = normalizePassive(passive);
@@ -598,9 +606,12 @@ export class Game {
       for (const action of rule.efeitos)
         if (action.id === "manaRecovery") recovery = action.valor;
     }
+    return recovery;
+  }
+  private recoverMana(player: Player) {
     this.gainMana(
       player,
-      recovery +
+      this.manaRecovery(player.mage) +
         this.state.slots
           .filter((s) => s.ownerId === player.id)
           .flatMap(slotCards)
@@ -1202,6 +1213,26 @@ export class Game {
         });
     }
     return healed;
+  }
+  private equipmentPlacementError(user: string, slot: Slot) {
+    if (this.state.phase === "BATTLE" && this.state.turn <= 2)
+      return "Armamentos são bloqueados nos dois primeiros turnos após a preparação.";
+    if (slot.ownerId !== user || slot.kind !== "Armamento" || slot.card)
+      return "Escolha um espaço de armamento aliado vazio.";
+    if ((this.player(user).counters.equipment ?? 0) >= 1)
+      return "Você só pode jogar um armamento por turno.";
+    if (
+      !this.weaponBeneficiaries(slot).some((s) => {
+        const receiver = s.rider ?? s.card;
+        return (
+          receiver &&
+          receiver.hpAtual > 0 &&
+          ["Tropa", "Mago"].includes(receiver.tipo)
+        );
+      })
+    )
+      return "Este espaço precisa de uma tropa ou mago em campo para receber o armamento.";
+    return "";
   }
   private weaponBeneficiaries(weaponSlot: Slot) {
     if (weaponSlot.id.includes(":arm:back-"))
@@ -1996,6 +2027,7 @@ export class Game {
             ownerId,
             affectedOwnerId: this.opponent(ownerId).id,
             rounds: effect.duracao!,
+            nextTickTurn: nextEffectRound(this.state.turn),
             damage: effect.valor!,
             element: effect.elemento ?? element,
             piercing: effect.perfurante,
@@ -2078,6 +2110,7 @@ export class Game {
             ) {
               (outcome.target.scheduledHeals ??= []).push({
                 round: this.state.round + effect.curaPosterior.rodadas,
+                turn: this.state.turn + 2 * effect.curaPosterior.rodadas,
                 amount: outcome.amount * effect.curaPosterior.multiplicador,
                 sourceId: source?.id,
                 ownerId,
@@ -2108,6 +2141,7 @@ export class Game {
             if (!this.impactAllowed(card.id)) continue;
             if (effect.inicio === "proximaRodada") {
               const round = this.state.round + 1;
+              const turn = this.state.turn + 2;
               const scheduled = (card.scheduledStatuses ??= []);
               const status: Status = {
                 requerStatus: effect.requerStatus,
@@ -2119,7 +2153,7 @@ export class Game {
                 origin: cause ?? source?.nome,
               };
               const existing = scheduled.find(
-                (s) => s.round === round && s.status.nome === status.nome,
+                (s) => s.turn === turn && s.status.nome === status.nome,
               );
               if (existing) {
                 status.turnosRestantes = Math.max(
@@ -2127,7 +2161,7 @@ export class Game {
                   status.turnosRestantes,
                 );
                 existing.status = status;
-              } else scheduled.push({ round, status });
+              } else scheduled.push({ round, turn, status });
               continue;
             }
             const applied = applyStatus(
@@ -2335,7 +2369,11 @@ export class Game {
       }
       case "Lama":
         if (slot.kind === "Tropa")
-          slot.terrain = { nome: "Lama", rodadasRestantes: 2 };
+          slot.terrain = {
+            nome: "Lama",
+            rodadasRestantes: 2,
+            nextTickTurn: nextEffectRound(this.state.turn),
+          };
         break;
       case "Lava":
         for (const adjacent of this.front(slot.ownerId))
@@ -2370,7 +2408,13 @@ export class Game {
           card.hp = (card.hp ?? 0) + 1;
           card.hpAtual++;
         } else {
-          applyStatus(card.statuses, "Envenenado", 3).originOwnerId = ownerId;
+          applyStatus(
+            card.statuses,
+            "Envenenado",
+            3,
+            undefined,
+            this.state.turn,
+          ).originOwnerId = ownerId;
           this.trigger("onStatusApplied", {
             ownerId: card.ownerId,
             cardId: card.id,
@@ -2391,7 +2435,11 @@ export class Game {
     )
       this.fail("Esta carta não aceita destino de deslocamento.");
     const limits = player.mage.limites[0];
+    const openingReason = this.openingCardBlockReason(card);
+    if (openingReason) this.fail(openingReason);
     if (card.tipo === "Feitico") {
+      if (this.state.phase === "PREPARATION")
+        this.fail("Feitiços são bloqueados durante a preparação.");
       if (
         card.requerElementoMago &&
         player.mage.elemento !== card.requerElementoMago
@@ -2400,11 +2448,11 @@ export class Game {
       if (hasStatus(player.mage.statuses, ["Cego"]))
         this.fail("Um mago Cego não pode conjurar feitiços.");
       if (
-        this.openingBlocked() &&
+        this.state.turn <= 2 &&
         this.causesDamage(card.efeitos, undefined, player.mage.elemento)
       )
         this.fail(
-          "Feitiços que causam dano são bloqueados na preparação e no primeiro turno de cada jogador.",
+          "Feitiços que causam dano são bloqueados nos dois primeiros turnos após a preparação.",
         );
       if (
         (card.assinatura ? player.counters.unique : player.counters.spells) >=
@@ -2489,6 +2537,10 @@ export class Game {
       if (!cmd.slotId) this.fail("Selecione um slot.");
       const slot = this.ownSlot(cmd.slotId, user);
       if (card.tipo === "Mago") this.fail("O mago já está em campo.");
+      if (card.tipo === "Armamento") {
+        const blocked = this.equipmentPlacementError(user, slot);
+        if (blocked) this.fail(blocked);
+      }
       if (card.tipo === "Tropa" && player.combatStarted)
         this.fail(
           "Não é possível mobilizar tropas após iniciar os ataques neste turno.",
@@ -2557,6 +2609,7 @@ export class Game {
         }
       }
       if (card.tipo === "Armamento") {
+        player.counters.equipment = (player.counters.equipment ?? 0) + 1;
         for (const beneficiary of this.weaponBeneficiaries(slot))
           for (const troop of [beneficiary.rider ?? beneficiary.card])
             if (troop) troop.hpAtual += card.bonusHp ?? 0;
@@ -2568,6 +2621,7 @@ export class Game {
   }
   private waterReactionAllowed(player: Player, card: Instance) {
     return (
+      this.state.phase !== "PREPARATION" &&
       card.tipo === "Feitico" &&
       card.elemento === "Agua" &&
       card.palavrasChave.includes("Reação") &&
@@ -2694,7 +2748,41 @@ export class Game {
       );
     return [target.id];
   }
+  private openingCardBlockReason(card: Instance) {
+    if (this.state.phase !== "BATTLE") return "";
+    if (this.state.turn === 1 && card.tipo !== "Tropa")
+      return "No primeiro turno após a preparação, só é permitido mobilizar tropas.";
+    if (this.state.turn <= 2 && ["Armamento", "Estrutura"].includes(card.tipo))
+      return "Armamentos e estruturas são bloqueados nos dois primeiros turnos após a preparação.";
+    return "";
+  }
+  private abilityOpeningReason(
+    effects: Card["efeitos"] | undefined,
+    id: string,
+    element?: Card["elemento"],
+  ) {
+    if (this.openingBlocked())
+      return "Habilidades bloqueadas na preparação e no primeiro turno após ela.";
+    if (this.state.turn <= 2 && this.causesDamage(effects, id, element))
+      return "Habilidades que causam dano são bloqueadas nos dois primeiros turnos após a preparação.";
+    return "";
+  }
   private spellBlockReason(card: Instance, user: string) {
+    if (card.tipo !== "Feitico") return "";
+    const openingReason = this.openingCardBlockReason(card);
+    if (openingReason) return openingReason;
+    if (
+      this.state.phase === "BATTLE" &&
+      this.state.turn <= 2 &&
+      this.causesDamage(
+        card.efeitos,
+        undefined,
+        this.player(user).mage.elemento,
+      )
+    )
+      return "Feitiços que causam dano são bloqueados nos dois primeiros turnos após a preparação.";
+    if (this.state.phase === "PREPARATION")
+      return "Feitiços são bloqueados durante a preparação.";
     if (
       card.requerElementoMago &&
       this.player(user).mage.elemento !== card.requerElementoMago
@@ -2826,6 +2914,7 @@ export class Game {
         ownerId: user,
         kind,
         rounds,
+        nextTickTurn: nextEffectRound(this.state.turn),
         damage: damage + bonus - temporaryBonus + actionBonus,
         element: card.elemento,
         card: {
@@ -2871,7 +2960,10 @@ export class Game {
             if (durationUnit === "turno")
               applied.expiraNoTurno =
                 this.state.turn + applied.turnosRestantes - 1;
-            else delete applied.expiraNoTurno;
+            else {
+              delete applied.expiraNoTurno;
+              applied.nextTickTurn = nextEffectRound(this.state.turn);
+            }
             if (value !== undefined) applied.valor = value;
           }
           applied.originOwnerId = user;
@@ -3096,6 +3188,7 @@ export class Game {
     try {
       for (const spell of this.state.ongoingSpells ?? []) {
         if (this.state.status !== "ACTIVE") break;
+        if (!effectRoundDue(spell, this.state.turn)) continue;
         const targets =
           spell.kind === "tornado"
             ? [this.opponent(spell.ownerId).mage.id]
@@ -3118,12 +3211,12 @@ export class Game {
               false,
               spell.element,
               undefined,
-              `${name} (${this.player(spell.ownerId).nome}, fim da rodada)`,
+              `${name} (${this.player(spell.ownerId).nome}, fim do ciclo)`,
               spell.ownerId,
             );
         });
         spell.rounds--;
-        this.log(`${name} causou dano no fim da rodada.`);
+        this.log(`${name} causou dano no fim do ciclo.`);
         this.resolve();
       }
       this.state.ongoingSpells = this.state.ongoingSpells?.filter(
@@ -3323,7 +3416,7 @@ export class Game {
   private attack(user: string, cmd: Extract<Command, { type: "attack" }>) {
     if (this.openingBlocked())
       this.fail(
-        "Ataques bloqueados na preparação e no primeiro turno de cada jogador.",
+        "Ataques bloqueados na preparação e no primeiro turno após ela.",
       );
     const p = this.player(user),
       slot = this.ownSlot(cmd.slotId, user),
@@ -3665,10 +3758,12 @@ export class Game {
       this.fail(
         "Esta habilidade ainda aguarda uma rodada completa entre usos.",
       );
-    if (this.openingBlocked())
-      this.fail(
-        "Habilidades bloqueadas na preparação e no primeiro turno de cada jogador.",
-      );
+    const openingReason = this.abilityOpeningReason(
+      ability.efeitos,
+      ability.id,
+      p.mage.elemento,
+    );
+    if (openingReason) this.fail(openingReason);
     if (ability.custoVida) {
       if (card.hpAtual <= ability.custoVida)
         this.fail(
@@ -3833,12 +3928,7 @@ export class Game {
           if (!target || !cmd.mode) this.fail("Escolha alvo aliado e modo.");
           this.spend(p, ability.custoMana);
           if (cmd.mode === "cura") this.heal(target, 3, undefined, card);
-          else
-            target.statuses.push({
-              nome: "Escudo",
-              valor: 3,
-              turnosRestantes: 2,
-            });
+          else applyStatus(target.statuses, "Escudo", 2, 3, this.state.turn);
           break;
         }
         case "ataqueFurtivo":
@@ -3873,9 +3963,13 @@ export class Game {
         case "armaduraPoderosa":
           this.spend(p, ability.custoMana);
           card.attacked = true;
-          card.statuses.push(
-            { nome: "Guardar", turnosRestantes: 2 },
-            { nome: "armaduraPoderosa", turnosRestantes: 2 },
+          applyStatus(card.statuses, "Guardar", 2, undefined, this.state.turn);
+          applyStatus(
+            card.statuses,
+            "armaduraPoderosa",
+            2,
+            undefined,
+            this.state.turn,
           );
           break;
         default:
@@ -3896,21 +3990,31 @@ export class Game {
       (card?.habilidadesAtivas ?? [])
         .filter(
           (h) =>
+            this.abilityOpeningReason(
+              h.efeitos,
+              h.id,
+              this.player(user).mage.elemento,
+            ) ||
             h.custoVida ||
             h.esperaRodadas ||
             h.efeitos?.some((e) => e.id === "spendAttack"),
         )
         .map((h) => [
           h.id,
-          h.custoVida && (card?.hpAtual ?? 0) <= h.custoVida
-            ? "Vida insuficiente para pagar a habilidade sem morrer."
-            : h.esperaRodadas &&
-                card?.abilityRounds?.[h.id] !== undefined &&
-                this.state.round - card.abilityRounds[h.id] <= h.esperaRodadas
-              ? "Aguarda uma rodada completa entre usos."
-              : h.efeitos?.some((e) => e.id === "spendAttack")
-                ? this.attackSourceError(user, slot, card ?? null)
-                : "",
+          this.abilityOpeningReason(
+            h.efeitos,
+            h.id,
+            this.player(user).mage.elemento,
+          ) ||
+            (h.custoVida && (card?.hpAtual ?? 0) <= h.custoVida
+              ? "Vida insuficiente para pagar a habilidade sem morrer."
+              : h.esperaRodadas &&
+                  card?.abilityRounds?.[h.id] !== undefined &&
+                  this.state.round - card.abilityRounds[h.id] <= h.esperaRodadas
+                ? "Aguarda uma rodada completa entre usos."
+                : h.efeitos?.some((e) => e.id === "spendAttack")
+                  ? this.attackSourceError(user, slot, card ?? null)
+                  : ""),
         ]),
     );
   }
@@ -3918,7 +4022,7 @@ export class Game {
     const p = this.player(this.state.current);
     p.combatStarted = false;
     p.turnActions = 0;
-    p.counters = { summons: 0, attacks: 0, spells: 0, unique: 0 };
+    p.counters = { summons: 0, attacks: 0, spells: 0, unique: 0, equipment: 0 };
     for (const c of this.state.slots
       .filter((s) => s.ownerId === p.id)
       .flatMap(slotCards))
@@ -3937,9 +4041,9 @@ export class Game {
       slot = this.ownSlot(slotId, user);
     if (p.mage.numeroCatalogo !== "108")
       this.fail("Sacrificar tropas é uma habilidade exclusiva do Necromante.");
-    if (this.openingBlocked())
+    if (this.state.phase === "PREPARATION" || this.state.turn <= 2)
       this.fail(
-        "Sacrifício bloqueado na preparação e no primeiro turno de combate.",
+        "Sacrifício bloqueado na preparação e nos dois primeiros turnos de combate.",
       );
     if (
       p.mage.usedAbility ||
@@ -3993,12 +4097,13 @@ export class Game {
     }
     this.trigger("onTurnEnd", { ownerId: this.state.current });
     const roundEnded = this.state.turn % 2 === 0;
+    this.tickOngoingSpells();
+    for (const field of this.state.fieldEffects ?? [])
+      if (effectRoundDue(field, this.state.turn)) field.rounds--;
+    this.state.fieldEffects = this.state.fieldEffects?.filter(
+      (f) => f.rounds > 0,
+    );
     if (roundEnded) {
-      this.tickOngoingSpells();
-      for (const field of this.state.fieldEffects ?? []) field.rounds--;
-      this.state.fieldEffects = this.state.fieldEffects?.filter(
-        (f) => f.rounds > 0,
-      );
       for (const player of this.state.players) {
         player.roundSpells = [];
         player.comboTriggered = false;
@@ -4006,22 +4111,26 @@ export class Game {
         player.zarcosTriggered = [];
       }
     }
-    if (roundEnded)
-      for (const slot of this.state.slots)
-        if (slot.terrain && --slot.terrain.rodadasRestantes <= 0)
-          delete slot.terrain;
+    for (const slot of this.state.slots)
+      if (
+        slot.terrain &&
+        effectRoundDue(slot.terrain, this.state.turn) &&
+        --slot.terrain.rodadasRestantes <= 0
+      )
+        delete slot.terrain;
     for (const card of this.state.slots
       .flatMap(slotCards)
       .filter((c): c is Instance => c !== null)) {
-      if (roundEnded) {
-        tickRound(card.statuses, (status, value) => {
+      tickRound(
+        card.statuses,
+        (status, value) => {
           if (card.hpAtual <= 0) return;
           const before = card.hpAtual;
           card.hpAtual -= value;
           this.reportDamage(
             card,
             value,
-            `${status.nome} (fim da rodada)`,
+            `${status.nome} (fim do ciclo)`,
             before,
             undefined,
             undefined,
@@ -4043,8 +4152,9 @@ export class Game {
               `Excedente de ${status.nome} em ${card.nome}`,
               status.originOwnerId,
             );
-        });
-      }
+        },
+        this.state.turn,
+      );
       for (const status of card.statuses)
         if (status.unidade === "turno") {
           status.turnosRestantes = Math.max(
@@ -4061,71 +4171,77 @@ export class Game {
     if (this.state.status === "FINISHED") return;
     this.state.current = this.opponent(this.state.current).id;
     this.state.turn++;
-    if (roundEnded) {
-      this.state.round++;
-      for (const card of this.state.slots.flatMap(slotCards)) {
-        const heals = (card.scheduledHeals ?? []).filter(
-          (h) => h.round <= this.state.round,
+    if (roundEnded) this.state.round++;
+    for (const card of this.state.slots.flatMap(slotCards)) {
+      const heals = (card.scheduledHeals ?? []).filter((h) =>
+        h.turn !== undefined
+          ? h.turn <= this.state.turn
+          : roundEnded && h.round <= this.state.round,
+      );
+      card.scheduledHeals = card.scheduledHeals?.filter((h) =>
+        h.turn !== undefined
+          ? h.turn > this.state.turn
+          : !roundEnded || h.round > this.state.round,
+      );
+      for (const scheduled of heals) {
+        const source =
+          this.findCard(scheduled.sourceId ?? "") ??
+          this.state.players
+            .flatMap((p) => [
+              ...p.hand,
+              ...p.deck,
+              ...p.graveyard,
+              ...p.banished,
+              ...p.forgotten,
+            ])
+            .find((c) => c.id === scheduled.sourceId) ??
+          this.player(scheduled.ownerId).mage;
+        const healed = this.heal(card, scheduled.amount, undefined, source);
+        this.event(
+          "notice",
+          card,
+          `${scheduled.origin}: ${card.nome} recuperou ${healed} de vida após o ciclo completo.`,
         );
-        card.scheduledHeals = card.scheduledHeals?.filter(
-          (h) => h.round > this.state.round,
+      }
+      const due = (card.scheduledStatuses ?? []).filter((s) =>
+        s.turn !== undefined
+          ? s.turn <= this.state.turn
+          : roundEnded && s.round <= this.state.round,
+      );
+      card.scheduledStatuses = card.scheduledStatuses?.filter((s) =>
+        s.turn !== undefined
+          ? s.turn > this.state.turn
+          : !roundEnded || s.round > this.state.round,
+      );
+      for (const { status } of due) {
+        const applied = applyStatus(
+          card.statuses,
+          status.nome,
+          status.turnosRestantes,
+          status.valor,
+          this.state.turn,
+          status.unidade,
         );
-        for (const scheduled of heals) {
-          const source =
-            this.findCard(scheduled.sourceId ?? "") ??
-            this.state.players
-              .flatMap((p) => [
-                ...p.hand,
-                ...p.deck,
-                ...p.graveyard,
-                ...p.banished,
-                ...p.forgotten,
-              ])
-              .find((c) => c.id === scheduled.sourceId) ??
-            this.player(scheduled.ownerId).mage;
-          const healed = this.heal(card, scheduled.amount, undefined, source);
-          this.event(
-            "notice",
-            card,
-            `${scheduled.origin}: ${card.nome} recuperou ${healed} de vida no início da rodada.`,
-          );
-        }
-        const due = (card.scheduledStatuses ?? []).filter(
-          (s) => s.round <= this.state.round,
+        applied.origin = status.origin;
+        applied.originOwnerId = status.originOwnerId;
+        applied.requerStatus = status.requerStatus;
+        this.trigger("onStatusApplied", {
+          ownerId: card.ownerId,
+          cardId: card.id,
+          status: status.nome,
+        });
+        this.event(
+          "notice",
+          card,
+          (status.origin ?? "Efeito programado") +
+            ": " +
+            card.nome +
+            " recebeu " +
+            status.nome +
+            " por " +
+            status.turnosRestantes +
+            " rodada(s).",
         );
-        card.scheduledStatuses = card.scheduledStatuses?.filter(
-          (s) => s.round > this.state.round,
-        );
-        for (const { status } of due) {
-          const applied = applyStatus(
-            card.statuses,
-            status.nome,
-            status.turnosRestantes,
-            status.valor,
-            this.state.turn,
-            status.unidade,
-          );
-          applied.origin = status.origin;
-          applied.originOwnerId = status.originOwnerId;
-          applied.requerStatus = status.requerStatus;
-          this.trigger("onStatusApplied", {
-            ownerId: card.ownerId,
-            cardId: card.id,
-            status: status.nome,
-          });
-          this.event(
-            "notice",
-            card,
-            (status.origin ?? "Efeito programado") +
-              ": " +
-              card.nome +
-              " recebeu " +
-              status.nome +
-              " por " +
-              status.turnosRestantes +
-              " rodada(s).",
-          );
-        }
       }
     }
     this.beginTurn();
@@ -4168,6 +4284,14 @@ export class Game {
       !["surrender", "preparationBonus"].includes(cmd.type)
     )
       this.fail("Você já confirmou a preparação. Aguarde o oponente.");
+    if (
+      this.state.phase === "BATTLE" &&
+      this.state.turn === 1 &&
+      !["play", "endTurn", "surrender"].includes(cmd.type)
+    )
+      this.fail(
+        "No primeiro turno após a preparação, só é permitido mobilizar tropas.",
+      );
     const previous = this.state;
     this.state = structuredClone(previous);
     try {
@@ -4267,10 +4391,32 @@ export class Game {
             .filter((c): c is Instance => c !== null)
             .map((c) => [c.id, c]),
         );
+        const abilitySlot =
+          cmd.type === "ability"
+            ? previous.slots.find((s) => s.id === cmd.slotId)
+            : undefined;
+        const payingCard =
+          cmd.type === "ability"
+            ? cmd.source === "rider"
+              ? abilitySlot?.rider
+              : cmd.source === "structure"
+                ? abilitySlot?.structure
+                : abilitySlot?.card
+            : undefined;
+        const lifeCost =
+          cmd.type === "ability"
+            ? (payingCard?.habilidadesAtivas.find((h) => h.id === cmd.abilityId)
+                ?.custoVida ?? 0)
+            : 0;
         if (
           previous.slots
             .flatMap(slotCards)
-            .some((c) => c && (after.get(c.id)?.hpAtual ?? 0) < c.hpAtual)
+            .some(
+              (c) =>
+                c &&
+                (after.get(c.id)?.hpAtual ?? 0) <
+                  c.hpAtual - (c.id === payingCard?.id ? lifeCost : 0),
+            )
         )
           this.fail("Nenhuma ação pode causar dano durante a preparação.");
       }
@@ -4298,6 +4444,13 @@ export class Game {
     return structuredClone({
       id: this.id,
       openingBlocked: this.openingBlocked(),
+      damageOpeningBlocked:
+        this.state.phase === "PREPARATION" || this.state.turn <= 2,
+      equipmentTargets: user
+        ? this.state.slots
+            .filter((s) => !this.equipmentPlacementError(user, s))
+            .map((s) => s.id)
+        : [],
       events: this.state.events ?? [],
       reactions: reactionDescriptions,
       ongoingSpells: this.state.ongoingSpells,
@@ -4344,9 +4497,16 @@ export class Game {
       reason: this.state.reason,
       slots: this.state.slots.map((slot) => ({
         ...slot,
+        structure: slot.structure
+          ? {
+              ...slot.structure,
+              manaRecovery: this.manaRecovery(slot.structure),
+            }
+          : null,
         rider: slot.rider
           ? {
               ...slot.rider,
+              manaRecovery: this.manaRecovery(slot.rider),
               limiteAtaques: basicAttackLimit(slot.rider, this.state.slots),
               bonusAtaquePassivo:
                 adjacentAttackBonus(slot.rider, this.state.slots) +
@@ -4360,6 +4520,7 @@ export class Game {
         card: slot.card
           ? {
               ...slot.card,
+              manaRecovery: this.manaRecovery(slot.card),
               limiteAtaques: basicAttackLimit(slot.card, this.state.slots),
               bonusAtaquePassivo:
                 adjacentAttackBonus(slot.card, this.state.slots) +
@@ -4378,6 +4539,11 @@ export class Game {
                 rider: this.attackTargets(user, slot, slot.rider ?? null),
               },
               abilityBlockReasons: {
+                structure: this.abilityAttackBlockReasons(
+                  user,
+                  slot,
+                  slot.structure,
+                ),
                 card: this.abilityAttackBlockReasons(user, slot, slot.card),
                 rider: this.abilityAttackBlockReasons(user, slot, slot.rider),
               },
@@ -4437,6 +4603,7 @@ export class Game {
                   ...c,
                   alvo: this.spellTarget(c, p.id),
                   spellBlockedReason: reason,
+                  handBlockedReason: this.openingCardBlockReason(c),
                   ...(c.alvoAutomatico && !reason
                     ? { automaticTargetId: this.spellSelection(c, p.id, [])[0] }
                     : {}),

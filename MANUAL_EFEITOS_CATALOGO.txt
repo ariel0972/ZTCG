@@ -118,9 +118,9 @@ status: nome do status, obrigatório quando id = status.
 duracao: duração positiva, obrigatória em status. Padrão de unidade: rodada.
 elemento: sobrescrita opcional do elemento de damage; sem ela usa o da carta.
 unidade: opcional, turno ou rodada, exclusivamente para status sem duração fixa.
-  Rodada é o ciclo dos dois turnos; decrementa no fim da rodada, inclusive a da
-  aplicação. Turno com duracao 2 inclui o turno atual e o próximo. A duração de
-  1 rodada pode ser curta se aplicada no último turno daquela rodada.
+  Rodada é o ciclo de dois encerramentos desde a ativação: passar o próprio
+  turno mantém; passar o adversário reduz uma rodada. Turno com duracao 2 inclui
+  o turno atual e o próximo, sem mudar com a nova contagem de rodada.
 requerStatus: vincula um status a outro. Exemplo: ReducaoDano enquanto Esconder.
   A redução não funciona sem o status requerido. Atacar remove Esconder e os
   benefícios vinculados a ele. Use apenas com id status e status suportado.
@@ -200,7 +200,8 @@ Com efeitos, o id pode ser seu identificador novo; não precisa criar função.
 Uma carta usa no máximo UMA habilidade por rodada, compartilhada entre seus
 botões. Habilidade não consome ataque automaticamente. Uma regra especial
 antiga pode consumir; armaduraPoderosa é um exemplo. Custo e limite são
-checados no servidor. Preparação e primeiro turno próprio bloqueiam habilidades.
+checados no servidor. Preparação e turno 1 após ela bloqueiam habilidades;
+no turno 2, só as habilidades que causam dano ficam bloqueadas.
 
 Em HABILIDADE, alvoAutomatico aceita Proprio ou Frontal:
   Proprio + UnicoAliado: a carta que usa a habilidade, inclusive estrutura.
@@ -413,9 +414,14 @@ Jato da água 002 cancela feitiço Fogo direcionado a tropa/mago, inclusive
 
 Preparação começa com 5 mana, sem geração das cartas em campo; mobilização de
 tropa tem fluxo próprio. Geração normal inicia após a preparação. Preparação
-e primeiro turno de CADA jogador impedem ataque, habilidade e feitiço de dano.
-Máximo de mana 20. Sacrifício é exclusivo do Necromante. Duração de rodada
-é coletiva; não significa duas rodadas pessoais. Tropa/estrutura/mago podem
+bloqueia qualquer feitiço, ataque, habilidade e dano. No turno 1 após a
+preparação, só se mobilizam tropas; no turno 2, ataques e habilidades/feitiços
+sem dano são permitidos. Armamentos e estruturas são proibidos nesses dois
+turnos. Máximo de um armamento por jogador por turno, com receptor em campo
+(tropa na coluna da frente; mago nos espaços de trás).
+Máximo de mana 20. Sacrifício é exclusivo do Necromante. Duração de uma rodada
+conta dois encerramentos de turno desde a ativação; não depende da paridade
+da rodada global. Tropa/estrutura/mago podem
 ter habilidade; Armamento sem vida não pode usar cura própria.
 O motor valida custos, limites, alvo, turno, abertura e versão da partida.
 Animações, texto e arraste não permitem ignorar essas regras.
@@ -1642,7 +1648,7 @@ draw, mana, field, spendAttack, guardTarget, remoções ou efeitos especiais.
 O validador recusa essas combinações e valores diferentes de Proprio.
 Esconder com duracao:2/unidade:turno cobre o fim do turno atual e o próximo
 turno adversário, funcionando em qualquer posição da rodada. Com duracao:1 e
-sem unidade, termina no fim da rodada atual. Esconder impede selecionar a carta
+sem unidade, termina após o ciclo completo desde a aplicação. Esconder impede selecionar a carta
 por ataques e efeitos individuais inimigos; não impede áreas e é perdido ao
 atacar normalmente. Não equivale a invulnerabilidade.
 A ampliação não grava a segunda habilidade automaticamente no Assassino do
@@ -1658,7 +1664,8 @@ attackLimit: passiva continuous/proprio de Tropa com valor entre 1 e 10.
 
 displace: efeito de feitiço ou habilidade com alvo UnicoInimigo. Só uma Tropa.
   direcao: direita (uma coluna, na visão do dono) ou vizinho (destino escolhido).
-  borda: mao é opcional e só aceita direita; sem ela, a borda impede o uso.
+  borda: mao devolve à mão; manter permite ativar sem mover na borda.
+  Ambas só aceitam direita; sem borda configurada, o limite impede o uso.
   estrutura: impedirUso (padrão) ou manter (não desloca e continua outros efeitos).
   Estruturas ficam no espaço. Montaria e ocupante se movem/devolvem juntos.
   Espaço ocupado ou Lama impede entrada. Status de impedimento de movimento
@@ -1682,7 +1689,7 @@ filtroAlvo por efeito: tipo/elemento opcionais, combinados com E. Só damage,
 inicio: proximaRodada, em status, agenda o efeito para a próxima rodada completa.
   Não aceita duração em turnos nem estados com duração elemental fixa.
   O agendamento fica visível em scheduledStatuses e só dispara onStatusApplied
-  quando a rodada começar; a devolução da carta à mão limpa o agendamento.
+  após o ciclo completo da aplicação; devolver à mão limpa o agendamento.
   SemAtaque impede somente ataques básicos (inclui estrutura vinculada à tropa).
   Campo livre também pode ser concedido como status temporário, sem renovar moved.
   Ex.: {"id":"status","status":"SemAtaque","duracao":1,"inicio":"proximaRodada","filtroAlvo":{"tipo":"Tropa","elemento":"Terra"}}
@@ -1803,3 +1810,26 @@ EXEMPLO_JSON_INICIO 080 — Reviver Tropa
   ]
 }
 EXEMPLO_JSON_FIM
+
+
+REVISÃO DE 19/10/2026 — DURAÇÕES E CARTAS DE AR
+
+Duração em rodada: nextTickTurn é estado interno, nunca um campo a preencher
+no catálogo. O motor agenda o primeiro vencimento para o fim do turno seguinte
+ao da ativação e os próximos a cada dois turnos. Exemplo: ativar no turno 4,
+passar 4 mantém; passar 5 causa o primeiro dano e reduz uma rodada. Isso vale
+para status, feitiços contínuos, Barreira Ígnea e Lama. Efeitos explicitamente
+configurados em turno mantêm sua unidade; cooldowns e número de rodada não mudam.
+Cauterizar cura após o mesmo ciclo completo. inicio proximaRodada agenda o
+status após dois encerramentos; a duração começa quando o status é aplicado.
+
+043 Beija-flor: displace com direcao direita e borda manter. Na última coluna,
+a ativação é válida, gasta o custo/uso normal e não desloca nem devolve à mão.
+Estrutura e destino ocupado continuam impedindo empurrão.
+057 Lâmina de Vento: custo 6, damage valor 3, tiposAlvo [Tropa], compra 1 e
+SemAtaque em tropa Terra no ciclo seguinte. Não atinge mago. As descrições
+antigas de 5 de dano ou devolução do Beija-flor estão substituídas.
+
+scripts/update-opening-air-cards.ts faz dry-run sem argumentos e aplica com
+--apply. Só sincroniza descricao/habilidadesAtivas de 043 e
+descricao/tiposAlvo/efeitos de 057; preserva arte, publicação e custos do banco.

@@ -386,17 +386,17 @@
     "nome": "Lâmina de Vento",
     "tipo": "Feitico",
     "custoMana": 6,
-    "descricao": "Causa 5 de dano a uma tropa ou ao mago inimigo e compra 1 carta. Se o alvo for uma tropa de Terra, ela não pode atacar durante a próxima rodada completa; movimento e habilidades continuam permitidos. Custa sempre 6 de mana.",
+    "descricao": "Causa 3 de dano a uma tropa inimiga e compra 1 carta. Se o alvo for uma tropa de Terra, ela não pode atacar durante a próxima rodada completa; movimento e habilidades continuam permitidos. Custa 6 de mana.",
     "imgURL": "/assets/Cards/Lâmina de Vento.png",
     "publicado": true,
     "versao": 1,
     "alvo": "UnicoInimigo",
     "elemento": "Ar",
-    "tiposAlvo": ["Tropa", "Mago"],
+    "tiposAlvo": ["Tropa"],
     "efeitos": [
       {
         "id": "damage",
-        "valor": 5
+        "valor": 3
       },
       {
         "id": "status",
@@ -2393,7 +2393,7 @@
     "nome": "Beija-flor de Fagniz",
     "tipo": "Tropa",
     "custoMana": 4,
-    "descricao": "Ataca duas vezes por rodada e pode mudar de posição uma vez por turno com Campo livre. Bater das Asas (3 mana): empurra uma tropa inimiga um espaço para a direita, na visão do dono dela. Espaço ocupado ou estrutura impede o uso. Ao ultrapassar a borda direita, devolve a tropa à mão. Montaria e ocupante são movidos juntos.",
+    "descricao": "Ataca duas vezes por rodada e pode mudar de posição uma vez por turno com Campo livre. Bater das Asas (3 mana): empurra uma tropa inimiga um espaço para a direita, na visão do dono dela. Espaço ocupado ou estrutura impede o uso. Na borda direita, a habilidade é usada sem mover a tropa, que permanece em campo. Montaria e ocupante são movidos juntos.",
     "imgURL": "/assets/Cards/Beija-flor de Fagniz.png",
     "publicado": true,
     "versao": 1,
@@ -2428,12 +2428,12 @@
         "filtroAlvo": {
           "tipo": "Tropa"
         },
-        "descricao": "Empurra uma tropa um espaço para a direita, ou devolve à mão na borda. Não atravessa tropas nem estruturas.",
+        "descricao": "Empurra uma tropa um espaço para a direita. Na borda, pode ser usada sem mover. Não atravessa tropas nem estruturas e não devolve cartas à mão.",
         "efeitos": [
           {
             "id": "displace",
             "direcao": "direita",
-            "borda": "mao",
+            "borda": "manter",
             "estrutura": "impedirUso"
           }
         ]

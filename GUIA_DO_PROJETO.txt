@@ -1926,3 +1926,56 @@ Necromante e ressurreição configurável — 16/10/2026:
   e filtro reacao com participação. Consulte o manual para montar outras cartas.
 - A fazer: cadastrar os indicadores dos outros magos quando suas regras forem
   confirmadas; revisar a arte antiga do Necromante que ainda não fala em acúmulo.
+
+
+REVISÃO DE 19/10/2026 — ABERTURA, ARMAMENTOS E RELÓGIO DOS EFEITOS
+
+Regras confirmadas: na preparação não se lança nenhum feitiço. No turno 1
+após ela, só se mobilizam tropas. No turno 2, ataques e habilidades/feitiços
+sem dano são liberados; armamentos e estruturas só a partir do turno 3.
+Máximo de um armamento por turno, exigindo tropa receptora na coluna frontal
+ou mago nos espaços traseiros. O contador é próprio de cada jogador e reinicia
+no seu turno. Não ocupa o limite de mobilização de tropas.
+
+Uma rodada de duração conta dois encerramentos desde a ativação, inclusive
+quando quem aplica é o segundo jogador. O mesmo vale para dano periódico,
+Barreira, Lama, início adiado de status e cura de Cauterizar. A rodada exibida
+e os intervalos de habilidades/passivas continuam como antes. Efeitos por
+turno não foram convertidos em rodada. Partidas salvas antigas sem relógio
+ganham a primeira referência no próximo encerramento, sem dano retroativo.
+
+Arquivos específicos:
+- src/game/effect-clock.ts — calcula o primeiro vencimento e avança o relógio
+serializável de um efeito em intervalos de dois turnos.
+- src/game/status.ts — status em rodada usam esse relógio; mantém efeitos por
+turno, acúmulos e congelamento com duração explícita.
+- src/game/state.ts — persiste contador de armamentos, relógios e vencimentos
+das curas/status agendados, aceitando ausência em estados antigos.
+- src/game/engine.ts — valida abertura e equipamento no servidor, aplica
+relógios e projeta alvos válidos/recuperação real de mana para a interface.
+- public/JS/battle-ui.js — arraste respeita bloqueios/alvos de equipamento e
+cartas em campo exibem +recuperação; mão continua exibindo custo.
+- public/JS/game.js — bloqueios do menu seguem o servidor e o HUD conta equipar.
+- src/game/displacement.ts — borda manter permite ativação sem movimento;
+borda mao continua disponível no motor para outras definições.
+- src/types/card.ts e src/db/models/Card.ts — aceitam borda manter no catálogo.
+- src/data/catalog.json — 043 não devolve para mão; 057 causa 3 só em tropas.
+- public/JS/card-view.js — explica borda manter na leitura dos efeitos.
+- tests/effect-duration.test.ts — cobre as duas paridades de ativação,
+restauração, dano contínuo, campo, terreno, cura e status adiado.
+- tests/preparation-equipment.test.ts — percorre todos os feitiços na preparação,
+valida receptores, limite de equipar, abertura e recuperação dinâmica do mago.
+- tests/air-cards.test.ts — testa dano/alvo da Lâmina, borda sem retorno e
+atualizações mínimas do catálogo.
+- tests/battle-ui.test.ts — valida custo na mão, recuperação em campo e arraste.
+- scripts/update-opening-air-cards.ts — sincroniza somente os novos campos de
+043 e 057 no banco; dry-run por padrão, backup e controle de versão com --apply.
+
+Pendências e cuidados: artes impressas antigas de 043/057 ainda podem ter
+texto anterior; atualizá-las exige aprovação visual. Não alterar custos,
+fraquezas, mana gerada nem outras cartas para acompanhar esta revisão.
+Para criar um efeito com duração nova, configure duracao/unidade no catálogo;
+não preencha nextTickTurn manualmente. Para testar, aplique nos turnos 3 e 4,
+passe duas vezes, exporte/restaure a partida e confira que não antecipa nem
+repete o efeito. Balanceamento da vantagem inicial deve ser observado em
+partidas reais; esta revisão aplica a regra solicitada sem inventar bônus.

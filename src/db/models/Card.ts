@@ -85,7 +85,7 @@ const effect = new Schema(
       default: undefined,
     },
     direcao: { type: String, enum: ["direita", "vizinho"] },
-    borda: { type: String, enum: ["mao"] },
+    borda: { type: String, enum: ["mao", "manter"] },
     estrutura: { type: String, enum: ["impedirUso", "manter"] },
     filtroAlvo: {
       type: new Schema(

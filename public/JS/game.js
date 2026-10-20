@@ -452,19 +452,32 @@ function damageAction(effects = [], id = "") {
 function handBlock(card) {
   const p = myPlayer(),
     limits = p.mage.limites[0];
+  if (card.handBlockedReason) return card.handBlockedReason;
   if (card.tipo === "Tropa") {
     if (p.combatStarted) return "Você já atacou neste turno.";
     if (p.counters.summons >= limits.tropasMobilizadas)
       return "Limite de mobilização atingido.";
   }
+  if (card.tipo === "Armamento") {
+    if ((p.counters.equipment ?? 0) >= 1)
+      return "Você só pode jogar um armamento por turno.";
+    if (!state.equipmentTargets?.length)
+      return "Não há espaço com uma tropa ou mago para receber o armamento.";
+  }
   if (card.tipo === "Feitico") {
+    if (state.phase === "PREPARATION")
+      return "Feitiços são bloqueados durante a preparação.";
     if (card.spellBlockedReason) return card.spellBlockedReason;
     if (meHasStatus("Cego"))
       return "Seu mago está Cego e não pode usar feitiços.";
     const conditionalLight =
       card.efeitos.every((e) => e.id === "lightOrb") &&
       p.mage.elemento !== "Fogo";
-    if (state.openingBlocked && damageAction(card.efeitos) && !conditionalLight)
+    if (
+      state.damageOpeningBlocked &&
+      damageAction(card.efeitos) &&
+      !conditionalLight
+    )
       return "Bloqueado na preparação e no primeiro turno de cada jogador.";
     if (
       (card.assinatura ? p.counters.unique : p.counters.spells) >=
@@ -671,7 +684,7 @@ function renderActions() {
               slotId: slot.id,
               source: fieldSource(card, slot),
             }),
-          state.openingBlocked
+          state.damageOpeningBlocked
             ? "Sacrifício bloqueado nesta fase."
             : myPlayer().mage.usedAbility
               ? "O mago já usou sua habilidade nesta rodada."
@@ -693,7 +706,7 @@ function renderActions() {
             render();
           },
           state.openingBlocked
-            ? "Ataques bloqueados na preparação e no primeiro turno de cada jogador."
+            ? "Ataques bloqueados na preparação e no primeiro turno após ela."
             : card.attacked
               ? "Esta carta já atacou."
               : card.tipo === "Mago" &&
@@ -731,10 +744,16 @@ function renderActions() {
           ))
       )
         panel.append(
-          actionButton("Reposicionar", () => {
-            selected = { type: "move", card, slot };
-            render();
-          }),
+          actionButton(
+            "Reposicionar",
+            () => {
+              selected = { type: "move", card, slot };
+              render();
+            },
+            state.phase === "BATTLE" && state.turn === 1
+              ? "No primeiro turno, só é permitido mobilizar tropas."
+              : "",
+          ),
         );
     }
     if (
@@ -1255,6 +1274,7 @@ function hud(id, player) {
     );
   for (const [label, used, max] of [
     ["Mobilizar", player.counters.summons, limits.tropasMobilizadas],
+    ["Equipar", player.counters.equipment ?? 0, 1],
     ["Atacar", player.counters.attacks, limits.tropaAtacam],
     ["Feitiços", player.counters.spells, limits.feiticosUsados],
     ["Assinatura", player.counters.unique, limits.feiticosUnicos],

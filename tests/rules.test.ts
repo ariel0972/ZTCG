@@ -140,15 +140,15 @@ test("preparação simultânea mantém cinco cartas privadas e mobilização man
   );
 });
 
-test("preparação permite cura, cobra armamentos e rejeita habilidades e feitiços de dano sem consumir recursos", () => {
+test("preparação rejeita cura por feitiço, cobra armamentos e bloqueia habilidades sem consumir recursos", () => {
   const g = make();
   const healer = instance("002", "p2", {
     efeitos: [{ id: "heal", valor: 3 }],
     alvo: "UnicoAliado",
   });
   g.player("p2").mage.hpAtual = 10;
-  cast(g, healer, [g.player("p2").mage.id]);
-  assert.equal(g.player("p2").mage.hpAtual, 13);
+  assert.throws(() => cast(g, healer, [g.player("p2").mage.id]), /preparação/);
+  assert.equal(g.player("p2").mage.hpAtual, 10);
   const weapon = instance("021", "p1", {
     tipo: "Armamento",
     bonusAtaque: 1,
@@ -214,7 +214,7 @@ test("confirmação antecipada permite resolver compensação nova e o timeout p
   assert.equal(h.player("p2").inactivityStreak, 0);
 });
 
-test("habilidades bloqueadas no primeiro turno de cada jogador; uma por carta por rodada e status impeditivos", () => {
+test("habilidades de dano bloqueadas na abertura; uma por carta por rodada e status impeditivos", () => {
   const g = battle();
   for (const id of ["p1", "p2"]) {
     slot(g, `${id}:front:0`).card = instance("020", id);
@@ -227,7 +227,7 @@ test("habilidades bloqueadas no primeiro turno de cada jogador; uma por carta po
         slotId: "p1:front:0",
         abilityId: "ataqueFurtivo",
       }),
-    /primeiro turno/,
+    /primeiro turno|dois primeiros turnos/,
   );
   command(g, "p1", { type: "endTurn" });
   assert.throws(
@@ -237,7 +237,7 @@ test("habilidades bloqueadas no primeiro turno de cada jogador; uma por carta po
         slotId: "p2:front:0",
         abilityId: "ataqueFurtivo",
       }),
-    /primeiro turno/,
+    /primeiro turno|dois primeiros turnos/,
   );
   command(g, "p2", { type: "endTurn" });
   command(g, "p1", { type: "endTurn" });
@@ -340,7 +340,7 @@ test("veneno, queimadura e sangramento têm acúmulos distintos e dano uma vez p
   const g = battle(),
     c = instance("021", "p2");
   slot(g, "p2:front:0").card = c;
-  applyStatus(c.statuses, "Envenenado", 3);
+  applyStatus(c.statuses, "Envenenado", 3, undefined, g.state.turn);
   command(g, "p1", { type: "endTurn" });
   assert.equal(slot(g, "p2:front:0").card!.hpAtual, c.hpAtual);
   command(g, "p2", { type: "endTurn" });
@@ -1360,7 +1360,7 @@ test("habilidades automáticas não pedem alvos: próprio cavaleiro, mago e toda
   assert.equal(g.player(enemy).mage.hpAtual, hp - 2);
 });
 
-test("abertura bloqueia ataque, habilidade e dano para ambos; mana só cresce após preparação", () => {
+test("abertura bloqueia dano não originado de ataques; mana só cresce após preparação", () => {
   const g = make();
   for (const user of ["p1", "p2"]) {
     assert.equal(g.player(user).mana, 5);
@@ -1386,13 +1386,18 @@ test("abertura bloqueia ataque, habilidade e dano para ambos; mana só cresce ap
           abilityId: "ataqueFurtivo",
         },
       ];
-      for (const action of actions)
-        assert.throws(() => command(g, user, action), /bloquead/);
+      for (const action of actions.filter(
+        (a) => phase !== "second" || a.type !== "attack",
+      ))
+        assert.throws(
+          () => command(g, user, action),
+          /bloquead|só é permitido/,
+        );
       assert.equal(g.player(user).mana, mana);
       assert.deepEqual(
         g.snapshot(user).slots.find((s) => s.id === `${user}:front:0`)!
           .attackTargets!.card,
-        [],
+        phase === "second" ? ["p1:front:2"] : [],
       );
     }
     if (phase === "prep") {

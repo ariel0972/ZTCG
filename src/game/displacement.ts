@@ -28,6 +28,13 @@ export function planDisplacement(
   if (effect.direcao !== "vizinho" && destinationId)
     return fail("Este deslocamento usa direção automática.");
   if (effect.direcao === "direita" && source.column === 2) {
+    if (effect.borda === "manter")
+      return {
+        source,
+        destination: undefined,
+        bounce: false,
+        stationary: true,
+      };
     if (effect.borda !== "mao") return fail("Não há espaço à direita.");
     return { source, destination: undefined, bounce: true, stationary: false };
   }

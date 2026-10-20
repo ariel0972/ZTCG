@@ -454,7 +454,7 @@ test("feitiços dos dois lados alteram automaticamente Barreira; estado persiste
   const h = make();
   troop(h, "p2:front:2");
   cast(h, "031");
-  cast(h, "057", [h.player("p2").mage.id], { elemento: "Terra" });
+  cast(h, "057", [slot(h, "p2:front:2").card!.id], { elemento: "Terra" });
   assert.equal(h.state.fieldEffects!.length, 0);
 });
 

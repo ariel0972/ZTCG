@@ -125,7 +125,7 @@ export const effectSchema = z
       .strict()
       .optional(),
     direcao: z.enum(["direita", "vizinho"]).optional(),
-    borda: z.enum(["mao"]).optional(),
+    borda: z.enum(["mao", "manter"]).optional(),
     estrutura: z.enum(["impedirUso", "manter"]).optional(),
     filtroAlvo: z
       .object({

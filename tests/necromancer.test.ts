@@ -103,6 +103,7 @@ function reaction(g: Game, target: string, user = "p1") {
     undefined,
     {
       elemento: "Zarcos",
+      tiposAlvo: ["Tropa", "Mago"],
       custoMana: 0,
       alvo:
         user === g.player("p1").mage.ownerId &&
@@ -275,7 +276,7 @@ test("ressurreições acumulam bônus de todos os feitiços e ele expira no fim 
   slot(g, "p2:front:2").card = enemy;
   g = Game.restore(JSON.parse(JSON.stringify(g.exportState())));
   cast(g, "057", [enemy.id]);
-  assert.equal(slot(g, "p2:front:2").card!.hpAtual, 31);
+  assert.equal(slot(g, "p2:front:2").card!.hpAtual, 33);
   act(g, { type: "endTurn" });
   assert.ok(
     !g
@@ -299,14 +300,18 @@ test("feitiço contínuo usa o bônus somente enquanto o turno ainda o possui", 
     custoMana: 0,
     elemento: "Ar",
     alvo: "TodosInimigos",
+    tiposAlvo: ["Tropa", "Mago"],
     efeitos: [{ id: "arrowRain", valor: 3, duracao: 2, variantesMago: [] }],
   });
   assert.equal(g.state.ongoingSpells![0].damage, 3);
   act(g, { type: "endTurn" });
-  assert.equal(slot(g, "p2:front:2").card!.hpAtual, 35);
+  assert.equal(slot(g, "p2:front:2").card!.hpAtual, 40);
   act(g, { type: "endTurn" });
+  assert.equal(slot(g, "p2:front:2").card!.hpAtual, 37);
   act(g, { type: "endTurn" });
-  assert.equal(slot(g, "p2:front:2").card!.hpAtual, 32);
+  assert.equal(slot(g, "p2:front:2").card!.hpAtual, 37);
+  act(g, { type: "endTurn" });
+  assert.equal(slot(g, "p2:front:2").card!.hpAtual, 34);
 });
 test("morte na rodada devolve 6 mana uma única vez e remove bônus; morte posterior não recompensa", () => {
   for (const later of [false, true]) {
@@ -507,6 +512,7 @@ test("bônus ativado na conjuração não reduz a base de efeitos contínuos", (
       cast(g, "057", [], undefined, {
         custoMana: 0,
         alvo: "TodosInimigos",
+        tiposAlvo: ["Tropa", "Mago"],
         efeitos: [{ id: "arrowRain", valor: 3, duracao: 2, variantesMago: [] }],
       });
       assert.equal(g.state.ongoingSpells![0].damage, 3);

@@ -62,7 +62,7 @@ function effectDescription(effect) {
       attackField: `Cria um efeito no campo inimigo por ${effect.duracao} rodadas, causando ${effect.valor} de dano após cada ataque.`,
       nextActionDamage: `A próxima ação que causar dano recebe +${effect.valor} de dano até o fim do turno.`,
       damage: `Causa ${effect.valor || 0} de dano.${effect.valorEstrutura === undefined ? "" : " Contra estrutura, causa " + effect.valorEstrutura + "."}`,
-      displace: `Desloca uma tropa para ${effect.direcao === "direita" ? "o espaço à direita" : "um espaço vizinho vazio escolhido"}${effect.borda === "mao" ? "; na borda direita, devolve à mão" : ""}.`,
+      displace: `Desloca uma tropa para ${effect.direcao === "direita" ? "o espaço à direita" : "um espaço vizinho vazio escolhido"}${effect.borda === "mao" ? "; na borda direita, devolve à mão" : effect.borda === "manter" ? "; na borda direita, permanece em campo" : ""}.`,
       heal: `Cura ${effect.valor || 0} de vida.`,
       spendAttack:
         "Consome o ataque da tropa e um uso do limite de ataques do mago.",

@@ -1,5 +1,6 @@
 import type { Card, Effect } from "../types/card";
 import type { Status } from "./status";
+import type { EffectClock } from "./effect-clock";
 import type { ReactionName } from "./reactions";
 
 export interface BattleDamage {
@@ -38,9 +39,10 @@ export interface Instance extends Card {
   };
   appliedElement?: string;
   statuses: Status[];
-  scheduledStatuses?: { round: number; status: Status }[];
+  scheduledStatuses?: { round: number; turn?: number; status: Status }[];
   scheduledHeals?: {
     round: number;
+    turn?: number;
     amount: number;
     sourceId?: string;
     ownerId: string;
@@ -62,7 +64,7 @@ export interface Slot {
   card: Instance | null;
   rider?: Instance | null;
   structure: Instance | null;
-  terrain?: { nome: "Lama"; rodadasRestantes: number };
+  terrain?: { nome: "Lama"; rodadasRestantes: number; nextTickTurn?: number };
   appliedElement?: string;
 }
 export const slotCards = (slot: Slot): Instance[] =>
@@ -104,9 +106,10 @@ export interface Player {
     attacks: number;
     spells: number;
     unique: number;
+    equipment?: number;
   };
 }
-export interface AttackField {
+export interface AttackField extends EffectClock {
   id: string;
   ownerId: string;
   affectedOwnerId: string;
@@ -148,6 +151,7 @@ export interface State {
     id: string;
     ownerId: string;
     kind: "tornado" | "arrowRain" | "sandstorm";
+    nextTickTurn?: number;
     rounds: number;
     damage: number;
     element?: Card["elemento"];
