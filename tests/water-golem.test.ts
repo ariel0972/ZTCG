@@ -488,3 +488,111 @@ test("janela do Jato seguida de desvio recebe novo prazo e preserva o tempo do t
   assert.equal(c.state.match!.deadline, now + 80_000);
   assert.equal(c.state.match!.players[0].counters.spells, 1);
 });
+
+test("Pedregulhos permite a cada Golém desviar do feitiço inteiro, independentemente da ordem", () => {
+  for (const columns of [
+    [0, 1],
+    [2, 0],
+  ]) {
+    let g = game();
+    for (const column of columns)
+      slot(g, "p2:front:" + column).card = card("026", "p2");
+    const spell = card("003", "p1"),
+      hpMage = g.player("p2").mage.hpAtual;
+    cast(g, spell);
+    const chosen = new Set<string>();
+    for (let i = 0; g.state.pendingImpact && i < 6; i++) {
+      const request = g.state.pendingImpact.request;
+      assert(
+        !chosen.has(request.cardId),
+        "Não deve pedir novamente para o mesmo Golém",
+      );
+      chosen.add(request.cardId);
+      g = restored(g);
+      act(g, { type: "respondDodge", dodge: true }, "p2");
+    }
+    assert.equal(chosen.size, 2);
+    assert.equal(g.state.pendingImpact, undefined);
+    for (const column of columns) {
+      const troop = slot(g, "p2:front:" + column).card!;
+      assert.equal(troop.hpAtual, 15);
+      assert.equal(troop.dodgedRound, 3);
+      assert.equal(troop.statuses.length, 0);
+    }
+    assert.equal(g.player("p2").mage.hpAtual, hpMage);
+    assert.equal(g.player("p1").mana, 15);
+    assert.equal(g.player("p1").counters.spells, 1);
+  }
+});
+test("Pedregulhos não transfere a escolha entre Goléns, mantém os demais alvos e consome escudo por pedra", () => {
+  for (const acceptFirst of [true, false]) {
+    let g = game();
+    for (const column of [0, 1])
+      slot(g, "p2:front:" + column).card = card("026", "p2");
+    cast(g, card("003", "p1"));
+    const first = g.state.pendingImpact!.request.cardId;
+    act(g, { type: "respondDodge", dodge: acceptFirst }, "p2");
+    assert(g.state.pendingImpact);
+    assert.notEqual(g.state.pendingImpact.request.cardId, first);
+    g = restored(g);
+    act(g, { type: "respondDodge", dodge: !acceptFirst }, "p2");
+    assert.equal(g.state.pendingImpact, undefined);
+    const a = slot(g, "p2:front:0").card!,
+      b = slot(g, "p2:front:1").card!;
+    assert.equal(a.hpAtual, acceptFirst ? 15 : 9);
+    assert.equal(b.hpAtual, acceptFirst ? 11 : 15);
+    assert.equal(a.dodgedRound, acceptFirst ? 3 : undefined);
+    assert.equal(b.dodgedRound, acceptFirst ? undefined : 3);
+  }
+  const g = game();
+  slot(g, "p2:front:0").card = card("023", "p2", {
+    hp: 30,
+    resistencia: [],
+    fraqueza: [],
+  });
+  applyStatus(slot(g, "p2:front:0").card!.statuses, "EscudoProtecao", 2, 3);
+  cast(g, card("003", "p1"));
+  const target = slot(g, "p2:front:0").card!;
+  assert.equal(target.hpAtual, 28);
+  assert(!target.statuses.some((s) => s.nome === "EscudoProtecao"));
+});
+
+test("Pedregulhos retoma escolhas salvas no formato anterior sem perder o desvio dos Goléns", () => {
+  let g = game();
+  for (const column of [0, 1])
+    slot(g, "p2:front:" + column).card = card("026", "p2");
+  cast(g, card("003", "p1"));
+  const first = g.state.pendingImpact!.request.cardId;
+  g.state.pendingImpact!.request.key = "1:" + first;
+  act(g, { type: "respondDodge", dodge: true }, "p2");
+  const second = g.state.pendingImpact!.request.cardId;
+  g.state.pendingImpact!.decisions = { ["1:" + first]: true };
+  g.state.pendingImpact!.request.key = "2:" + second;
+  g = restored(g);
+  act(g, { type: "respondDodge", dodge: true }, "p2");
+  assert.equal(g.state.pendingImpact, undefined);
+  for (const column of [0, 1])
+    assert.equal(slot(g, "p2:front:" + column).card!.hpAtual, 15);
+});
+
+test("resposta de um menu antigo não pode decidir o desvio do próximo Golém", () => {
+  const g = game();
+  for (const column of [0, 1])
+    slot(g, "p2:front:" + column).card = card("026", "p2");
+  cast(g, card("003", "p1"));
+  const first = g.state.pendingImpact!.request.key;
+  act(g, { type: "respondDodge", dodge: true, choiceKey: first }, "p2");
+  const second = g.state.pendingImpact!.request.key,
+    before = g.exportState();
+  assert.notEqual(first, second);
+  assert.throws(
+    () =>
+      act(g, { type: "respondDodge", dodge: false, choiceKey: first }, "p2"),
+    (e: any) => e.code === "STALE_CHOICE",
+  );
+  assert.deepEqual(g.exportState(), before);
+  act(g, { type: "respondDodge", dodge: true, choiceKey: second }, "p2");
+  assert.equal(g.state.pendingImpact, undefined);
+  for (const column of [0, 1])
+    assert.equal(slot(g, "p2:front:" + column).card!.hpAtual, 15);
+});

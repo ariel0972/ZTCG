@@ -79,6 +79,7 @@ export class Game {
   };
   private impact?: {
     key: number;
+    dodgeKey: number;
     kind: "attack" | "spell" | "ability";
     name: string;
     blocked: Map<string, boolean>;
@@ -93,10 +94,13 @@ export class Game {
     kind: "attack" | "spell" | "ability",
     name: string,
     operation: () => T,
+    { shareDodgeWithParent = false }: { shareDodgeWithParent?: boolean } = {},
   ): T {
     const previous = this.impact;
+    const key = this.resolution ? this.resolution.impactIndex++ : 0;
     this.impact = {
-      key: this.resolution ? this.resolution.impactIndex++ : 0,
+      key,
+      dodgeKey: shareDodgeWithParent && previous ? previous.dodgeKey : key,
       kind,
       name,
       blocked: new Map(),
@@ -115,7 +119,7 @@ export class Game {
     const cached = impact.blocked.get(target.id);
     // Banishment bypasses the spell shield, but never a chosen dodge.
     if (cached !== undefined && !banishment) return !cached;
-    const key = `${impact.key}:${target.id}`;
+    const key = `${impact.dodgeKey}:${target.id}`;
     const dodge = target.habilidadesPassivas
       .map(normalizePassive)
       .some(
@@ -134,7 +138,16 @@ export class Game {
             this.state.slots,
           ),
       );
-    const decision = this.resolution?.decisions[key];
+    let decision = this.resolution?.decisions[key];
+    // Resume pending volleys saved before shared dodge decisions were introduced.
+    if (
+      decision === undefined &&
+      this.resolution &&
+      impact.dodgeKey !== impact.key
+    ) {
+      decision = this.resolution.decisions[`${impact.key}:${target.id}`];
+      if (decision !== undefined) this.resolution.decisions[key] = decision;
+    }
     if (dodge && target.dodgedRound !== this.state.round && this.resolution) {
       if (decision === undefined)
         throw new ImpactChoice(
@@ -264,10 +277,16 @@ export class Game {
       this.state.version++;
     }
   }
-  private respondDodge(user: string, dodge: boolean) {
+  private respondDodge(user: string, dodge: boolean, choiceKey?: string) {
     const pending = this.state.pendingImpact;
     if (!pending || pending.request.ownerId !== user)
       this.fail("Não há desvio disponível para você.");
+    if (choiceKey !== undefined && choiceKey !== pending.request.key)
+      throw new AppError(
+        409,
+        "Essa escolha de desvio já mudou. Confira a carta indicada no menu.",
+        "STALE_CHOICE",
+      );
     const current = this.state;
     const resume = {
       ...pending,
@@ -302,7 +321,8 @@ export class Game {
     if (this.state.pendingImpact || this.state.pendingHandChoice) {
       if (cmd.type === "surrender")
         this.finish(this.opponent(user).id, "Desistência.");
-      else if (cmd.type === "respondDodge") this.respondDodge(user, cmd.dodge);
+      else if (cmd.type === "respondDodge")
+        this.respondDodge(user, cmd.dodge, cmd.choiceKey);
       else if (cmd.type === "chooseHand") this.chooseHand(user, cmd.cardId);
       else this.fail("Aguarde a resposta à ação pendente.");
       if (cmd.type !== "respondDodge") this.state.version++;
@@ -3446,8 +3466,11 @@ export class Game {
             troops.find((id) => this.targetSlot(id)!.column >= nextColumn) ??
             troops[0];
           if (target) nextColumn = this.targetSlot(target)!.column + 1;
-          this.inImpact("spell", card.nome, () =>
-            hit([target ?? enemy.mage.id], 1),
+          this.inImpact(
+            "spell",
+            card.nome,
+            () => hit([target ?? enemy.mage.id], 1),
+            { shareDodgeWithParent: true },
           );
           this.resolve();
         }

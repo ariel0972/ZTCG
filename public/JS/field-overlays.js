@@ -1,3 +1,34 @@
+export function responseMenuKey(state) {
+  if (!state) return "";
+  const choice = state.paused
+    ? "paused"
+    : state.pendingImpact
+      ? "dodge:" + (state.pendingImpact.key ?? state.pendingImpact.cardId)
+      : state.pendingRevive
+        ? "revive:" + state.pendingRevive.id
+        : state.pendingHandChoice
+          ? "hand:" + state.pendingHandChoice.ownerId
+          : state.pendingAttack
+            ? "attack:" + state.pendingAttack.attackerId
+            : state.pendingSpell
+              ? "spell:" + state.pendingSpell.card.id
+              : "reconnect";
+  return (
+    state.id + ":" + (state.responseDeadline ?? "reconnect") + ":" + choice
+  );
+}
+export function dodgeChoiceTitle(state) {
+  const id = state.pendingImpact?.cardId;
+  const slot = state.slots?.find((s) =>
+    [s.card, s.rider, s.structure].some((c) => c?.id === id),
+  );
+  const card = [slot?.card, slot?.rider, slot?.structure].find(
+    (c) => c?.id === id,
+  );
+  const position =
+    slot?.kind === "Tropa" ? " · espaço " + (slot.column + 1) : "";
+  return (card?.nome ?? "Carta") + position + ": desviar?";
+}
 // Non-modal menus stay inside the field and can be folded to inspect the cards.
 export function createFieldMenu(
   host,
@@ -73,6 +104,6 @@ export function publicFieldNotice(state) {
   return {
     label: "Turno pausado",
     message,
-    key: `${state.id}:${state.responseDeadline ?? "reconnect"}`,
+    key: responseMenuKey(state),
   };
 }

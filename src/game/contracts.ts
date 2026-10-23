@@ -19,7 +19,12 @@ export const commandSchema = z.discriminatedUnion("type", [
     })
     .strict(),
   z
-    .object({ ...base, type: z.literal("respondDodge"), dodge: z.boolean() })
+    .object({
+      ...base,
+      type: z.literal("respondDodge"),
+      dodge: z.boolean(),
+      choiceKey: id.optional(),
+    })
     .strict(),
   z
     .object({ ...base, type: z.literal("chooseHand"), cardId: id.optional() })

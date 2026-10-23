@@ -84,3 +84,38 @@ test("aviso para espectador só informa a preparação ou a pausa, sem cartas pr
     null,
   );
 });
+
+test("cada Golém reabre o menu mesmo com o mesmo prazo e informa seu espaço no campo", async () => {
+  const path = "../public/JS/field-overlays.js",
+    { createFieldMenu, responseMenuKey, dodgeChoiceTitle } = await import(path);
+  const dom = new JSDOM('<div id="field"></div>');
+  try {
+    const doc = dom.window.document,
+      field = doc.getElementById("field")!;
+    const view = createFieldMenu(field, {
+      label: "Desviar",
+      content: doc.createElement("p"),
+    });
+    const state: any = {
+      id: "match",
+      responseDeadline: 5000,
+      slots: [
+        { kind: "Tropa", column: 0, card: { id: "a", nome: "Golém de água" } },
+        { kind: "Tropa", column: 2, card: { id: "b", nome: "Golém de água" } },
+      ],
+      pendingImpact: { key: "0:a", cardId: "a" },
+    };
+    view.update({ visible: true, key: responseMenuKey(state) });
+    assert.match(dodgeChoiceTitle(state), /espaço 1/);
+    const menu = field.querySelector("details")!;
+    menu.open = false;
+    view.update({ visible: true, key: responseMenuKey(state) });
+    assert.equal(menu.open, false);
+    state.pendingImpact = { key: "0:b", cardId: "b" };
+    view.update({ visible: true, key: responseMenuKey(state) });
+    assert.equal(menu.open, true);
+    assert.match(dodgeChoiceTitle(state), /espaço 3/);
+  } finally {
+    dom.window.close();
+  }
+});

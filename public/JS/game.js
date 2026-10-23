@@ -36,7 +36,11 @@ import { createMatchResult } from "./match-result.js";
 import { createCardBacks } from "./card-backs.js";
 import { createOngoingSpells } from "./ongoing-spells.js";
 import { createDeckSelector } from "./deck-selector.js";
-import { createFieldMenu } from "./field-overlays.js";
+import {
+  createFieldMenu,
+  responseMenuKey,
+  dodgeChoiceTitle,
+} from "./field-overlays.js";
 let deckSelector;
 const battleEvents = createBattleEvents(document.body, {
   getViewerId: () => user?.id,
@@ -1355,15 +1359,12 @@ function render() {
   if (state?.pendingImpact && user) {
     selected = null;
     targets = [];
-    const request = state.pendingImpact,
-      card = state.slots
-        .flatMap((s) => [s.card, s.rider, s.structure])
-        .find((c) => c?.id === request.cardId);
+    const request = state.pendingImpact;
     responsePanel.append(
-      node("h2", `${card?.nome || "Carta"}: desviar?`),
+      node("h2", dodgeChoiceTitle(state)),
       node(
         "p",
-        `${request.source}. Anula o dano e os efeitos deste golpe. Gratuito; resposta em 20 segundos e turno pausado. Respeita a espera da passiva.`,
+        `${request.source}. Anula o dano e os efeitos deste golpe nesta carta. Gratuito; resposta em 20 segundos e turno pausado. Respeita a espera da passiva.`,
       ),
     );
     if (request.ownerId === user.id)
@@ -1373,7 +1374,8 @@ function render() {
       ]) {
         const button = node("button", text, dodge ? "primary" : "quiet");
         button.disabled = pending || state.paused || !connected;
-        button.onclick = () => command({ type: "respondDodge", dodge });
+        button.onclick = () =>
+          command({ type: "respondDodge", dodge, choiceKey: request.key });
         responsePanel.append(button);
       }
     else responsePanel.append(node("p", "Aguardando a escolha do oponente."));
@@ -1566,7 +1568,7 @@ function render() {
     $(id).disabled = pending || !connected;
   responseMenu.update({
     visible: state.status === "ACTIVE" && !responsePanel.hidden,
-    key: `${state.id}:${state.responseDeadline ?? "reconnect"}`,
+    key: responseMenuKey(state),
   });
   preparationMenu.update({
     visible:
