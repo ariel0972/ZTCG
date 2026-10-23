@@ -59,6 +59,15 @@ export function cardFace(
   { slot, slots, hand = false, previous, reactions = {} } = {},
 ) {
   const face = node("div", "", "live-card");
+  if (card.oculta) {
+    face.classList.add("concealed-card");
+    const back = document.createElement("img");
+    back.src = card.imgURL || "/assets/avatar.png";
+    back.alt = "Carta virada; identidade oculta";
+    back.draggable = false;
+    face.append(back);
+    return face;
+  }
   face.dataset.element = card.elemento || "Neutro";
   if (card.id) face.dataset.liveCardId = card.id;
   const art = node("div", "", "live-art");
@@ -105,6 +114,10 @@ export function cardFace(
   resource.setAttribute("aria-label", resource.title);
   resource.dataset.resource = recovery ? "recovery" : "cost";
   heading.append(node("span", card.nome, "live-name"), resource);
+  if (card.concealedTrap)
+    face.append(
+      node("small", "Armadilha · oculta para o adversário", "trap-owner-label"),
+    );
   const stats = node("div", "", "live-stats");
   function stat(value, type, label) {
     const badge = node("span", String(value), `live-stat ${type}`);

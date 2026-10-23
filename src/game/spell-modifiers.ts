@@ -19,6 +19,7 @@ export function currentSpellCost(card: Card, mage: Instance) {
 }
 const values = new Set([
   "damage",
+  "trap",
   "heal",
   "draw",
   "mana",
@@ -65,55 +66,63 @@ export function modifiedSpell<T extends Card>(card: T, mage: Instance): T {
   copy.custoMana = currentSpellCost(card, mage);
   if (!bonus) return copy;
   Object.assign(copy, { appliedSpellBonus: bonus });
-  copy.efeitos = copy.efeitos.map((original) => {
-    const e: Effect = structuredClone(original);
-    if (e.duracao !== undefined) e.duracao += bonus;
-    else if (defaultDuration[e.id]) e.duracao = defaultDuration[e.id] + bonus;
-    if (
-      e.valor !== undefined &&
-      (values.has(e.id) ||
-        (e.id === "status" && statusValues.has(e.status ?? "")))
-    )
-      e.valor += bonus;
-    if (
-      e.id === "status" &&
-      damagingStatus.has(canonicalStatus(e.status ?? ""))
-    )
-      e.valor =
-        (original.valor ??
-          (["Peste Negra", "Leptospirose"].includes(e.status ?? "") ? 2 : 1)) +
-        bonus;
-    if (e.valorEstrutura !== undefined) e.valorEstrutura += bonus;
-    if (e.bonusAtaque !== undefined) e.bonusAtaque += bonus;
-    if (e.bonusHp !== undefined) e.bonusHp += bonus;
-    if (e.id === "bloodScent")
-      e.bonusAtaque = (original.bonusAtaque ?? 1) + bonus;
-    // spellBoost changes its duration only: each copy keeps its own +1 / -2.
-    if (e.variantesMago)
-      e.variantesMago = e.variantesMago.map((v) => ({
-        ...v,
-        ...(v.duracao !== undefined ? { duracao: v.duracao + bonus } : {}),
-        ...(v.efeitos
-          ? {
-              efeitos: v.efeitos.map((s) => ({
-                ...s,
-                duracao: s.duracao + bonus,
-                ...(damagingStatus.has(canonicalStatus(s.status))
-                  ? {
-                      valor:
-                        (s.valor ??
-                          (["Peste Negra", "Leptospirose"].includes(s.status)
-                            ? 2
-                            : 1)) + bonus,
-                    }
-                  : s.valor !== undefined && statusValues.has(s.status)
-                    ? { valor: s.valor + bonus }
-                    : {}),
-              })),
-            }
-          : {}),
-      }));
-    return e;
-  });
+  const modifyEffects = (effects: Effect[]) =>
+    effects.map((original) => {
+      const e: Effect = structuredClone(original);
+      if (e.duracao !== undefined) e.duracao += bonus;
+      else if (defaultDuration[e.id]) e.duracao = defaultDuration[e.id] + bonus;
+      if (
+        e.valor !== undefined &&
+        (values.has(e.id) ||
+          (e.id === "status" && statusValues.has(e.status ?? "")))
+      )
+        e.valor += bonus;
+      if (
+        e.id === "status" &&
+        damagingStatus.has(canonicalStatus(e.status ?? ""))
+      )
+        e.valor =
+          (original.valor ??
+            (["Peste Negra", "Leptospirose"].includes(e.status ?? "")
+              ? 2
+              : 1)) + bonus;
+      if (e.valorEstrutura !== undefined) e.valorEstrutura += bonus;
+      if (e.bonusAtaque !== undefined) e.bonusAtaque += bonus;
+      if (e.bonusHp !== undefined) e.bonusHp += bonus;
+      if (e.id === "bloodScent")
+        e.bonusAtaque = (original.bonusAtaque ?? 1) + bonus;
+      // spellBoost changes its duration only: each copy keeps its own +1 / -2.
+      if (e.variantesMago)
+        e.variantesMago = e.variantesMago.map((v) => ({
+          ...v,
+          ...(v.duracao !== undefined ? { duracao: v.duracao + bonus } : {}),
+          ...(v.efeitos
+            ? {
+                efeitos: v.efeitos.map((s) => ({
+                  ...s,
+                  duracao: s.duracao + bonus,
+                  ...(damagingStatus.has(canonicalStatus(s.status))
+                    ? {
+                        valor:
+                          (s.valor ??
+                            (["Peste Negra", "Leptospirose"].includes(s.status)
+                              ? 2
+                              : 1)) + bonus,
+                      }
+                    : s.valor !== undefined && statusValues.has(s.status)
+                      ? { valor: s.valor + bonus }
+                      : {}),
+                })),
+              }
+            : {}),
+        }));
+      return e;
+    });
+  copy.efeitos = modifyEffects(copy.efeitos);
+  if (copy.opcoes)
+    copy.opcoes = copy.opcoes.map((o) => ({
+      ...o,
+      efeitos: modifyEffects(o.efeitos),
+    }));
   return copy;
 }

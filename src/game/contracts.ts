@@ -43,6 +43,7 @@ export const commandSchema = z.discriminatedUnion("type", [
     .object({
       ...base,
       type: z.literal("play"),
+      mode: id.optional(),
       cardId: id,
       slotId: id.optional(),
       destinationId: id.optional(),
@@ -67,7 +68,7 @@ export const commandSchema = z.discriminatedUnion("type", [
       destinationId: id.optional(),
       source: z.enum(["card", "structure", "rider"]).optional(),
       targets: z.array(id).max(3).default([]),
-      mode: z.enum(["cura", "escudo"]).optional(),
+      mode: id.optional(),
     })
     .strict(),
   z

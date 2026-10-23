@@ -6,6 +6,8 @@ import { fieldElementResult } from "./field-effects";
 import { nextActionBonusStatus, addActionDamage } from "./action-bonus";
 import { planDisplacement } from "./displacement";
 import { playableErrors } from "./capabilities";
+import { hiddenFieldCard } from "./hidden-cards";
+import { chooseAction } from "./action-options";
 import type { Instance, Slot, Player, State, DeckDefinition } from "./state";
 import type { BattleEvent, BattleDamage } from "./state";
 import { slotCards } from "./state";
@@ -822,6 +824,16 @@ export class Game {
     );
     return bonus;
   }
+  private openingHarm(
+    effects: Effect[] = [],
+    id?: string,
+    element?: Card["elemento"],
+  ) {
+    return (
+      this.causesDamage(effects, id, element) ||
+      effects.some((e) => e.id === "sacrifice")
+    );
+  }
   private causesDamage(
     effects: Effect[] = [],
     abilityId?: string,
@@ -856,6 +868,7 @@ export class Game {
             )
           : [
               "damage",
+              "trap",
               "attackField",
               "periodicDamage",
               "stoneVolley",
@@ -1224,12 +1237,26 @@ export class Game {
     }
     return healed;
   }
+  private equipmentGrant(user: string, slot: Slot) {
+    const grant = this.player(user).equipmentGrant;
+    if (grant?.turn !== this.state.turn) return undefined;
+    return this.weaponBeneficiaries(slot).some((s) =>
+      grant.destinatarios.includes(
+        (s.rider ?? s.card)?.tipo as "Tropa" | "Mago",
+      ),
+    )
+      ? grant
+      : undefined;
+  }
   private equipmentPlacementError(user: string, slot: Slot) {
     if (this.state.phase === "BATTLE" && this.state.turn <= 2)
       return "Armamentos são bloqueados nos dois primeiros turnos após a preparação.";
     if (slot.ownerId !== user || slot.kind !== "Armamento" || slot.card)
       return "Escolha um espaço de armamento aliado vazio.";
-    if ((this.player(user).counters.equipment ?? 0) >= 1)
+    if (
+      (this.player(user).counters.equipment ?? 0) >= 1 &&
+      !this.equipmentGrant(user, slot)?.ignorarLimite
+    )
       return "Você só pode jogar um armamento por turno.";
     if (
       !this.weaponBeneficiaries(slot).some((s) => {
@@ -1275,6 +1302,7 @@ export class Game {
     delete card.revivedFromGraveyard;
     delete card.deathReward;
     delete card.killedBy;
+    delete card.concealedTrap;
   }
   private event(
     kind: string,
@@ -1765,6 +1793,8 @@ export class Game {
       if (!slot || (!slot.card && !slot.structure))
         this.fail("Alvo vazio ou inexistente.");
       const card = this.findCard(id) ?? slot.card;
+      if (card?.concealedTrap)
+        this.fail("Cartas ocultas não podem ser selecionadas por este efeito.");
       if (type === "UnicoAliado" && slot.ownerId !== owner)
         this.fail("Selecione um aliado.");
       if (
@@ -2001,7 +2031,7 @@ export class Game {
     const player = this.player(ownerId);
     if (
       destinationId &&
-      !effects.some((e) => ["displace", "revive"].includes(e.id))
+      !effects.some((e) => ["displace", "revive", "control"].includes(e.id))
     )
       this.fail("Este efeito não aceita destino de deslocamento.");
     for (const effect of effects) {
@@ -2018,6 +2048,151 @@ export class Game {
           ),
       );
       switch (effect.id) {
+        case "equipmentGrant":
+          player.equipmentGrant = {
+            turn: this.state.turn,
+            destinatarios: effect.destinatarios!,
+            ignorarLimite: !!effect.ignorarLimite,
+          };
+          this.event(
+            "notice",
+            source ?? player.mage,
+            "Armamentos gratuitos neste turno para os destinatários indicados.",
+          );
+          break;
+        case "resetAttacks":
+          player.counters.attacks = 0;
+          for (const card of this.state.slots
+            .filter((s) => s.ownerId === ownerId)
+            .flatMap(slotCards)) {
+            if (!["Tropa", "Mago"].includes(card.tipo)) continue;
+            card.attacked = false;
+            card.attacksMade = 0;
+          }
+          this.event(
+            "notice",
+            source ?? player.mage,
+            "Contador de ataques restaurado; tropas podem atacar novamente neste turno.",
+          );
+          break;
+        case "sacrifice": {
+          const dead =
+            ids.length === 1
+              ? (this.findCard(ids[0]) ?? this.targetSlot(ids[0])?.card)
+              : undefined;
+          if (
+            dead?.tipo !== "Tropa" ||
+            dead.ownerId !== ownerId ||
+            dead.hpAtual <= 0
+          )
+            this.fail("Escolha uma tropa aliada viva para sacrificar.");
+          dead.hpAtual = 0;
+          delete dead.killedBy;
+          this.trigger("onSacrifice", {
+            ownerId,
+            cardId: dead.id,
+            card: dead,
+            element: dead.elemento,
+          });
+          const reward = effect.recompensaSacrificio!;
+          this.gainMana(player, reward.mana);
+          this.heal(
+            player.mage,
+            reward.subtipos?.includes(dead.subtipo!)
+              ? (reward.vidaEspecial ?? reward.vida)
+              : reward.vida,
+            undefined,
+            source,
+          );
+          this.event(
+            "notice",
+            source ?? player.mage,
+            `${dead.nome} foi sacrificada.`,
+          );
+          break;
+        }
+        case "control": {
+          const from = ids.length === 1 ? this.targetSlot(ids[0]) : undefined;
+          const victim =
+            ids.length === 1
+              ? (this.findCard(ids[0]) ?? from?.card)
+              : undefined;
+          if (!from || victim?.tipo !== "Tropa" || from.ownerId === ownerId)
+            this.fail("Escolha uma tropa inimiga em campo.");
+          if (!this.impactAllowed(victim.id)) break;
+          const destinations = reviveDestinations(this.state.slots, ownerId);
+          const to = destinations.find((s) => s.id === destinationId);
+          if (destinations.length && !to)
+            this.fail("Escolha um espaço aliado livre e sem Lama.");
+          if (!destinations.length && destinationId)
+            this.fail("Não há destino disponível para essa troca de controle.");
+          if (!destinations.length && this.front(ownerId).some((s) => !s.card))
+            this.fail("Um espaço com Lama não permite receber a tropa.");
+          const group = [from.card, from.rider].filter(
+            (c): c is Instance => c?.tipo === "Tropa",
+          );
+          if (to) this.relocateTroops(from, to, false, false);
+          else {
+            from.card = null;
+            from.rider = null;
+          }
+          for (const card of group) {
+            card.ownerId = ownerId;
+            if (!to) {
+              this.resetCard(card);
+              player.hand.push(card);
+            }
+          }
+          this.event(
+            "notice",
+            source ?? player.mage,
+            group.map((c) => c.nome).join(" e ") +
+              (to
+                ? " passou para o seu campo."
+                : " foi para sua mão porque seu campo está cheio."),
+          );
+          break;
+        }
+        case "trap": {
+          const slot =
+            ids.length === 1 ? this.ownSlot(ids[0], ownerId) : undefined;
+          if (
+            !source ||
+            !slot ||
+            slot.kind !== "Tropa" ||
+            slot.card ||
+            slot.rider ||
+            slot.terrain
+          )
+            this.fail(
+              "A armadilha exige um espaço frontal aliado vazio e sem Lama.",
+            );
+          const physical =
+            source.tipo === "Feitico"
+              ? player.graveyard.find((c) => c.id === source.id)
+              : undefined;
+          const marker: Instance = physical ?? {
+            ...structuredClone(source),
+            id: randomUUID(),
+            tipo: "Feitico",
+            hp: undefined,
+            ataque: undefined,
+            hpAtual: 0,
+            efeitos: [],
+            habilidadesAtivas: [],
+            habilidadesPassivas: [],
+          };
+          marker.concealedTrap = {
+            effect: structuredClone(effect),
+            generated: !physical,
+          };
+          if (physical)
+            player.graveyard = player.graveyard.filter(
+              (c) => c.id !== physical.id,
+            );
+          slot.card = marker;
+          break;
+        }
         case "spellBoost":
           player.mage.statuses.push({
             nome: source?.nome ?? "Amplificação",
@@ -2155,12 +2330,18 @@ export class Game {
             ids.length > effect.valor! ||
             new Set(ids).size !== ids.length
           )
-            this.fail("Escolha até " + effect.valor + " tropas diferentes.");
+            this.fail("Escolha até " + effect.valor + " cartas diferentes.");
           const cards = ids.map((id) =>
-            player.graveyard.find((c) => c.id === id && c.tipo === "Tropa"),
+            player.graveyard.find(
+              (c) =>
+                c.id === id &&
+                (effect.tiposCarta ?? ["Tropa"]).includes(c.tipo),
+            ),
           );
           if (cards.some((c) => !c))
-            this.fail("Escolha somente tropas do seu cemitério.");
+            this.fail(
+              "Escolha somente cartas do tipo permitido no seu cemitério.",
+            );
           for (const card of cards as Instance[]) {
             this.resetCard(card);
             player.deck.push(card);
@@ -2613,12 +2794,16 @@ export class Game {
   private play(user: string, cmd: Extract<Command, { type: "play" }>) {
     const player = this.player(user),
       index = player.hand.findIndex((c) => c.id === cmd.cardId),
-      physical = player.hand[index],
-      card = physical ? modifiedSpell(physical, player.mage) : undefined;
-    if (!card) this.fail("Carta não está na sua mão.");
+      physical = player.hand[index];
+    if (!physical) this.fail("Carta não está na sua mão.");
+    if (physical.tipo === "Feitico" && this.state.phase === "PREPARATION")
+      this.fail("Feitiços são bloqueados durante a preparação.");
+    const card = chooseAction(modifiedSpell(physical, player.mage), cmd.mode);
     if (
       cmd.destinationId &&
-      !card.efeitos.some((e) => ["displace", "revive"].includes(e.id))
+      !card.efeitos.some((e) =>
+        ["displace", "revive", "control"].includes(e.id),
+      )
     )
       this.fail("Esta carta não aceita destino de deslocamento.");
     const limits = player.mage.limites[0];
@@ -2645,7 +2830,7 @@ export class Game {
         this.fail("Um mago Cego não pode conjurar feitiços.");
       if (
         this.state.turn <= 2 &&
-        this.causesDamage(card.efeitos, undefined, player.mage.elemento)
+        this.openingHarm(card.efeitos, undefined, player.mage.elemento)
       )
         this.fail(
           "Feitiços que causam dano são bloqueados nos dois primeiros turnos após a preparação.",
@@ -2686,7 +2871,15 @@ export class Game {
       player.graveyard.push(physical);
       (player.castCards ??= []).push(card.numeroCatalogo);
       player.castCards = [...new Set(player.castCards)];
-      this.event("spell", card);
+      this.event(
+        "spell",
+        card.efeitos.some((e) => e.id === "trap")
+          ? hiddenFieldCard(
+              { id: ids[0], ownerId: user } as Slot,
+              player.deckAppearance.verso,
+            )
+          : card,
+      );
       if (card.assinatura) player.counters.unique++;
       else player.counters.spells++;
       this.trigger("onSpellCast", {
@@ -2776,7 +2969,9 @@ export class Game {
         player,
         this.state.phase === "PREPARATION" && card.tipo === "Tropa"
           ? 0
-          : card.custoMana,
+          : card.tipo === "Armamento" && this.equipmentGrant(user, slot)
+            ? 0
+            : card.custoMana,
       );
       player.hand.splice(index, 1);
       this.event("summon", card);
@@ -2813,7 +3008,9 @@ export class Game {
       }
     }
     if (card.tipo !== "Feitico") this.zarcosPlayed(user, card);
-    this.log(`${player.nome} jogou ${card.nome}.`);
+    this.log(
+      `${player.nome} jogou ${card.efeitos.some((e) => e.id === "trap") ? "uma carta oculta" : card.nome}.`,
+    );
   }
   private waterReactionAllowed(player: Player, card: Instance) {
     return (
@@ -2871,7 +3068,7 @@ export class Game {
       this.effects(
         user,
         addActionDamage(card.efeitos, bonus + actionBonus).map((e) =>
-          ["attackField", "periodicDamage"].includes(e.id)
+          ["attackField", "periodicDamage", "trap"].includes(e.id)
             ? {
                 ...e,
                 valor: e.valor! - temporaryBonus,
@@ -2959,7 +3156,7 @@ export class Game {
   ) {
     if (this.openingBlocked())
       return "Habilidades bloqueadas na preparação e no primeiro turno após ela.";
-    if (this.state.turn <= 2 && this.causesDamage(effects, id, element))
+    if (this.state.turn <= 2 && this.openingHarm(effects, id, element))
       return "Habilidades que causam dano são bloqueadas nos dois primeiros turnos após a preparação.";
     return "";
   }
@@ -2981,11 +3178,7 @@ export class Game {
     if (
       this.state.phase === "BATTLE" &&
       this.state.turn <= 2 &&
-      this.causesDamage(
-        card.efeitos,
-        undefined,
-        this.player(user).mage.elemento,
-      )
+      this.openingHarm(card.efeitos, undefined, this.player(user).mage.elemento)
     )
       return "Feitiços que causam dano são bloqueados nos dois primeiros turnos após a preparação.";
     if (
@@ -3571,6 +3764,8 @@ export class Game {
     return "";
   }
   private attackTargetError(slot: Slot, card: Instance, target: Slot) {
+    if (target.card?.concealedTrap && card.tipo !== "Tropa")
+      return "Somente tropas podem atacar este espaço ocupado por carta oculta.";
     if (
       target.card &&
       restrictedBasicAttack(target.card, card, this.state.slots)
@@ -3636,7 +3831,10 @@ export class Game {
       .filter(
         (target) =>
           target.ownerId === enemy.id &&
-          (!exposed || guarded || target.kind === "Mago") &&
+          (!exposed ||
+            guarded ||
+            target.kind === "Mago" ||
+            !!target.card?.concealedTrap) &&
           !this.attackTargetError(slot, card, target),
       )
       .map((target) => target.id);
@@ -3717,6 +3915,49 @@ export class Game {
       card.attacksMade >= basicAttackLimit(card, this.state.slots);
     p.combatStarted = true;
     if (card.tipo !== "Mago") p.counters.attacks++;
+    if (card.tipo === "Tropa" && target.card?.concealedTrap) {
+      const trap = target.card;
+      const spec = trap.concealedTrap!;
+      this.inImpact("spell", trap.nome, () => {
+        target.card = null;
+        delete trap.concealedTrap;
+        if (!spec.generated) this.player(target.ownerId).graveyard.push(trap);
+        this.event(
+          "reaction",
+          trap,
+          `${trap.nome} foi revelada e cancelou o ataque de ${card.nome}.`,
+          { slotId: target.id },
+        );
+        this.damage(
+          card.id,
+          spec.effect.valor! +
+            (spec.effect.bonusContraSubtipos?.subtipos.includes(card.subtipo!)
+              ? spec.effect.bonusContraSubtipos.valor
+              : 0),
+          undefined,
+          spec.effect.perfurante ?? true,
+          spec.effect.elemento ?? trap.elemento,
+          trap,
+          `Armadilha: ${trap.nome}`,
+        );
+        this.effects(
+          trap.ownerId,
+          [
+            {
+              id: "status",
+              status: spec.effect.status,
+              duracao: spec.effect.duracao,
+            },
+          ],
+          [card.id],
+          trap.elemento,
+          trap,
+          trap.nome,
+        );
+      });
+      this.afterAttackFields(card);
+      return;
+    }
     card.palavrasChave = card.palavrasChave.filter((k) => k !== "Esconder");
     card.statuses = card.statuses.filter((s) => s.nome !== "Esconder");
     card.statuses = card.statuses.filter(
@@ -3987,11 +4228,27 @@ export class Game {
       this.fail(
         "Esta carta não pode usar habilidades enquanto estiver atordoada, congelada ou cega.",
       );
-    const ability = card.habilidadesAtivas.find((h) => h.id === cmd.abilityId);
+    const originalAbility = card.habilidadesAtivas.find(
+      (h) => h.id === cmd.abilityId,
+    );
+    const ability = originalAbility
+      ? chooseAction(
+          originalAbility,
+          originalAbility.opcoes ? cmd.mode : undefined,
+        )
+      : undefined;
     if (!ability) this.fail("Esta carta não possui a habilidade.");
     if (
+      cmd.mode &&
+      !originalAbility?.opcoes &&
+      ability.id !== "protecaoAquatica"
+    )
+      this.fail("Esta habilidade não aceita escolha de efeito.");
+    if (
       cmd.destinationId &&
-      !ability.efeitos?.some((e) => ["displace", "revive"].includes(e.id))
+      !ability.efeitos?.some((e) =>
+        ["displace", "revive", "control"].includes(e.id),
+      )
     )
       this.fail("Esta habilidade não aceita destino de deslocamento.");
     if (
@@ -4064,6 +4321,13 @@ export class Game {
       );
       if (new Set(targets).size !== targets.length)
         this.fail("Selecione alvos diferentes.");
+      if (
+        ability.tiposAlvo &&
+        targets.some(
+          (id) => !ability.tiposAlvo!.includes(this.findCard(id)?.tipo!),
+        )
+      )
+        this.fail("Tipo de alvo não permitido por esta habilidade.");
       if (ability.filtroAlvo) {
         const matches = (id: string) =>
           matchesPassiveFilter(this.findSourceCard(id), ability.filtroAlvo);
@@ -4169,7 +4433,8 @@ export class Game {
         case "protecaoAquatica": {
           const ids = this.validateTargets(user, "UnicoAliado", cmd.targets);
           const target = this.findCard(ids[0]) ?? this.targetSlot(ids[0])?.card;
-          if (!target || !cmd.mode) this.fail("Escolha alvo aliado e modo.");
+          if (!target || !["cura", "escudo"].includes(cmd.mode ?? ""))
+            this.fail("Escolha alvo aliado e modo.");
           this.spend(p, ability.custoMana);
           if (cmd.mode === "cura") this.heal(target, 3, undefined, card);
           else applyStatus(target.statuses, "Escudo", 2, 3, this.state.turn);
@@ -4265,6 +4530,7 @@ export class Game {
   private beginTurn() {
     const p = this.player(this.state.current);
     p.combatStarted = false;
+    delete p.equipmentGrant;
     p.turnActions = 0;
     p.counters = { summons: 0, attacks: 0, spells: 0, unique: 0, equipment: 0 };
     for (const c of this.state.slots
@@ -4728,6 +4994,15 @@ export class Game {
       openingBlocked: this.openingBlocked(),
       damageOpeningBlocked:
         this.state.phase === "PREPARATION" || this.state.turn <= 2,
+      equipmentFreeTargets: user
+        ? this.state.slots
+            .filter(
+              (s) =>
+                !this.equipmentPlacementError(user, s) &&
+                this.equipmentGrant(user, s),
+            )
+            .map((s) => s.id)
+        : [],
       equipmentTargets: user
         ? this.state.slots
             .filter((s) => !this.equipmentPlacementError(user, s))
@@ -4802,21 +5077,28 @@ export class Game {
                   .reduce((n, s) => n + (s.valor ?? 0), 0),
             }
           : null,
-        card: slot.card
-          ? {
-              ...slot.card,
-              manaRecovery: this.manaRecovery(slot.card),
-              manaAttachments: this.manaAttachments(slot.card),
-              limiteAtaques: basicAttackLimit(slot.card, this.state.slots),
-              bonusAtaquePassivo:
-                adjacentAttackBonus(slot.card, this.state.slots) +
-                slot.card.statuses
-                  .filter(
-                    (s) => s.nome === "BonusAtaque" && s.turnosRestantes > 0,
-                  )
-                  .reduce((sum, s) => sum + (s.valor ?? 0), 0),
-            }
-          : null,
+        card:
+          slot.card?.concealedTrap && slot.ownerId !== user
+            ? hiddenFieldCard(
+                slot,
+                this.player(slot.ownerId).deckAppearance.verso,
+              )
+            : slot.card
+              ? {
+                  ...slot.card,
+                  manaRecovery: this.manaRecovery(slot.card),
+                  manaAttachments: this.manaAttachments(slot.card),
+                  limiteAtaques: basicAttackLimit(slot.card, this.state.slots),
+                  bonusAtaquePassivo:
+                    adjacentAttackBonus(slot.card, this.state.slots) +
+                    slot.card.statuses
+                      .filter(
+                        (s) =>
+                          s.nome === "BonusAtaque" && s.turnosRestantes > 0,
+                      )
+                      .reduce((sum, s) => sum + (s.valor ?? 0), 0),
+                }
+              : null,
         ...(slot.ownerId === user
           ? {
               attackTargets: {
@@ -4891,6 +5173,14 @@ export class Game {
                 return {
                   ...effective,
                   custoManaBase: c.custoMana,
+                  ...(c.tipo === "Armamento" &&
+                  this.state.slots.some(
+                    (s) =>
+                      !this.equipmentPlacementError(p.id, s) &&
+                      this.equipmentGrant(p.id, s),
+                  )
+                    ? { custoMana: 0, equipamentoGratuito: true }
+                    : {}),
                   canDiscard: this.canDiscard(c),
                   alvo: this.spellTarget(effective, p.id),
                   spellBlockedReason: reason,

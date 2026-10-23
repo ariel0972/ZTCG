@@ -30,6 +30,7 @@ export interface Instance extends Card {
   attacksMade?: number;
   usedAbility: boolean;
   moved?: boolean;
+  concealedTrap?: { effect: Effect; generated?: boolean };
   revivedFromGraveyard?: boolean;
   reviveBonuses?: { hp: number; ataque: number };
   deathReward?: {
@@ -91,6 +92,11 @@ export interface Player {
   }[];
   returnUsedUntil?: Record<string, number>;
   zarcosTriggered?: string[];
+  equipmentGrant?: {
+    turn: number;
+    destinatarios: ("Tropa" | "Mago")[];
+    ignorarLimite: boolean;
+  };
   id: string;
   nome: string;
   deckAppearance: { nome: string; icone: string; verso: string };

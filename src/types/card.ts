@@ -84,6 +84,35 @@ export const effectSchema = z
     alvo: z.literal("Proprio").optional(),
     valor: number.optional(),
     descontoMana: number.optional(),
+    tiposCarta: z.array(z.enum(cardTypes)).min(1).max(5).optional(),
+    destinatarios: z
+      .array(z.enum(["Tropa", "Mago"]))
+      .min(1)
+      .max(2)
+      .optional(),
+    ignorarLimite: z.boolean().optional(),
+    recompensaSacrificio: z
+      .object({
+        mana: number.max(20),
+        vida: number,
+        vidaEspecial: number.optional(),
+        subtipos: z
+          .array(z.enum(["Animal", "Humano", "Monstro", "Planta", "Invocação"]))
+          .max(5)
+          .optional(),
+      })
+      .strict()
+      .optional(),
+    bonusContraSubtipos: z
+      .object({
+        subtipos: z
+          .array(z.enum(["Animal", "Humano", "Monstro", "Planta", "Invocação"]))
+          .min(1)
+          .max(5),
+        valor: number,
+      })
+      .strict()
+      .optional(),
     elementos: z.array(z.enum(elements)).min(1).max(6).optional(),
     fracao: z.number().min(0).max(1).optional(),
     limiteManaOrigem: number.max(20).optional(),
@@ -155,6 +184,16 @@ export const effectSchema = z
     variantesMago: z.array(spellVariantSchema).max(6).optional(),
   })
   .strict();
+export const actionOptionSchema = z
+  .object({
+    id: identifier,
+    nome: z.string().trim().min(1).max(120),
+    alvo: z.enum(targets),
+    maxAlvos: z.number().int().min(1).max(3).optional(),
+    tiposAlvo: z.array(z.enum(cardTypes)).min(1).max(5).optional(),
+    efeitos: z.array(effectSchema).min(1).max(12),
+  })
+  .strict();
 export const activeSchema = z
   .object({
     id: identifier,
@@ -178,6 +217,7 @@ export const activeSchema = z
       .strict()
       .optional(),
     efeitos: z.array(effectSchema).max(12).optional(),
+    opcoes: z.array(actionOptionSchema).min(2).max(5).optional(),
   })
   .strict();
 const passiveCardTargets = [
@@ -444,6 +484,7 @@ export const cardSchema = z
     ignoraEsconder: z.boolean().optional(),
     tiposAlvo: z.array(z.enum(cardTypes)).min(1).max(5).optional(),
     efeitos: z.array(effectSchema).max(12).default([]),
+    opcoes: z.array(actionOptionSchema).min(2).max(5).optional(),
     habilidadesAtivas: z.array(activeSchema).max(12).default([]),
     habilidadesPassivas: z.array(passiveSchema).max(12).default([]),
     palavrasChave: z.array(z.string().min(1).max(80)).max(20).default([]),

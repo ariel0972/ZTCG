@@ -2029,3 +2029,12 @@ proteções normais valem e só uma cópia própria pode estar ativa.
 A fazer: acompanhar o balanceamento das amplificações acumuladas; revisar as
 artes quando desejar refletir as regras digitais. Para novos efeitos, use
 os recursos genéricos descritos no manual, sem condicionar pelo número da carta.
+
+EXTENSÃO — ESCOLHAS E FEITIÇOS NEUTROS (23/10/2026)
+- src/game/action-options.ts — Resolve opções declarativas de feitiços e habilidades, preserva a identidade e rejeita escolhas ausentes ou inválidas.
+- tests/action-options.test.ts — Verifica persistência no Mongo, seleção de efeito, filtros do cemitério, rollback e amplificação de opções.
+As cartas 051, 060, 073, 115 e 129 usam efeitos declarativos; não há exceções por número no motor. As opções de Chamar Armamento se aplicam ao turno atual e respeitam os bloqueios da abertura.
+
+- src/game/hidden-cards.ts — Gera a representação sem identidade das cartas viradas para adversários e espectadores, usando o verso do baralho.
+- tests/neutral-spells.test.ts — Cobre ocultação, disparo da armadilha, sacrifício, ataques restaurados, transferência de montaria e permanência dos equipamentos.
+- scripts/update-neutral-spells.ts — Sincroniza somente as cinco cartas neutras com backup, controle de versão e simulação antes de --apply.

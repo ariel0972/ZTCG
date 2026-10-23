@@ -105,6 +105,17 @@
           <pre class="preline">{ "id": "damage", "valor": 3 }</pre>
           <pre class="preline">
 { "id": "status", "status": "Cego", "duracao": 2 }</pre>
+          <h3>Escolhas e efeitos reutilizáveis</h3>
+          <p class="hint">
+            Use opcoes em feitiços ou habilidades para oferecer escolhas com
+            alvo e efeitos próprios. shuffleGraveyard aceita tiposCarta para
+            filtrar o cemitério. equipmentGrant, trap, sacrifice, resetAttacks e
+            control podem ser usados em habilidades de outras cartas; consulte o
+            manual de efeitos para os parâmetros e exemplos completos das cartas
+            051, 129, 115, 073 e 060.
+          </p>
+          <pre class="preline">
+{ "opcoes": [{ "id": "mana", "nome": "Ganhar mana", "alvo": "Global", "efeitos": [{ "id": "mana", "valor": 2 }] }, { "id": "reciclar", "nome": "Reciclar armamentos", "alvo": "Cemiterio", "maxAlvos": 2, "efeitos": [{ "id": "shuffleGraveyard", "valor": 2, "tiposCarta": ["Armamento"] }] }] }</pre>
           <h3>Exemplo de habilidade ativa</h3>
           <pre class="preline">
 { "id": "curaAliada", "nome": "Curar", "custoMana": 2, "alvo": "UnicoAliado", "efeitos": [{ "id": "heal", "valor": 3 }] }</pre>

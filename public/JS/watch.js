@@ -55,8 +55,10 @@ function slotView(slot) {
     button.append(
       cardFace(card, { slot, slots: state.slots, reactions: state.reactions }),
     );
-    button.onclick = () => inspector.inspect(card);
-    inspector.bind(button, card);
+    if (!card.oculta) {
+      button.onclick = () => inspector.inspect(card);
+      inspector.bind(button, card);
+    }
     wrapper.append(button);
   }
   if (slot.card || slot.structure) wrapper.classList.add("occupied");

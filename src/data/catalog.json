@@ -801,12 +801,41 @@
     "numeroCatalogo": "051",
     "nome": "Chamar Armamento",
     "tipo": "Feitico",
-    "custoMana": 2,
-    "descricao": "",
+    "custoMana": 5,
+    "descricao": "Escolha um: neste turno, jogue armamentos da sua mão gratuitamente nas tropas em campo, ignorando o limite de um armamento por turno; ou escolha até 2 armamentos do seu cemitério, coloque-os no baralho e embaralhe.",
     "imgURL": "/assets/Cards/Chamar Armamento.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
-    "alvo": "UnicoInimigo"
+    "alvo": "Global",
+    "efeitos": [],
+    "opcoes": [
+      {
+        "id": "equipar",
+        "nome": "Armamentos gratuitos neste turno",
+        "alvo": "Global",
+        "efeitos": [
+          {
+            "id": "equipmentGrant",
+            "destinatarios": ["Tropa"],
+            "ignorarLimite": true
+          }
+        ]
+      },
+      {
+        "id": "reciclar",
+        "nome": "Embaralhar até 2 armamentos do cemitério",
+        "alvo": "Cemiterio",
+        "maxAlvos": 2,
+        "efeitos": [
+          {
+            "id": "shuffleGraveyard",
+            "valor": 2,
+            "tiposCarta": ["Armamento"]
+          }
+        ]
+      }
+    ],
+    "elemento": "Neutro"
   },
   {
     "numeroCatalogo": "052",
@@ -873,12 +902,19 @@
     "numeroCatalogo": "060",
     "nome": "Encanto da Traição",
     "tipo": "Feitico",
-    "custoMana": 2,
-    "descricao": "",
+    "custoMana": 4,
+    "descricao": "Assuma permanentemente o controle de uma tropa inimiga. Escolha um espaço aliado livre e sem Lama; montaria e ocupante são transferidos juntos. Mantenha vida, status e ações gastas. Estruturas e armamentos ficam no lado original. Se todos os espaços estiverem ocupados, leve as tropas à sua mão, removendo efeitos temporários. Não gasta mobilização nem gera mana de entrada.",
     "imgURL": "/assets/Cards/Encanto da Traição.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
-    "alvo": "UnicoInimigo"
+    "alvo": "UnicoInimigo",
+    "tiposAlvo": ["Tropa"],
+    "efeitos": [
+      {
+        "id": "control"
+      }
+    ],
+    "elemento": "Neutro"
   },
   {
     "numeroCatalogo": "061",
@@ -906,12 +942,18 @@
     "numeroCatalogo": "073",
     "nome": "Cegueira dos Caídos",
     "tipo": "Feitico",
-    "custoMana": 2,
-    "descricao": "",
+    "custoMana": 7,
+    "descricao": "Restaure o contador de ataques do seu mago e os ataques gastos por suas tropas neste turno. Tropas que já atacaram podem atacar novamente, respeitando seus limites normais de ataques, status e demais regras de combate.",
     "imgURL": "/assets/Cards/Cegueira dos Caídos.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
-    "alvo": "UnicoInimigo"
+    "alvo": "Global",
+    "efeitos": [
+      {
+        "id": "resetAttacks"
+      }
+    ],
+    "elemento": "Neutro"
   },
   {
     "numeroCatalogo": "080",
@@ -1044,14 +1086,27 @@
   },
   {
     "numeroCatalogo": "115",
-    "nome": "Sacrificio",
+    "nome": "Sacrifício",
     "tipo": "Feitico",
-    "custoMana": 2,
-    "descricao": "",
+    "custoMana": 5,
+    "descricao": "Sacrifique uma tropa aliada, ignorando sua estrutura. Seu mago ganha 5 de mana e recupera 2 de vida. Se a tropa for Invocação ou Animal, recupera 5 de vida em vez de 2. Ativa passivas de sacrifício normalmente.",
     "imgURL": "/assets/Cards/Sacrifício.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
-    "alvo": "UnicoInimigo"
+    "alvo": "UnicoAliado",
+    "tiposAlvo": ["Tropa"],
+    "efeitos": [
+      {
+        "id": "sacrifice",
+        "recompensaSacrificio": {
+          "mana": 5,
+          "vida": 2,
+          "vidaEspecial": 5,
+          "subtipos": ["Invocação", "Animal"]
+        }
+      }
+    ],
+    "elemento": "Neutro"
   },
   {
     "numeroCatalogo": "125",
@@ -1068,12 +1123,25 @@
     "numeroCatalogo": "129",
     "nome": "Armadilha de Urso",
     "tipo": "Feitico",
-    "custoMana": 2,
-    "descricao": "",
+    "custoMana": 4,
+    "descricao": "Coloque esta carta virada em um espaço de tropa aliado vazio. Quando uma tropa inimiga atacar nessa direção, revele e descarte a armadilha: cancele o ataque, cause 5 de dano diretamente à atacante, ignorando estruturas, e aplique Incapacitado por 1 rodada completa. Contra Monstro ou Animal, causa 6 de dano. Permanece até disparar.",
     "imgURL": "/assets/Cards/Armadilha de Urso.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
-    "alvo": "UnicoInimigo"
+    "alvo": "CampoAliado",
+    "efeitos": [
+      {
+        "id": "trap",
+        "valor": 5,
+        "status": "Incapacitado",
+        "duracao": 1,
+        "bonusContraSubtipos": {
+          "subtipos": ["Monstro", "Animal"],
+          "valor": 1
+        }
+      }
+    ],
+    "elemento": "Neutro"
   },
   {
     "numeroCatalogo": "131",

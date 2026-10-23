@@ -33,6 +33,53 @@ const effect = new Schema(
     alvo: { type: String, enum: ["Proprio"] },
     valor: n,
     descontoMana: n,
+    destinatarios: {
+      type: [{ type: String, enum: ["Tropa", "Mago"] }],
+      default: undefined,
+    },
+    ignorarLimite: Boolean,
+    recompensaSacrificio: {
+      type: new Schema(
+        {
+          mana: { ...n, max: 20, required: true },
+          vida: { ...n, required: true },
+          vidaEspecial: n,
+          subtipos: {
+            type: [
+              {
+                type: String,
+                enum: ["Animal", "Humano", "Monstro", "Planta", "Invocação"],
+              },
+            ],
+            default: undefined,
+          },
+        },
+        { _id: false, strict: "throw" },
+      ),
+      default: undefined,
+    },
+    bonusContraSubtipos: {
+      type: new Schema(
+        {
+          subtipos: {
+            type: [
+              {
+                type: String,
+                enum: ["Animal", "Humano", "Monstro", "Planta", "Invocação"],
+              },
+            ],
+            required: true,
+          },
+          valor: { ...n, required: true },
+        },
+        { _id: false, strict: "throw" },
+      ),
+      default: undefined,
+    },
+    tiposCarta: {
+      type: [{ type: String, enum: cardTypes }],
+      default: undefined,
+    },
     elementos: { type: [{ type: String, enum: elements }], default: undefined },
     fracao: { type: Number, min: 0, max: 1 },
     limiteManaOrigem: { ...n, max: 20 },
@@ -107,6 +154,20 @@ const effect = new Schema(
   },
   { _id: false, strict: "throw" },
 );
+const actionOption = new Schema(
+  {
+    id: { type: String, required: true },
+    nome: { type: String, required: true },
+    alvo: { type: String, enum: targets, required: true },
+    maxAlvos: { type: Number, min: 1, max: 3 },
+    tiposAlvo: {
+      type: [{ type: String, enum: cardTypes }],
+      default: undefined,
+    },
+    efeitos: [effect],
+  },
+  { _id: false, strict: "throw" },
+);
 const active = new Schema(
   {
     id: { type: String, required: true },
@@ -130,6 +191,7 @@ const active = new Schema(
       default: undefined,
     },
     efeitos: [effect],
+    opcoes: { type: [actionOption], default: undefined },
   },
   { _id: false, strict: "throw" },
 );
@@ -266,6 +328,7 @@ const schema = new Schema<Card>(
     ignoraEsconder: Boolean,
     tiposAlvo: { type: [String], enum: cardTypes, default: undefined },
     efeitos: [effect],
+    opcoes: { type: [actionOption], default: undefined },
     habilidadesAtivas: [active],
     habilidadesPassivas: [passive],
     palavrasChave: [String],

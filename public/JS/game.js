@@ -287,6 +287,10 @@ function dragBinding(element, source) {
         source: fieldSource(from.card, from.slot),
       };
       targets = [];
+      if (action === "play" && from.card.opcoes?.length) {
+        render();
+        return;
+      }
       if (
         action === "play" &&
         from.card.tipo === "Feitico" &&
@@ -431,6 +435,9 @@ function damageAction(effects = [], id = "") {
       (e) =>
         [
           "damage",
+          "trap",
+          "sacrifice",
+          "periodicDamage",
           "attackField",
           "stoneVolley",
           "tornado",
@@ -465,7 +472,7 @@ function handBlock(card) {
       return "Limite de mobilização atingido.";
   }
   if (card.tipo === "Armamento") {
-    if ((p.counters.equipment ?? 0) >= 1)
+    if ((p.counters.equipment ?? 0) >= 1 && !card.equipamentoGratuito)
       return "Você só pode jogar um armamento por turno.";
     if (!state.equipmentTargets?.length)
       return "Não há espaço com uma tropa ou mago para receber o armamento.";
@@ -583,6 +590,10 @@ function displacementBlockReason() {
     state.slots,
     user.id,
   );
+  if (targetAction()?.efeitos?.some((e) => e.id === "control"))
+    return choice.required && !selected?.destinationId
+      ? "Escolha um espaço aliado livre e sem Lama para receber a tropa."
+      : "";
   if (targetAction()?.efeitos?.some((e) => e.id === "revive"))
     return !targets.length
       ? "Escolha primeiro uma tropa no seu cemitério."
@@ -596,6 +607,26 @@ function displacementBlockReason() {
       ? "Escolha um espaço vizinho destacado para o destino."
       : "Não há espaço vizinho livre para deslocar esta tropa."
     : "";
+}
+function renderOptionChoice(panel, action) {
+  if (!action.opcoes?.length) return false;
+  panel.append(
+    node("p", "Escolha um efeito antes de selecionar os alvos.", "hint"),
+  );
+  for (const option of action.opcoes) {
+    const button = actionButton(
+      (selected.mode === option.id ? "✓ " : "") + option.nome,
+      () => {
+        selected.mode = option.id;
+        targets = [];
+        delete selected.destinationId;
+        render();
+      },
+    );
+    button.setAttribute("aria-pressed", String(selected.mode === option.id));
+    panel.append(button);
+  }
+  return !selected.mode;
 }
 function renderActions() {
   const panel = $("action-panel"),
@@ -880,7 +911,8 @@ function renderActions() {
       ),
     );
   } else if (selected.type === "play") {
-    const card = selected.card;
+    if (renderOptionChoice(panel, selected.card)) return;
+    const card = targetAction();
     if (card.tipo !== "Feitico")
       panel.append(
         node(
@@ -910,6 +942,7 @@ function renderActions() {
             command({
               type: "play",
               cardId: card.id,
+              mode: selected.mode,
               targets,
               destinationId: selected.destinationId,
             }),
@@ -922,7 +955,8 @@ function renderActions() {
       );
     }
   } else if (selected.type === "ability") {
-    const ability = selected.ability;
+    if (renderOptionChoice(panel, selected.ability)) return;
+    const ability = targetAction();
     if (zoneTargets.includes(ability.alvo))
       panel.append(
         actionButton("Escolher cartas do cemitério", () =>
@@ -955,6 +989,7 @@ function renderActions() {
               slotId: selected.slot.id,
               abilityId: ability.id,
               source: fieldSource(selected.card, selected.slot),
+              mode: selected.mode,
               targets,
               destinationId: selected.destinationId,
             }),
@@ -1009,7 +1044,7 @@ function slotView(slot) {
   if (card) {
     button.classList.add("occupied");
     if (card.attacked) button.classList.add("exhausted");
-    inspector.bind(button, card);
+    if (!card.oculta) inspector.bind(button, card);
     const oldFace = document.querySelector(`[data-live-card-id="${card.id}"]`);
     const previous = oldFace
       ? {

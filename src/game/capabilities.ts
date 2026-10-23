@@ -5,6 +5,11 @@ import { canonicalStatus } from "./status";
 import { reactionDescriptions } from "./reactions";
 
 export const effectIds = [
+  "equipmentGrant",
+  "trap",
+  "sacrifice",
+  "resetAttacks",
+  "control",
   "spellBoost",
   "stealMana",
   "attachMana",
@@ -167,6 +172,42 @@ export function playableErrors(card: Card): string[] {
   ) => {
     for (const e of effects) {
       if (
+        ["equipmentGrant", "resetAttacks"].includes(e.id) &&
+        target !== "Global"
+      )
+        errors.push(`${e.id} exige Global.`);
+      if (e.id === "equipmentGrant" && !e.destinatarios?.length)
+        errors.push("equipmentGrant exige destinatarios.");
+      if (
+        (e.destinatarios || e.ignorarLimite !== undefined) &&
+        e.id !== "equipmentGrant"
+      )
+        errors.push(
+          "Destinatários e dispensa de limite exigem equipmentGrant.",
+        );
+      if (
+        e.id === "trap" &&
+        (target !== "CampoAliado" ||
+          !e.valor ||
+          !e.status ||
+          !e.duracao ||
+          !statusIds.includes(e.status))
+      )
+        errors.push(
+          "Armadilha exige CampoAliado, dano, status implementado e duração positiva.",
+        );
+      if (e.bonusContraSubtipos && e.id !== "trap")
+        errors.push("Bônus por subtipo exige trap.");
+      if (
+        e.id === "sacrifice" &&
+        (target !== "UnicoAliado" || !e.recompensaSacrificio)
+      )
+        errors.push("Sacrifício exige UnicoAliado e recompensaSacrificio.");
+      if (e.recompensaSacrificio && e.id !== "sacrifice")
+        errors.push("Recompensa de sacrifício exige sacrifice.");
+      if (e.id === "control" && target !== "UnicoInimigo")
+        errors.push("Troca de controle exige UnicoInimigo.");
+      if (
         e.alvo &&
         (!ability ||
           !["damage", "heal", "status"].includes(e.id) ||
@@ -186,6 +227,8 @@ export function playableErrors(card: Card): string[] {
         errors.push(
           "Ressurreição exige um único efeito para escolher um destino.",
         );
+      if (e.tiposCarta && e.id !== "shuffleGraveyard")
+        errors.push("tiposCarta exige shuffleGraveyard.");
       if (e.id === "shuffleGraveyard" && (!e.valor || e.valor > 3))
         errors.push("Embaralhar cemitério exige quantidade entre 1 e 3.");
       if (
@@ -326,7 +369,7 @@ export function playableErrors(card: Card): string[] {
         errors.push(`Efeito ${e.id} não implementado.`);
       if (
         e.perfurante !== undefined &&
-        !["damage", "attackField"].includes(e.id)
+        !["damage", "attackField", "trap"].includes(e.id)
       )
         errors.push("Perfuração exige dano ou efeito de campo.");
       if ((e.curaPosterior || e.recompensaAoEliminar) && e.id !== "damage")
@@ -419,6 +462,9 @@ export function playableErrors(card: Card): string[] {
       )
         errors.push("Status/duração inválidos.");
       if (
+        !["equipmentGrant", "sacrifice", "resetAttacks", "control"].includes(
+          e.id,
+        ) &&
         e.id !== "searchElemental" &&
         e.id !== "status" &&
         e.id !== "banish" &&
@@ -480,6 +526,26 @@ export function playableErrors(card: Card): string[] {
   if (card.efeitos.filter((e) => e.id === "displace").length > 1)
     errors.push("Use um único deslocamento por feitiço.");
   checkEffects(card.efeitos, card.alvo);
+  const checkOptions = (options: Card["opcoes"], ability = false) => {
+    if (!options) return;
+    if (new Set(options.map((o) => o.id)).size !== options.length)
+      errors.push("IDs de opções repetidos.");
+    for (const option of options) {
+      checkEffects(option.efeitos, option.alvo, ability);
+      if (option.efeitos.some((e) => specialTargets[e.id]))
+        errors.push(
+          "Opções usam somente efeitos genéricos, sem efeitos especiais de feitiços.",
+        );
+    }
+  };
+  checkOptions(card.opcoes);
+  if (
+    card.opcoes &&
+    (card.tipo !== "Feitico" || card.efeitos.length || card.alvoAutomatico)
+  )
+    errors.push(
+      "Opções diretas exigem feitiço sem efeitos base nem alvo automático.",
+    );
   if (card.efeitos.some((e) => ["spendAttack", "guardTarget"].includes(e.id)))
     errors.push(
       "Consumo de ataque e proteção vinculada são efeitos de habilidades de tropas.",
@@ -493,9 +559,14 @@ export function playableErrors(card: Card): string[] {
     errors.push(
       "Efeitos diretos são exclusivos de feitiços; use habilidades nas demais cartas.",
     );
-  if (card.tipo === "Feitico" && !card.efeitos.length)
+  if (card.tipo === "Feitico" && !card.efeitos.length && !card.opcoes)
     errors.push("Feitiço sem efeitos.");
   for (const h of card.habilidadesAtivas) {
+    checkOptions(h.opcoes, true);
+    if (h.opcoes && (h.efeitos?.length || h.alvoAutomatico))
+      errors.push(
+        "Habilidade com opções não aceita efeitos base nem alvo automático.",
+      );
     if (
       h.maxAlvos &&
       h.alvo !== "MultiplosInimigos" &&
@@ -558,7 +629,7 @@ export function playableErrors(card: Card): string[] {
           "Efeitos especiais de feitiços não são executáveis em habilidades.",
         );
       if (!h.alvo) errors.push(`Defina alvo da habilidade ${h.id}.`);
-    } else if (!(abilityIds as readonly string[]).includes(h.id))
+    } else if (!h.opcoes && !(abilityIds as readonly string[]).includes(h.id))
       errors.push(`Habilidade ${h.id} não implementada.`);
   }
   for (const h of card.habilidadesPassivas) {

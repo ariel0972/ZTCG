@@ -5,10 +5,25 @@ export const automaticTargets = [
   "TodosAliados",
 ];
 export const hasAutomaticTarget = (action) =>
-  !!action?.alvoAutomatico || automaticTargets.includes(action?.alvo);
+  !action?.opcoes?.length &&
+  (!!action?.alvoAutomatico || automaticTargets.includes(action?.alvo));
 export const zoneTargets = ["Deck", "DeckOponente", "Cemiterio", "Mao"];
 export function actionTarget(selection) {
-  return selection?.type === "ability" ? selection.ability : selection?.card;
+  const action =
+    selection?.type === "ability" ? selection.ability : selection?.card;
+  if (!action?.opcoes?.length) return action;
+  const option = action.opcoes.find((o) => o.id === selection.mode);
+  if (!option)
+    return { ...action, alvo: undefined, efeitos: [], tiposAlvo: undefined };
+  const { id: _id, nome: _nome, ...definition } = option;
+  return {
+    ...action,
+    alvoAutomatico: undefined,
+    tiposAlvo: undefined,
+    maxAlvos: 1,
+    ...definition,
+    opcoes: undefined,
+  };
 }
 export function spellSlotTarget(action, slot, userId) {
   if (!action || zoneTargets.includes(action.alvo)) return false;
@@ -16,7 +31,12 @@ export function spellSlotTarget(action, slot, userId) {
     type = action.alvo;
   if (type === "Global") return false;
   if (["CampoAliado", "CampoInimigo"].includes(type))
-    return slot.kind === "Tropa" && (type === "CampoAliado" ? own : !own);
+    return (
+      slot.kind === "Tropa" &&
+      (type === "CampoAliado" ? own : !own) &&
+      (!action.efeitos?.some((e) => e.id === "trap") ||
+        (!slot.card && !slot.rider && !slot.terrain))
+    );
   if (
     (["UnicoAliado", "TodosAliados"].includes(type) && !own) ||
     ([
@@ -32,6 +52,8 @@ export function spellSlotTarget(action, slot, userId) {
     type === "Estrutura" ? slot.structure : slot.card || slot.structure;
   if (
     !target ||
+    target.oculta ||
+    target.concealedTrap ||
     (!own &&
       target.statuses?.some(
         (s) => s.nome === "Esconder" && s.turnosRestantes > 0,
@@ -106,10 +128,11 @@ export function zoneCardAllowed(action, card) {
     );
   if (action.id === "refazerCaminhos" || action.id === "recuperarEnergia")
     return card.tipo === "Feitico";
-  if (
-    action.efeitos?.some((e) => ["revive", "shuffleGraveyard"].includes(e.id))
-  )
-    return card.tipo === "Tropa";
+  const graveEffect = action.efeitos?.find((e) =>
+    ["revive", "shuffleGraveyard"].includes(e.id),
+  );
+  if (graveEffect)
+    return (graveEffect.tiposCarta ?? ["Tropa"]).includes(card.tipo);
   return true;
 }
 export function targetDescription(action) {
@@ -174,6 +197,19 @@ export function displacementChoice(action, targetIds, slots) {
 }
 
 export function destinationChoice(action, targetIds, slots, ownerId) {
+  if (action?.efeitos?.some((e) => e.id === "control")) {
+    const front = slots.filter(
+      (s) => s.ownerId === ownerId && s.kind === "Tropa",
+    );
+    return {
+      required: !!targetIds?.length && front.some((s) => !s.card),
+      destinations: targetIds?.length
+        ? front
+            .filter((s) => !s.card && !s.rider && !s.terrain)
+            .map((s) => s.id)
+        : [],
+    };
+  }
   if (action?.efeitos?.some((e) => e.id === "revive"))
     return {
       required: true,

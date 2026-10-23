@@ -2146,3 +2146,18 @@
   z-index: 120;
   background: #11232b;
 }
+
+.live-card.concealed-card {
+  padding: 0;
+  overflow: hidden;
+  background: #14242a;
+}
+.live-card.concealed-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.trap-owner-label {
+  color: #ffd891;
+  font-size: 10px;
+}
