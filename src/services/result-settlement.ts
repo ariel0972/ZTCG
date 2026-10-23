@@ -81,7 +81,7 @@ export async function refreshAffectedRankings(affected: AffectedRankings) {
 export async function recordMatchResult(room: DurableRoom) {
   await withResultControl(async () => {
     const state = room.game.state,
-      version = room.resultRulesVersion;
+      version = room.resultRulesVersion ?? RESULT_RULES_VERSION;
     const loser = isSurrender(state.reason)
       ? room.entries.find((e) => e.id !== state.winner)?.id
       : undefined;

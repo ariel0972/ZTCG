@@ -194,7 +194,7 @@ export function experienceRules() {
     durationBands: DURATION_XP_BANDS,
     surrenderMinimumTurns: 6,
     maximumRatedSurrenders: 3,
-    prospective: true,
+    prospective: false,
     thresholds: Array.from({ length: 31 }, (_, i) => ({
       level: i + 1,
       xp: levelThreshold(i + 1),

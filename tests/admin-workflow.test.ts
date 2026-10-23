@@ -210,7 +210,7 @@ test("exclusão interrompida retoma recálculo e gravação repetida não ressus
     db.restore();
   }
 });
-test("gravação distingue salas antigas e novas, conta sequência curta e redefine ao ganhar sem desistir", async () => {
+test("gravação aplica regras atuais a salas antigas, conta sequência curta e redefine ao ganhar sem desistir", async () => {
   const db = await fakeDatabase();
   try {
     const room = (i: number, version?: number, loser = p, turns = 10): any => ({
@@ -230,12 +230,13 @@ test("gravação distingue salas antigas e novas, conta sequência curta e redef
       },
     });
     await recordMatchResult(room(0, undefined, p, 1));
-    assert.equal(db.matches[0].rulesVersion, undefined);
+    assert.equal(db.matches[0].rulesVersion, 2);
+    assert.equal(db.matches[0].awardXp, false);
     for (let i = 1; i <= 4; i++)
       await recordMatchResult(room(i, 2, p, i === 1 ? 5 : 10));
     assert.equal(db.matches[1].awardXp, false);
     assert.equal(db.matches[4].ranked, false);
-    assert.equal((await profileStats(p)).partidas, 4);
+    assert.equal((await profileStats(p)).partidas, 3);
     await recordMatchResult(room(5, 2, q));
     await recordMatchResult(room(6, 2, p));
     assert.equal(db.matches[6].surrenderStreak, 1);

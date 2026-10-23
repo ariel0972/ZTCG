@@ -85,12 +85,19 @@ export async function projectMatchRankings(
   invalidateRankings();
 }
 // Offline reconciliation/migration; never called by ranking reads or active commands.
-export async function rebuildRankings(force = false) {
+export async function rebuildRankings(
+  force = false,
+  checkpoint: () => Promise<void> = async () => {},
+) {
   const users = await User.find().select("_id").lean();
   const decks = await Deck.find().select("_id userId").lean();
   const owners = new Set(users.map((u) => String(u._id)));
-  for (const user of users) await refreshPlayerRanking(String(user._id), force);
+  for (const user of users) {
+    await checkpoint();
+    await refreshPlayerRanking(String(user._id), force);
+  }
   for (const deck of decks) {
+    await checkpoint();
     if (owners.has(String(deck.userId)))
       await refreshDeckRanking(String(deck._id), String(deck.userId), force);
     else await Deck.updateOne({ _id: deck._id }, { $unset: { ranking: "" } });

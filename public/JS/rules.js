@@ -24,7 +24,7 @@ async function load() {
       ),
       node(
         "p",
-        "As partidas anteriores à atualização preservam o cálculo de XP e o histórico anteriores. As regras novas valem para partidas iniciadas após a atualização. O XP é acumulado; subir de nível não gasta seus pontos.",
+        "As regras atuais de duração e desistência também se aplicam a todo o histórico, incluindo partidas antigas. O XP é acumulado; subir de nível não gasta seus pontos.",
       ),
       node(
         "p",
@@ -37,7 +37,7 @@ async function load() {
             " · ",
           )}. Depois do nível 5, o intervalo de XP cresce em 200 a cada nível (620, 820, 1.020…).`,
       ),
-      node("h3", "Duração e desistências nas partidas novas"),
+      node("h3", "Duração e desistências"),
       node(
         "p",
         "O XP normal é multiplicado pelo fator de sequência e pelo de duração: até 4 turnos ×1; 5–9 ×1,3; 10–19 ×1,8; 20–29 ×2,2; 30 ou mais ×1,7. O arredondamento acontece uma única vez no final.",
