@@ -1,20 +1,22 @@
 import User from "../db/models/user";
 import Deck from "../db/models/decks";
 import Match from "../db/models/match";
-import { experienceHistory } from "./experience";
+import { experienceHistory, EXPERIENCE_FIELDS } from "./experience";
 import { invalidateRankings } from "./ranking-cache";
 
 // Rebuild ONLY affected participants when a result is committed. No work on active moves.
 // Full replay per participant preserves chronological XP/streaks, late results and retries.
 export async function refreshPlayerRanking(userId: string, force = false) {
   const matches = await Match.find({ "players.userId": userId })
-    .select("matchId winner reason finishedAt createdAt")
+    .select(EXPERIENCE_FIELDS)
     .lean();
   const stats = experienceHistory(userId, matches).stats;
   const ranking = {
-    partidas: stats.partidas,
+    partidas: stats.partidasClassificadas,
     vitorias: stats.vitorias,
-    rate: stats.partidas ? stats.vitorias / stats.partidas : 0,
+    rate: stats.partidasClassificadas
+      ? stats.vitorias / stats.partidasClassificadas
+      : 0,
     stats,
     updatedAt: new Date(),
   };
@@ -26,7 +28,7 @@ export async function refreshPlayerRanking(userId: string, force = false) {
         : {
             $or: [
               { "ranking.partidas": { $exists: false } },
-              { "ranking.partidas": { $lte: stats.partidas } },
+              { "ranking.partidas": { $lte: stats.partidasClassificadas } },
             ],
           }),
     },
@@ -40,7 +42,11 @@ export async function refreshDeckRanking(
   userId: string,
   force = false,
 ) {
-  const filter = { players: { $elemMatch: { userId, deckId } } };
+  const filter = {
+    players: { $elemMatch: { userId, deckId } },
+    deletedAt: { $exists: false },
+    ranked: { $ne: false },
+  };
   const records = await Match.find(filter).select("winner").lean();
   const partidas = records.length,
     vitorias = records.filter((r) => r.winner === userId).length;

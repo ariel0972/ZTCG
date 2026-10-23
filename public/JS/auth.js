@@ -164,7 +164,7 @@ export async function navbar() {
       entry.href = profilePath(user.id);
     host.append(link);
     if (user.admin) {
-      const admin = node("a", "Catálogo");
+      const admin = node("a", "Administração");
       admin.href = "/HTML/admin.html";
       host.append(admin);
     }

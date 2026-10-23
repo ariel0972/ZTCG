@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { z } from "zod";
-import User from "../db/models/user";
 import CardModel from "../db/models/Card";
 import { cardSchema } from "../types/card";
 import {
@@ -11,10 +10,6 @@ import {
 import { playableErrors } from "../game/capabilities";
 import { AppError } from "../lib/errors";
 const router = Router();
-router.get("/users", async (_req, res) => {
-  const users = await User.find().select("-senha").limit(100);
-  res.json({ success: true, users });
-});
 router.get("/cards", async (_req, res) => {
   res.json({ success: true, ...(await catalogWithDiagnostics(true)) });
 });

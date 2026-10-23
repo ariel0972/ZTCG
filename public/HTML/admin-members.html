@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Membros · Administração · Zacornia</title>
+    <link rel="icon" href="/assets/icons/favicon.svg" />
+    <link rel="stylesheet" href="/CSS/app.css" />
+    <link rel="stylesheet" href="/CSS/admin.css" />
+    <script type="module" src="/JS/admin-members.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">ZACORNIA <small>TRADING CARD GAME</small></a>
+      <nav aria-label="Principal">
+        <a href="/">Decks</a><a href="/HTML/index.html">Jogar</a
+        ><a href="/HTML/perfil.html">Perfil</a>
+      </nav>
+      <div id="account" class="account"></div>
+    </header>
+    <div class="admin-shell">
+      <aside id="admin-navigation" class="admin-sidebar"></aside>
+      <div class="admin-workspace">
+        <p id="admin-access-status" role="status">
+          Verificando acesso administrativo…
+        </p>
+        <main id="admin-content" class="page admin-content" hidden>
+          <p class="eyebrow">ADMINISTRAÇÃO · CONTAS</p>
+          <h1>Membros</h1>
+          <p class="muted">
+            Localize uma conta para consultar seus dados e seu histórico de
+            batalhas.
+          </p>
+          <section class="surface">
+            <form id="member-search" class="admin-members-tools">
+              <label
+                >Nome ou e-mail<input
+                  id="member-query"
+                  type="search"
+                  maxlength="100"
+                  placeholder="Buscar membro" /></label
+              ><button id="member-search-button" class="primary" type="submit">
+                Buscar
+              </button>
+            </form>
+            <p
+              id="member-list-status"
+              class="hint"
+              role="status"
+              aria-live="polite"
+            ></p>
+            <div class="admin-table-scroll">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Jogador</th>
+                    <th scope="col">E-mail</th>
+                    <th scope="col">Permissão</th>
+                    <th scope="col">Conta</th>
+                  </tr>
+                </thead>
+                <tbody id="member-list"></tbody>
+              </table>
+            </div>
+            <div class="admin-pagination">
+              <button id="members-previous" type="button" disabled>
+                Anterior</button
+              ><span id="members-page"></span
+              ><button id="members-next" type="button" disabled>Próxima</button>
+            </div>
+          </section>
+          <section id="member-details" class="surface" hidden>
+            <div id="member-summary" class="admin-member-summary"></div>
+            <div id="member-moderation"></div>
+            <p id="member-stats" class="hint"></p>
+            <p id="member-action-status" role="status" aria-live="polite"></p>
+            <h2>Histórico de batalhas</h2>
+            <div class="admin-history-actions">
+              <button id="select-page" type="button">
+                Selecionar esta página</button
+              ><span id="selected-battles-count"
+                >0 batalha(s) selecionada(s)</span
+              ><button id="delete-selected" type="button" disabled>
+                Excluir selecionadas</button
+              ><button id="delete-all" class="danger" type="button" disabled>
+                Apagar histórico completo
+              </button>
+            </div>
+            <p
+              id="member-history-status"
+              class="hint"
+              role="status"
+              aria-live="polite"
+            ></p>
+            <div class="admin-table-scroll">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Selecionar</th>
+                    <th scope="col">Data</th>
+                    <th scope="col">Adversário</th>
+                    <th scope="col">Resultado</th>
+                    <th scope="col">Turnos</th>
+                    <th scope="col">Encerramento</th>
+                  </tr>
+                </thead>
+                <tbody id="member-matches"></tbody>
+              </table>
+            </div>
+            <div class="admin-pagination">
+              <button id="matches-previous" type="button" disabled>
+                Anterior</button
+              ><span id="matches-page"></span
+              ><button id="matches-next" type="button" disabled>Próxima</button>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+    <dialog
+      id="admin-confirm"
+      class="admin-confirm"
+      aria-labelledby="admin-confirm-title"
+      aria-describedby="admin-confirm-text"
+    >
+      <h2 id="admin-confirm-title"></h2>
+      <p id="admin-confirm-text"></p>
+      <p id="admin-confirm-status" role="status" aria-live="polite"></p>
+      <div class="toolbar">
+        <button id="admin-confirm-cancel" type="button">Cancelar</button
+        ><button id="admin-confirm-apply" class="primary" type="button">
+          Confirmar
+        </button>
+      </div>
+    </dialog>
+    <p id="message" class="message" role="status" aria-live="polite" hidden></p>
+  </body>
+</html>

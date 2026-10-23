@@ -11,6 +11,7 @@ import { rateLimit } from "../middlewares/rateLimit";
 import { passwordRoutes } from "./passwordRoutes";
 import { playerName, playerNameKey } from "../services/player-name";
 import { profileStats } from "../services/profiles";
+import { assertAccountAccess } from "../services/account-access";
 import { invalidateRankings } from "../services/ranking-cache";
 const router = Router();
 router.use(passwordRoutes());
@@ -79,13 +80,15 @@ router.post("/refresh", rateLimit(30), async (req, res) => {
     const user = await User.findById(payload.id).select("+ranking");
     if (!user || (payload.sv ?? 0) !== (user.sessionVersion ?? 0))
       throw new Error();
+    assertAccountAccess(user);
     res.setHeader("Cache-Control", "no-store");
     res.json({
       success: true,
       token: issueSession(user, res),
       user: await publicUser(user),
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof AppError && error.status === 403) throw error;
     throw new AppError(401, "Entre na sua conta novamente.", "UNAUTHORIZED");
   }
 });
@@ -163,6 +166,7 @@ router.post("/logar", rateLimit(20), async (req, res) => {
     user = await User.findOne({ email: input.email }).select("+senha +ranking");
   if (!user || !(await bcrypt.compare(input.senha, user.senha)))
     throw new AppError(401, "Email ou senha incorretos.", "UNAUTHORIZED");
+  assertAccountAccess(user);
   const token = issueSession(user, res);
   res.setHeader("Cache-Control", "no-store");
   res.json({

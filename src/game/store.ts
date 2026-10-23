@@ -33,6 +33,7 @@ export interface DurableRoom {
   recoveryUntil?: number;
   finishedAt?: number;
   resultSaved: boolean;
+  resultRulesVersion?: number;
   seenResultBy?: string[];
   rematchVotes: string[];
   rematchClosed: boolean;

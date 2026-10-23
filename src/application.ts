@@ -13,6 +13,8 @@ import { AppError } from "./lib/errors";
 import userRoutes, { publicUser } from "./routes/userRoutes";
 import deckRoutes from "./routes/deckRoutes";
 import adminRoutes from "./routes/adminRoutes";
+import { adminMemberRoutes } from "./routes/adminMemberRoutes";
+import { recoverHistoryDeletions } from "./services/admin-history";
 import { cardRoutes } from "./routes/cardRoutes";
 import { checkToken } from "./middlewares/checkToken";
 import { checkAdmin } from "./middlewares/checkAdmin";
@@ -145,6 +147,7 @@ export function createApp(
       req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`
     )
       throw new AppError(401, "Acesso negado.");
+    await recoverHistoryDeletions();
     const result = await game.maintain();
     const pending = (await game.store.pending(100)).filter(
       (r) =>
@@ -211,6 +214,7 @@ export function createApp(
   app.use("/cards", cardRoutes);
   app.use("/lore-data", loreRoutes);
   app.use("/decks", checkToken, deckRoutes);
+  app.use("/admin/users", checkToken, checkAdmin, adminMemberRoutes(game));
   app.use("/admin/lore", checkToken, checkAdmin, adminLoreRoutes);
   app.use("/admin", checkToken, checkAdmin, adminRoutes);
   app.get("/user/:id", checkToken, async (req: AuthRequest, res) => {
@@ -220,7 +224,11 @@ export function createApp(
     res.json({ success: true, user: await publicUser(user) });
   });
   app.get("/matches", checkToken, async (req: AuthRequest, res) => {
-    const matches = await Match.find({ "players.userId": req.userId })
+    const matches = await Match.find({
+      "players.userId": req.userId,
+      deletedAt: { $exists: false },
+      historyVisible: { $ne: false },
+    })
       .sort({ finishedAt: -1 })
       .limit(30)
       .lean();

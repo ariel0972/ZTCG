@@ -1,4 +1,6 @@
 import { api, navbar, message, node } from "./auth.js";
+import { initializeAdminShell, setAdminAccess } from "./admin-shell.js";
+initializeAdminShell("cards");
 const $ = (id) => document.getElementById(id);
 let cards = [],
   version = 1,
@@ -10,7 +12,7 @@ function edit(card) {
 }
 async function load() {
   const user = await navbar();
-  if (!user?.admin) {
+  if (!setAdminAccess(user)) {
     message("Acesso restrito a administradores.", true);
     return;
   }

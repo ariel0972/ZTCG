@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { AuthRequest } from "../types";
 import { AppError } from "../lib/errors";
 import User from "../db/models/user";
+import { accountRestriction } from "../services/account-access";
 export function verifyToken(token: string): string {
   const decoded = jwt.verify(token, process.env.SECRET!, {
     algorithms: ["HS256"],
@@ -32,10 +33,15 @@ export async function checkToken(
   const payload = jwt.decode(token!) as jwt.JwtPayload;
   try {
     const user = await User.findById(req.userId)
-      .select("sessionVersion")
+      .select("sessionVersion moderation")
       .lean();
     if (!user || (payload.sv ?? 0) !== (user.sessionVersion ?? 0)) {
       next(new AppError(401, "Entre na sua conta novamente.", "UNAUTHORIZED"));
+      return;
+    }
+    const restriction = accountRestriction(user);
+    if (restriction) {
+      next(new AppError(403, restriction.message, restriction.code));
       return;
     }
     next();

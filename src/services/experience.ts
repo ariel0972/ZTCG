@@ -1,3 +1,11 @@
+import {
+  durationMultiplier,
+  resultEligibility,
+  RESULT_RULES_VERSION,
+  isSurrender,
+  DURATION_XP_BANDS,
+  type ResultPolicyMatch,
+} from "./result-policy";
 export const LEVEL_TITLES = [
   { min: 1, max: 1, title: "Noviço em Mana" },
   { min: 2, max: 3, title: "Aprendiz de thumos" },
@@ -50,7 +58,10 @@ export function experienceProgress(total: number) {
   };
 }
 
-export type ExperienceMatch = {
+export const EXPERIENCE_FIELDS =
+  "matchId winner reason turns finishedAt createdAt rulesVersion surrenderedBy surrenderStreak deletedAt resultReady";
+export type ExperienceMatch = ResultPolicyMatch & {
+  surrenderedBy?: string | null;
   matchId: string;
   winner?: string | null;
   reason?: string | null;
@@ -76,18 +87,43 @@ export function experienceHistory(userId: string, matches: ExperienceMatch[]) {
   let xp = 0,
     vitorias = 0,
     empates = 0,
+    derrotas = 0,
+    partidas = 0,
+    historicoCount = 0,
+    partidasClassificadas = 0,
     sequenciaVitorias = 0,
     sequenciaDerrotas = 0,
-    maiorSequenciaVitorias = 0;
+    maiorSequenciaVitorias = 0,
+    sequenciaDesistencias = 0;
   const awards = new Map<
     string,
-    { xpGanho: number; multiplicadorXp: number }
+    {
+      xpGanho: number;
+      multiplicadorXp: number;
+      multiplicadorDuracao: number;
+      multiplicadorSequencia: number;
+      contaHistorico: boolean;
+      contaResultado: boolean;
+    }
   >();
   for (const match of chronological) {
+    if (match.deletedAt) continue;
     const win = match.winner === userId,
-      draw = !match.winner;
-    if (win) vitorias++;
-    if (draw) empates++;
+      draw = !match.winner,
+      eligible = resultEligibility(match);
+    if (match.rulesVersion === RESULT_RULES_VERSION) {
+      if (isSurrender(match.reason) && match.surrenderedBy === userId)
+        sequenciaDesistencias++;
+      else sequenciaDesistencias = 0;
+    } else sequenciaDesistencias = 0;
+    if (eligible.countGame) partidas++;
+    if (eligible.historyVisible) historicoCount++;
+    if (eligible.ranked) {
+      partidasClassificadas++;
+      if (win) vitorias++;
+      else if (draw) empates++;
+      else derrotas++;
+    }
     const interrupted =
       /desist[eê]ncia|desconex[aã]o|desconectad[oa]s?|inatividade/i.test(
         match.reason || "",
@@ -112,11 +148,22 @@ export function experienceHistory(userId: string, matches: ExperienceMatch[]) {
       base = XP_RULES.base + XP_RULES.lossBonus;
       multiplier = streakMultiplier(sequenciaDerrotas);
     }
-    const earned = Math.round(base * multiplier);
+    const duration =
+      match.rulesVersion === RESULT_RULES_VERSION
+        ? durationMultiplier(match.turns)
+        : 1;
+    const combined = Number((multiplier * duration).toFixed(6)),
+      earned = eligible.awardXp ? Math.round(base * combined) : 0;
     xp += earned;
-    awards.set(match.matchId, { xpGanho: earned, multiplicadorXp: multiplier });
+    awards.set(match.matchId, {
+      xpGanho: earned,
+      multiplicadorXp: combined,
+      multiplicadorDuracao: duration,
+      multiplicadorSequencia: multiplier,
+      contaHistorico: eligible.historyVisible,
+      contaResultado: eligible.ranked,
+    });
   }
-  const partidas = chronological.length;
   return {
     awards,
     stats: {
@@ -124,10 +171,16 @@ export function experienceHistory(userId: string, matches: ExperienceMatch[]) {
       partidas,
       vitorias,
       empates,
-      derrotas: partidas - vitorias - empates,
-      taxaVitorias: partidas ? Math.round((vitorias / partidas) * 100) : 0,
+      derrotas,
+      historicoCount,
+      partidasClassificadas,
+      partidasSemClassificacao: partidas - partidasClassificadas,
+      taxaVitorias: partidasClassificadas
+        ? Math.round((vitorias / partidasClassificadas) * 100)
+        : 0,
       sequenciaVitorias,
       sequenciaDerrotas,
+      sequenciaDesistencias,
       maiorSequenciaVitorias,
       multiplicadorProximaVitoria: streakMultiplier(sequenciaVitorias + 1),
       multiplicadorProximaDerrota: streakMultiplier(sequenciaDerrotas + 1),
@@ -138,6 +191,10 @@ export function experienceHistory(userId: string, matches: ExperienceMatch[]) {
 export function experienceRules() {
   return {
     ...XP_RULES,
+    durationBands: DURATION_XP_BANDS,
+    surrenderMinimumTurns: 6,
+    maximumRatedSurrenders: 3,
+    prospective: true,
     thresholds: Array.from({ length: 31 }, (_, i) => ({
       level: i + 1,
       xp: levelThreshold(i + 1),

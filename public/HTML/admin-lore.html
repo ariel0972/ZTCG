@@ -6,6 +6,7 @@
     <title>Editar lore · Zacornia</title>
     <link rel="icon" href="/assets/icons/favicon.svg" />
     <link rel="stylesheet" href="/CSS/app.css" />
+    <link rel="stylesheet" href="/CSS/admin.css" />
     <link rel="stylesheet" href="/CSS/lore.css" />
     <script type="module" src="/JS/admin-lore.js"></script>
   </head>
@@ -18,123 +19,141 @@
       </nav>
       <div id="account" class="account"></div>
     </header>
-    <main class="lore-page">
-      <p class="eyebrow">ADMINISTRAÇÃO · LORE</p>
-      <h1>Escreva as próximas crônicas.</h1>
-      <p class="muted">
-        Salve ideias em rascunho e publique quando estiverem prontas. Editar um
-        rascunho mantém a versão publicada no ar.
-      </p>
-      <p>
-        <a href="/lore">Ver a biblioteca →</a> ·
-        <a href="/HTML/admin.html">Catálogo de cartas</a>
-      </p>
-      <p id="editor-status" class="muted" role="status">Verificando acesso…</p>
-      <div id="lore-editor-layout" class="lore-editor-layout" hidden>
-        <aside class="surface lore-editor-index">
-          <button id="new-story" class="primary" type="button">
-            Nova história
-          </button>
-          <label
-            >Localizar história<select
-              id="story-select"
-              size="8"
-              aria-label="Localizar história"
-            ></select
-          ></label>
-          <p class="hint">
-            Personagens, lugares, facções e histórias do universo podem ser
-            publicados aos poucos.
+    <div class="admin-shell">
+      <aside id="admin-navigation" class="admin-sidebar"></aside>
+      <div class="admin-workspace">
+        <p id="admin-access-status" role="status">
+          Verificando acesso administrativo…
+        </p>
+        <main id="admin-content" class="lore-page admin-content" hidden>
+          <p class="eyebrow">ADMINISTRAÇÃO · LORE</p>
+          <h1>Escreva as próximas crônicas.</h1>
+          <p class="muted">
+            Salve ideias em rascunho e publique quando estiverem prontas. Editar
+            um rascunho mantém a versão publicada no ar.
           </p>
-        </aside>
-        <form id="lore-form" class="surface lore-editor-form">
-          <div class="lore-form-pair">
-            <label
-              >Título<input id="story-title" required maxlength="120"
-            /></label>
-            <label
-              >Categoria<select id="story-category">
-                <option value="personagem">Personagem</option>
-                <option value="lugar">Lugar</option>
-                <option value="faccao">Facção</option>
-                <option value="universo">Universo</option>
-              </select></label
-            >
+          <p>
+            <a href="/lore">Ver a biblioteca →</a> ·
+            <a href="/HTML/admin.html">Catálogo de cartas</a>
+          </p>
+          <p id="editor-status" class="muted" role="status">
+            Verificando acesso…
+          </p>
+          <div id="lore-editor-layout" class="lore-editor-layout" hidden>
+            <aside class="surface lore-editor-index">
+              <button id="new-story" class="primary" type="button">
+                Nova história
+              </button>
+              <label
+                >Localizar história<select
+                  id="story-select"
+                  size="8"
+                  aria-label="Localizar história"
+                ></select
+              ></label>
+              <p class="hint">
+                Personagens, lugares, facções e histórias do universo podem ser
+                publicados aos poucos.
+              </p>
+            </aside>
+            <form id="lore-form" class="surface lore-editor-form">
+              <div class="lore-form-pair">
+                <label
+                  >Título<input id="story-title" required maxlength="120"
+                /></label>
+                <label
+                  >Categoria<select id="story-category">
+                    <option value="personagem">Personagem</option>
+                    <option value="lugar">Lugar</option>
+                    <option value="faccao">Facção</option>
+                    <option value="universo">Universo</option>
+                  </select></label
+                >
+              </div>
+              <label
+                >Endereço da história<input
+                  id="story-slug"
+                  required
+                  minlength="2"
+                  maxlength="80"
+                  pattern="[a-z0-9]+(-[a-z0-9]+)*"
+                  placeholder="nome-da-historia"
+                  aria-describedby="story-slug-help"
+              /></label>
+              <p id="story-slug-help" class="hint">
+                Use letras minúsculas, números e hífens. O endereço fica fixo
+                após o primeiro salvamento.
+              </p>
+              <label
+                >Subtítulo<input id="story-subtitle" maxlength="180"
+              /></label>
+              <label
+                >Resumo para a biblioteca<textarea
+                  id="story-summary"
+                  rows="2"
+                  maxlength="360"
+                ></textarea>
+              </label>
+              <label
+                >História<textarea
+                  id="story-text"
+                  rows="18"
+                  maxlength="30000"
+                  placeholder="Comece sua história…"
+                ></textarea>
+              </label>
+              <p class="hint">
+                Separe os parágrafos com uma linha em branco. O texto da lore
+                não altera atributos, passivas ou habilidades das cartas.
+              </p>
+              <label
+                >Cartas vinculadas<select
+                  id="story-cards"
+                  multiple
+                  size="6"
+                ></select
+              ></label>
+              <p class="hint">
+                Vincule uma ou mais cartas. No computador, use Ctrl ou Command
+                para selecionar várias; histórias do universo podem ficar sem
+                cartas.
+              </p>
+              <label
+                >Link do texto de origem, opcional<input
+                  id="story-source"
+                  type="url"
+                  maxlength="600"
+                  placeholder="https://…"
+              /></label>
+              <div class="lore-editor-actions">
+                <button id="preview-story" type="button">Pré-visualizar</button>
+                <button id="save-draft" type="button">Salvar rascunho</button>
+                <button id="publish-story" class="primary" type="submit">
+                  Publicar história
+                </button>
+                <button
+                  id="unpublish-story"
+                  class="quiet danger"
+                  type="button"
+                  hidden
+                >
+                  Retirar do ar
+                </button>
+              </div>
+              <p
+                id="story-state"
+                class="hint"
+                role="status"
+                aria-live="polite"
+              ></p>
+              <a id="story-public-link" target="_blank" rel="noopener" hidden
+                >Ver versão publicada ↗</a
+              >
+            </form>
           </div>
-          <label
-            >Endereço da história<input
-              id="story-slug"
-              required
-              minlength="2"
-              maxlength="80"
-              pattern="[a-z0-9]+(-[a-z0-9]+)*"
-              placeholder="nome-da-historia"
-              aria-describedby="story-slug-help"
-          /></label>
-          <p id="story-slug-help" class="hint">
-            Use letras minúsculas, números e hífens. O endereço fica fixo após o
-            primeiro salvamento.
-          </p>
-          <label>Subtítulo<input id="story-subtitle" maxlength="180" /></label>
-          <label
-            >Resumo para a biblioteca<textarea
-              id="story-summary"
-              rows="2"
-              maxlength="360"
-            ></textarea>
-          </label>
-          <label
-            >História<textarea
-              id="story-text"
-              rows="18"
-              maxlength="30000"
-              placeholder="Comece sua história…"
-            ></textarea>
-          </label>
-          <p class="hint">
-            Separe os parágrafos com uma linha em branco. O texto da lore não
-            altera atributos, passivas ou habilidades das cartas.
-          </p>
-          <label
-            >Cartas vinculadas<select
-              id="story-cards"
-              multiple
-              size="6"
-            ></select
-          ></label>
-          <p class="hint">
-            Vincule uma ou mais cartas. No computador, use Ctrl ou Command para
-            selecionar várias; histórias do universo podem ficar sem cartas.
-          </p>
-          <label
-            >Link do texto de origem, opcional<input
-              id="story-source"
-              type="url"
-              maxlength="600"
-              placeholder="https://…"
-          /></label>
-          <div class="lore-editor-actions">
-            <button id="preview-story" type="button">Pré-visualizar</button>
-            <button id="save-draft" type="button">Salvar rascunho</button>
-            <button id="publish-story" class="primary" type="submit">
-              Publicar história
-            </button>
-            <button
-              id="unpublish-story"
-              class="quiet danger"
-              type="button"
-              hidden
-            >
-              Retirar do ar
-            </button>
-          </div>
-          <p id="story-state" class="hint" role="status" aria-live="polite"></p>
-          <a id="story-public-link" target="_blank" rel="noopener" hidden
-            >Ver versão publicada ↗</a
-          >
-        </form>
+        </main>
       </div>
-    </main>
+    </div>
     <dialog
       id="lore-preview"
       class="lore-preview"

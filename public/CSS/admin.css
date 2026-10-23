@@ -1,0 +1,230 @@
+.admin-shell {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  min-height: calc(100dvh - 80px);
+  max-width: 1800px;
+  margin: 0 auto;
+}
+.admin-shell [hidden] {
+  display: none !important;
+}
+.admin-sidebar {
+  border-right: 1px solid var(--line);
+  padding: 30px 20px;
+  position: sticky;
+  top: 0;
+  align-self: start;
+  min-height: calc(100dvh - 80px);
+}
+.admin-sidebar h2 {
+  font-size: 19px;
+  margin: 8px 0 26px;
+}
+.admin-sidebar nav {
+  display: grid;
+  gap: 10px;
+}
+.admin-sidebar nav a {
+  display: grid;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 14px 12px;
+  text-decoration: none;
+}
+.admin-sidebar nav a small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.admin-sidebar nav a:hover {
+  background: var(--panel);
+  border-color: var(--line);
+}
+.admin-sidebar nav [aria-current="page"] {
+  background: var(--panel);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.admin-return {
+  display: inline-block;
+  margin-top: 28px;
+  color: var(--muted);
+}
+.admin-workspace {
+  min-width: 0;
+}
+.admin-content {
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 32px !important;
+}
+#admin-access-status {
+  margin: 32px;
+}
+.admin-content .admin-members-tools {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  flex-wrap: wrap;
+}
+.admin-members-tools label {
+  flex: 1 1 240px;
+}
+.admin-table-scroll {
+  overflow-x: auto;
+  margin-top: 20px;
+}
+.admin-table {
+  border-collapse: collapse;
+  min-width: 650px;
+  width: 100%;
+  text-align: left;
+}
+.admin-table th,
+.admin-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.admin-table th {
+  font-size: 12px;
+  color: var(--muted);
+}
+.admin-table td small {
+  display: block;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.admin-table td {
+  overflow-wrap: anywhere;
+}
+.admin-pagination {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+.admin-member-summary {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.admin-member-summary img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+@media (max-width: 1120px) {
+  .admin-content .page-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .admin-content .lore-editor-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 760px) {
+  .admin-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .admin-sidebar {
+    position: static;
+    min-height: 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    padding: 18px;
+  }
+  .admin-sidebar h2 {
+    margin-bottom: 15px;
+  }
+  .admin-sidebar nav {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .admin-sidebar nav a {
+    padding: 11px 8px;
+    font-size: 12px;
+  }
+  .admin-sidebar nav a small {
+    display: none;
+  }
+  .admin-return {
+    margin-top: 15px;
+  }
+  .admin-content {
+    padding: 20px 14px !important;
+  }
+  .admin-table th,
+  .admin-table td {
+    padding: 10px 8px;
+  }
+  .admin-table {
+    font-size: 12px;
+  }
+}
+
+.admin-content #member-details {
+  margin-top: 24px;
+}
+
+.admin-member-actions,
+.admin-history-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+  margin: 18px 0;
+}
+.admin-member-actions label {
+  max-width: 160px;
+}
+#member-moderation textarea {
+  max-width: 650px;
+  display: block;
+}
+.admin-table input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+.admin-confirm {
+  width: min(620px, calc(100vw - 40px));
+  max-height: 85dvh;
+  overflow: auto;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 26px;
+}
+.admin-confirm::backdrop {
+  background: rgba(0, 0, 0, 0.72);
+}
+.admin-confirm p {
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.admin-confirm .toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.admin-content .danger {
+  border-color: #c66565;
+  color: #ed9b9b;
+}
+@media (max-width: 600px) {
+  .admin-member-actions {
+    align-items: stretch;
+  }
+  .admin-member-actions button {
+    flex: 1 1 150px;
+  }
+  .admin-history-actions button {
+    flex: 1 1 140px;
+  }
+}

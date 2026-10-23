@@ -16,7 +16,7 @@ async function load() {
     progression.replaceChildren(
       node(
         "p",
-        `Cada partida normal dá ${experience.base} XP: vitória soma ${experience.winBonus} (${experience.base + experience.winBonus} XP), derrota soma ${experience.lossBonus} (${experience.base + experience.lossBonus} XP) e empate dá ${experience.base} XP. Desistência, desconexão ou inatividade dão ${experience.interrupted} XP para cada jogador, sem multiplicador.`,
+        `Cada partida normal dá ${experience.base} XP: vitória soma ${experience.winBonus} (${experience.base + experience.winBonus} XP), derrota soma ${experience.lossBonus} (${experience.base + experience.lossBonus} XP) e empate dá ${experience.base} XP. Desistência, desconexão ou inatividade dão ${experience.interrupted} XP de base para cada jogador, sujeitos às regras de duração e desistência abaixo.`,
       ),
       node(
         "p",
@@ -24,7 +24,7 @@ async function load() {
       ),
       node(
         "p",
-        "Todas as partidas antigas também contam. O XP é acumulado; subir de nível não gasta seus pontos.",
+        "As partidas anteriores à atualização preservam o cálculo de XP e o histórico anteriores. As regras novas valem para partidas iniciadas após a atualização. O XP é acumulado; subir de nível não gasta seus pontos.",
       ),
       node(
         "p",
@@ -36,6 +36,15 @@ async function load() {
           .join(
             " · ",
           )}. Depois do nível 5, o intervalo de XP cresce em 200 a cada nível (620, 820, 1.020…).`,
+      ),
+      node("h3", "Duração e desistências nas partidas novas"),
+      node(
+        "p",
+        "O XP normal é multiplicado pelo fator de sequência e pelo de duração: até 4 turnos ×1; 5–9 ×1,3; 10–19 ×1,8; 20–29 ×2,2; 30 ou mais ×1,7. O arredondamento acontece uma única vez no final.",
+      ),
+      node(
+        "p",
+        "Desistir antes do turno 6 não concede XP e não registra a partida no histórico ou nas estatísticas. A partir da quarta desistência consecutiva de um jogador, ambos recebem XP e contam a partida jogada, mas ela não soma vitória, derrota, ranking ou histórico público. Concluir uma partida sem desistir, incluindo ganhar por desistência do adversário, reinicia essa sequência.",
       ),
       node("h3", "Seu título acompanha o nível"),
       titles,

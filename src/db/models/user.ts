@@ -19,6 +19,15 @@ export interface IUser extends Document {
   partidas: number;
   admin: boolean;
   sessionVersion: number;
+  managementVersion?: number;
+  managementLastActionId?: string;
+  moderation?: {
+    banned?: boolean;
+    suspendedUntil?: Date | null;
+    reason?: string;
+    by?: string;
+    at?: Date;
+  };
   resetTokenHash?: string;
   resetExpires?: Date;
 }
@@ -35,6 +44,21 @@ const userSchema = new Schema<IUser>({
   partidas: { type: Number, default: 0 },
   admin: { type: Boolean, default: false },
   sessionVersion: { type: Number, default: 0 },
+  managementVersion: { type: Number, default: 0 },
+  managementLastActionId: { type: String, select: false },
+  moderation: {
+    type: new Schema(
+      {
+        banned: Boolean,
+        suspendedUntil: Date,
+        reason: String,
+        by: String,
+        at: Date,
+      },
+      { _id: false },
+    ),
+    default: undefined,
+  },
   resetTokenHash: { type: String, select: false },
   resetExpires: { type: Date, select: false },
 });

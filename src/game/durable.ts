@@ -9,10 +9,10 @@ import {
   Waiting,
 } from "./store";
 import { ownedDeck } from "../services/decks";
-import Match from "../db/models/match";
+import { recordMatchResult } from "../services/result-settlement";
+import { RESULT_RULES_VERSION } from "../services/result-policy";
 import { AppError } from "../lib/errors";
 import { log } from "../lib/observability";
-import { projectMatchRankings } from "../services/ranking-projections";
 import { invalidateRankings } from "../services/ranking-cache";
 export const TURN_MS = 120_000,
   LEASE_MS = 15_000,
@@ -24,29 +24,7 @@ export class DurableGame {
     readonly store: DurableStore = new MongoGameStore(),
     private now = Date.now,
     private load: Loader = ownedDeck,
-    private record = async (room: DurableRoom) => {
-      await Match.updateOne(
-        { matchId: room.id },
-        {
-          $setOnInsert: {
-            matchId: room.id,
-            players: room.entries.map((e) => ({
-              userId: e.id,
-              nome: e.nome,
-              deckId: e.deckId,
-            })),
-            winner: room.game.state.winner,
-            reason: room.game.state.reason,
-            turns: room.game.state.turn,
-            finishedAt: new Date(room.finishedAt!),
-          },
-        },
-        { upsert: true, writeConcern: { w: "majority", wtimeout: 5000 } },
-      );
-      await projectMatchRankings(
-        room.entries.map((e) => ({ userId: e.id, deckId: e.deckId })),
-      );
-    },
+    private record = recordMatchResult,
   ) {}
   private async retry<T>(operation: () => Promise<T | undefined>): Promise<T> {
     for (let n = 0; n < 20; n++) {
@@ -157,6 +135,7 @@ export class DurableGame {
       deadline: this.now() + TURN_MS,
       lastAdvancedAt: this.now(),
       resultSaved: false,
+      resultRulesVersion: RESULT_RULES_VERSION,
       rematchVotes: [],
       rematchClosed: false,
     };

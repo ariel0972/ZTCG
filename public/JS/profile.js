@@ -239,6 +239,9 @@ async function load() {
     $("stats").replaceChildren(
       ...[
         [stats.partidas, "Partidas concluídas"],
+        ...(stats.partidasSemClassificacao
+          ? [[stats.partidasSemClassificacao, "Sem classificação"]]
+          : []),
         [stats.vitorias, "Vitórias"],
         [`${stats.taxaVitorias}%`, "Taxa de vitórias"],
         [`${stats.derrotas} / ${stats.empates}`, "Derrotas / Empates"],
@@ -277,7 +280,8 @@ async function load() {
         "experience-multiplier",
       ),
     );
-    $("history-total").textContent = `${stats.partidas} partidas no total`;
+    $("history-total").textContent =
+      `${stats.historicoCount ?? stats.partidas} partidas no histórico`;
     renderDecks();
     renderHistory(data.matches);
     $("more-history").hidden = !data.hasMore;

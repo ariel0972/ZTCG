@@ -1,9 +1,9 @@
 import Match from "../db/models/match";
-import { experienceHistory } from "./experience";
+import { experienceHistory, EXPERIENCE_FIELDS } from "./experience";
 export { experienceProgress as progression } from "./experience";
 export async function profileExperience(userId: string) {
   const matches = await Match.find({ "players.userId": userId })
-    .select("matchId winner reason finishedAt createdAt")
+    .select(EXPERIENCE_FIELDS)
     .sort({ finishedAt: 1, matchId: 1 })
     .lean();
   return experienceHistory(userId, matches);

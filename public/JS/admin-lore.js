@@ -1,4 +1,6 @@
 import { api, navbar, node, message } from "./auth.js";
+import { initializeAdminShell, setAdminAccess } from "./admin-shell.js";
+initializeAdminShell("lore");
 import { renderLoreArticle, lorePath } from "./lore-view.js";
 
 const $ = (id) => document.getElementById(id);
@@ -188,7 +190,7 @@ window.addEventListener("beforeunload", (event) => {
 });
 void (async () => {
   const user = await navbar();
-  if (!user?.admin) {
+  if (!setAdminAccess(user)) {
     $("editor-status").textContent =
       "Esta área é exclusiva de administradores.";
     return;

@@ -32,7 +32,11 @@ profileRoutes.get("/:id", async (req: AuthRequest, res) => {
         ...(owner ? {} : { publico: true }),
       })
       .toArray(),
-    Match.find({ "players.userId": id })
+    Match.find({
+      "players.userId": id,
+      deletedAt: { $exists: false },
+      historyVisible: { $ne: false },
+    })
       .sort({ finishedAt: -1, matchId: -1 })
       .skip(page * 20)
       .limit(20)
@@ -68,6 +72,6 @@ profileRoutes.get("/:id", async (req: AuthRequest, res) => {
       ...experience.awards.get(m.matchId),
     })),
     page,
-    hasMore: (page + 1) * 20 < stats.partidas,
+    hasMore: (page + 1) * 20 < stats.historicoCount,
   });
 });

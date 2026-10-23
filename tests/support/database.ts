@@ -5,6 +5,7 @@ import User from "../../src/db/models/user";
 import Deck from "../../src/db/models/decks";
 import CardModel from "../../src/db/models/Card";
 import Match from "../../src/db/models/match";
+import { AdminControl, AdminAudit } from "../../src/db/models/admin";
 import { Friendship, Invitation } from "../../src/db/models/social";
 import { Card, cardSchema } from "../../src/types/card";
 import initial from "../../src/data/catalog.json";
@@ -26,7 +27,9 @@ export async function fakeDatabase() {
     matches: any[] = [],
     friendships: any[] = [],
     invitations: any[] = [],
-    lores: any[] = [];
+    lores: any[] = [],
+    adminControls: any[] = [],
+    adminAudits: any[] = [];
   function equal(a: unknown, b: unknown) {
     return String(a) === String(b);
   }
@@ -142,11 +145,18 @@ export async function fakeDatabase() {
     [Deck, decks],
     [Avatar, []],
     [Lore, lores],
+    [AdminControl, adminControls],
+    [AdminAudit, adminAudits],
     [Friendship, friendships],
     [Invitation, invitations],
     ...Object.values(socialModels).map((model) => [model, []] as [any, any[]]),
   ] as [any, any[]][]) {
-    if (model === Avatar || Object.values(socialModels).includes(model))
+    if (
+      model === Avatar ||
+      model === AdminControl ||
+      model === AdminAudit ||
+      Object.values(socialModels).includes(model)
+    )
       patch(model, "findById", (id) =>
         query(document(find(rows, { _id: id })[0])),
       );
@@ -284,10 +294,22 @@ export async function fakeDatabase() {
     if (row) Object.assign(row, update.$set);
     return query(document(row));
   });
-  patch(Match, "updateOne", (filter, update) => {
-    if (!find(matches, filter).length)
-      matches.push(structuredClone(update.$setOnInsert));
-    return Promise.resolve({ acknowledged: true });
+  patch(Match, "updateOne", (filter, change, options = {}) => {
+    let row = find(matches, filter)[0];
+    if (!row && options.upsert) {
+      row = structuredClone(change.$setOnInsert);
+      matches.push(row);
+    }
+    if (row) update(row, change);
+    return Promise.resolve({ acknowledged: true, matchedCount: row ? 1 : 0 });
+  });
+  patch(Match, "updateMany", (filter, change) => {
+    const rows = find(matches, filter);
+    rows.forEach((row) => update(row, change));
+    return Promise.resolve({
+      matchedCount: rows.length,
+      modifiedCount: rows.length,
+    });
   });
   patch(Match, "countDocuments", (filter) =>
     query(find(matches, filter).length),
@@ -333,6 +355,8 @@ export async function fakeDatabase() {
     invitations,
     catalog,
     lores,
+    adminControls,
+    adminAudits,
     restore: () => {
       invalidateCatalog();
       invalidateRankings();

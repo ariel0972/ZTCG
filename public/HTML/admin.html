@@ -3,9 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Conta · Zacornia</title>
+    <title>Catálogo · Administração · Zacornia</title>
     <link rel="icon" href="/assets/icons/favicon.svg" />
     <link rel="stylesheet" href="/CSS/app.css" />
+    <link rel="stylesheet" href="/CSS/admin.css" />
     <script type="module" src="/JS/admin.js"></script>
   </head>
   <body>
@@ -17,130 +18,142 @@
       </nav>
       <div id="account" class="account"></div>
     </header>
-    <main class="page">
-      <p class="eyebrow">ADMINISTRAÇÃO</p>
-      <h1>Catálogo e regras de cartas</h1>
-      <p>
-        <a class="file-button" href="/HTML/admin-lore.html"
-          >Editar histórias e lore</a
-        >
-      </p>
-      <p class="muted">
-        Cada entrada guarda a definição da carta. Efeitos e habilidades precisam
-        estar implementados no motor para publicar.
-      </p>
-      <div class="page-grid">
-        <section class="surface">
-          <label>Localizar carta<select id="catalog-select"></select></label>
-          <div class="toolbar">
-            <label
-              >Nova entrada<select id="new-type">
-                <option>Mago</option>
-                <option>Tropa</option>
-                <option>Feitico</option>
-                <option>Estrutura</option>
-                <option>Armamento</option>
-              </select></label
-            ><button id="new-card">Criar modelo</button
-            ><label class="file-button"
-              >Importar JSON<input
-                id="import-card"
-                type="file"
-                accept=".json,application/json"
-            /></label>
-          </div>
-          <p id="editor-help" class="hint">
-            Edite atributos, efeitos e habilidades no JSON. Use publicado:false
-            durante a revisão. numeroCatalogo identifica a entrada.
+    <div class="admin-shell">
+      <aside id="admin-navigation" class="admin-sidebar"></aside>
+      <div class="admin-workspace">
+        <p id="admin-access-status" role="status">
+          Verificando acesso administrativo…
+        </p>
+        <main id="admin-content" class="page admin-content" hidden>
+          <p class="eyebrow">ADMINISTRAÇÃO</p>
+          <h1>Catálogo e regras de cartas</h1>
+          <p>
+            <a class="file-button" href="/HTML/admin-lore.html"
+              >Editar histórias e lore</a
+            >
           </p>
-          <div class="toolbar">
-            <label
-              >Modelo de passiva<select
-                id="passive-template"
-                aria-label="Modelo de passiva"
-              ></select></label
-            ><button id="add-passive" type="button">
-              Adicionar passiva ao JSON
-            </button>
-          </div>
-          <p class="hint">
-            Os modelos são reutilizáveis. Ajuste elemento, direção, status e
-            valor no JSON; valide e salve a carta para aplicar.
+          <p class="muted">
+            Cada entrada guarda a definição da carta. Efeitos e habilidades
+            precisam estar implementados no motor para publicar.
           </p>
-          <p class="hint">
-            O filtro numeroCatalogo seleciona uma carta específica. Montaria
-            permite duas tropas no mesmo slot: use palavrasChave: ["Montaria"] e
-            montaria: {"filtro": {"numeroCatalogo": "021"}} para aceitar só
-            Cavaleiro, ou montaria: {} para aceitar qualquer tropa. Campo livre
-            permite mover a montaria com seu ocupante uma vez por turno.
-          </p>
-          <textarea
-            id="card-json"
-            class="admin-editor"
-            aria-label="Definição JSON da carta"
-            spellcheck="false"
-          ></textarea>
-          <div class="toolbar">
-            <button id="validate-card">Validar</button
-            ><button id="save-card" class="primary">Salvar entrada</button>
-          </div>
-          <p id="validation" class="preline"></p>
-        </section>
-        <section class="surface">
-          <h2>Campos e efeitos disponíveis</h2>
-          <p class="hint">
-            Não coloque funções JavaScript no catálogo. Uma habilidade ativa
-            pode ter alvo e uma lista de efeitos declarativos. Gatilhos passivos
-            possuem um efeito identificado pelo nome.
-          </p>
-          <pre id="capabilities" class="preline"></pre>
-          <h3>Exemplo de efeito</h3>
-          <p class="hint">
-            Use descricao na carta, na habilidade ou na passiva para o texto
-            exibido ao jogador. O comportamento é definido por efeitos; o texto
-            não executa regras.
-          </p>
-          <pre class="preline">
+          <div class="page-grid">
+            <section class="surface">
+              <label
+                >Localizar carta<select id="catalog-select"></select
+              ></label>
+              <div class="toolbar">
+                <label
+                  >Nova entrada<select id="new-type">
+                    <option>Mago</option>
+                    <option>Tropa</option>
+                    <option>Feitico</option>
+                    <option>Estrutura</option>
+                    <option>Armamento</option>
+                  </select></label
+                ><button id="new-card">Criar modelo</button
+                ><label class="file-button"
+                  >Importar JSON<input
+                    id="import-card"
+                    type="file"
+                    accept=".json,application/json"
+                /></label>
+              </div>
+              <p id="editor-help" class="hint">
+                Edite atributos, efeitos e habilidades no JSON. Use
+                publicado:false durante a revisão. numeroCatalogo identifica a
+                entrada.
+              </p>
+              <div class="toolbar">
+                <label
+                  >Modelo de passiva<select
+                    id="passive-template"
+                    aria-label="Modelo de passiva"
+                  ></select></label
+                ><button id="add-passive" type="button">
+                  Adicionar passiva ao JSON
+                </button>
+              </div>
+              <p class="hint">
+                Os modelos são reutilizáveis. Ajuste elemento, direção, status e
+                valor no JSON; valide e salve a carta para aplicar.
+              </p>
+              <p class="hint">
+                O filtro numeroCatalogo seleciona uma carta específica. Montaria
+                permite duas tropas no mesmo slot: use palavrasChave:
+                ["Montaria"] e montaria: {"filtro": {"numeroCatalogo": "021"}}
+                para aceitar só Cavaleiro, ou montaria: {} para aceitar qualquer
+                tropa. Campo livre permite mover a montaria com seu ocupante uma
+                vez por turno.
+              </p>
+              <textarea
+                id="card-json"
+                class="admin-editor"
+                aria-label="Definição JSON da carta"
+                spellcheck="false"
+              ></textarea>
+              <div class="toolbar">
+                <button id="validate-card">Validar</button
+                ><button id="save-card" class="primary">Salvar entrada</button>
+              </div>
+              <p id="validation" class="preline"></p>
+            </section>
+            <section class="surface">
+              <h2>Campos e efeitos disponíveis</h2>
+              <p class="hint">
+                Não coloque funções JavaScript no catálogo. Uma habilidade ativa
+                pode ter alvo e uma lista de efeitos declarativos. Gatilhos
+                passivos possuem um efeito identificado pelo nome.
+              </p>
+              <pre id="capabilities" class="preline"></pre>
+              <h3>Exemplo de efeito</h3>
+              <p class="hint">
+                Use descricao na carta, na habilidade ou na passiva para o texto
+                exibido ao jogador. O comportamento é definido por efeitos; o
+                texto não executa regras.
+              </p>
+              <pre class="preline">
 { "descricao": "Escolha um aliado e cure 3 de vida." }</pre>
-          <pre class="preline">{ "id": "damage", "valor": 3 }</pre>
-          <pre class="preline">
+              <pre class="preline">{ "id": "damage", "valor": 3 }</pre>
+              <pre class="preline">
 { "id": "status", "status": "Cego", "duracao": 2 }</pre>
-          <h3>Escolhas e efeitos reutilizáveis</h3>
-          <p class="hint">
-            Use opcoes em feitiços ou habilidades para oferecer escolhas com
-            alvo e efeitos próprios. shuffleGraveyard aceita tiposCarta para
-            filtrar o cemitério. equipmentGrant, trap, sacrifice, resetAttacks e
-            control podem ser usados em habilidades de outras cartas; consulte o
-            manual de efeitos para os parâmetros e exemplos completos das cartas
-            051, 129, 115, 073 e 060.
-          </p>
-          <pre class="preline">
+              <h3>Escolhas e efeitos reutilizáveis</h3>
+              <p class="hint">
+                Use opcoes em feitiços ou habilidades para oferecer escolhas com
+                alvo e efeitos próprios. shuffleGraveyard aceita tiposCarta para
+                filtrar o cemitério. equipmentGrant, trap, sacrifice,
+                resetAttacks e control podem ser usados em habilidades de outras
+                cartas; consulte o manual de efeitos para os parâmetros e
+                exemplos completos das cartas 051, 129, 115, 073 e 060.
+              </p>
+              <pre class="preline">
 { "opcoes": [{ "id": "mana", "nome": "Ganhar mana", "alvo": "Global", "efeitos": [{ "id": "mana", "valor": 2 }] }, { "id": "reciclar", "nome": "Reciclar armamentos", "alvo": "Cemiterio", "maxAlvos": 2, "efeitos": [{ "id": "shuffleGraveyard", "valor": 2, "tiposCarta": ["Armamento"] }] }] }</pre>
-          <h3>Exemplo de habilidade ativa</h3>
-          <pre class="preline">
+              <h3>Exemplo de habilidade ativa</h3>
+              <pre class="preline">
 { "id": "curaAliada", "nome": "Curar", "custoMana": 2, "alvo": "UnicoAliado", "efeitos": [{ "id": "heal", "valor": 3 }] }</pre>
-          <h3>Alvos automáticos e duração</h3>
-          <p class="hint">
-            Em habilidades, alvoAutomatico Proprio usa a própria carta com
-            UnicoAliado; Frontal usa a tropa à frente com UnicoInimigo. Em
-            feitiços, UltimoAtacanteTropa usa a última tropa que atacou uma
-            tropa sua no turno anterior. tiposAlvo restringe os tipos
-            permitidos. No efeito status, unidade pode ser turno ou rodada.
-            requerStatus vincula o benefício a outro status, como o casco a
-            Esconder.
-          </p>
-          <pre class="preline">
+              <h3>Alvos automáticos e duração</h3>
+              <p class="hint">
+                Em habilidades, alvoAutomatico Proprio usa a própria carta com
+                UnicoAliado; Frontal usa a tropa à frente com UnicoInimigo. Em
+                feitiços, UltimoAtacanteTropa usa a última tropa que atacou uma
+                tropa sua no turno anterior. tiposAlvo restringe os tipos
+                permitidos. No efeito status, unidade pode ser turno ou rodada.
+                requerStatus vincula o benefício a outro status, como o casco a
+                Esconder.
+              </p>
+              <pre class="preline">
 { "id": "regenerar", "nome": "Regenerar", "custoMana": 4, "alvo": "UnicoAliado", "alvoAutomatico": "Proprio", "efeitos": [{ "id": "heal", "valor": 3 }] }</pre>
-          <pre class="preline">
+              <pre class="preline">
 { "id": "searchNamed", "carta": "054", "seNaoUsada": "054" }</pre>
-          <p class="hint">
-            Para um comportamento novo, implemente sua regra e testes antes de
-            registrá-lo como suportado. As partidas iniciadas conservam uma
-            cópia das definições.
-          </p>
-        </section>
+              <p class="hint">
+                Para um comportamento novo, implemente sua regra e testes antes
+                de registrá-lo como suportado. As partidas iniciadas conservam
+                uma cópia das definições.
+              </p>
+            </section>
+          </div>
+        </main>
       </div>
-    </main>
+    </div>
     <p id="message" class="message" role="status" aria-live="polite" hidden></p>
   </body>
 </html>
