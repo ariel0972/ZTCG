@@ -124,12 +124,26 @@
     "numeroCatalogo": "103",
     "nome": "Asas Incandescentes",
     "tipo": "Feitico",
-    "custoMana": 2,
-    "descricao": "",
+    "custoMana": 5,
+    "descricao": "Uma tropa aliada ganha Campo livre, +2 de ataque básico e ataques de Fogo enquanto permanecer em campo. O bônus de ataque acumula. Esta carta é banida após o uso.",
     "imgURL": "/assets/Cards/Asas Incandescentes.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
-    "alvo": "UnicoInimigo"
+    "alvo": "UnicoAliado",
+    "elemento": "Fogo",
+    "tiposAlvo": ["Tropa"],
+    "destinoAposUso": "banido",
+    "efeitos": [
+      {
+        "id": "fieldModifier",
+        "concessao": {
+          "bonusAtaque": 2,
+          "palavrasChave": ["Campo livre"],
+          "elementoAtaque": "Fogo",
+          "visual": "asasDeFogo"
+        }
+      }
+    ]
   },
   {
     "numeroCatalogo": "104",
@@ -363,20 +377,26 @@
     "nome": "Furacão de Areia",
     "tipo": "Feitico",
     "custoMana": 4,
-    "descricao": "Aplica Cego por 1 rodada e causa 2 de dano a todos os inimigos no fim dessa rodada. Com Mago de Ar, rouba a carta do topo do baralho inimigo.",
+    "descricao": "Aplica Cego por 1 rodada às tropas inimigas e causa 2 de dano a elas após um ciclo completo. Não atinge magos nem rouba cartas.",
     "imgURL": "/assets/Cards/Furacão de Areia.png",
     "publicado": true,
     "versao": 2,
-    "alvo": "TodosInimigos",
+    "alvo": "TodasTropasInimigas",
     "elemento": "Ar",
     "efeitos": [
       {
-        "id": "sandstorm",
+        "id": "status",
+        "status": "Cego",
+        "duracao": 1
+      },
+      {
+        "id": "periodicDamage",
         "valor": 2,
         "duracao": 1
       }
     ],
-    "maxAlvos": 1
+    "maxAlvos": 1,
+    "tiposAlvo": ["Tropa"]
   },
   {
     "numeroCatalogo": "034",
@@ -394,7 +414,7 @@
     "nome": "Lâmina de Vento",
     "tipo": "Feitico",
     "custoMana": 6,
-    "descricao": "Causa 3 de dano a uma tropa inimiga e compra 1 carta. Se o alvo for uma tropa de Terra, ela não pode atacar durante a próxima rodada completa; movimento e habilidades continuam permitidos. Custa 6 de mana.",
+    "descricao": "Causa 3 de dano a uma tropa inimiga e aplica Sangramento. Se o dano inicial eliminar essa tropa, compre 1 carta. Uma tropa de Terra também fica sem atacar na próxima rodada completa.",
     "imgURL": "/assets/Cards/Lâmina de Vento.png",
     "publicado": true,
     "versao": 1,
@@ -404,7 +424,16 @@
     "efeitos": [
       {
         "id": "damage",
-        "valor": 3
+        "valor": 3,
+        "recompensaAoEliminar": {
+          "compra": 1,
+          "tipo": "Tropa"
+        }
+      },
+      {
+        "id": "status",
+        "status": "Sangrando",
+        "duracao": 3
       },
       {
         "id": "status",
@@ -415,10 +444,6 @@
           "tipo": "Tropa",
           "elemento": "Terra"
         }
-      },
-      {
-        "id": "draw",
-        "valor": 1
       }
     ]
   },
@@ -1620,15 +1645,81 @@
     "numeroCatalogo": "022",
     "nome": "Goblin",
     "tipo": "Tropa",
-    "custoMana": 4,
-    "descricao": "",
+    "custoMana": 2,
+    "descricao": "Ataca duas vezes por rodada. Não pode atacar com ataques básicos se a tropa à frente for de Fogo ou houver Fogo aplicado no campo à frente.",
     "imgURL": "/assets/Cards/Goblin.png",
     "publicado": true,
     "versao": 1,
-    "hp": 1,
-    "ataque": 2,
+    "hp": 6,
+    "ataque": 1,
     "manaGerada": 1,
-    "direcaoAtaque": "Frente"
+    "direcaoAtaque": "Frente",
+    "subtipo": "Monstro",
+    "elemento": "Neutro",
+    "resistencia": ["Neutro"],
+    "fraqueza": ["Fogo"],
+    "habilidadesPassivas": [
+      {
+        "gatilho": "continuous",
+        "escopo": "proprio",
+        "efeitos": [
+          {
+            "id": "attackLimit",
+            "valor": 2
+          }
+        ]
+      },
+      {
+        "gatilho": "continuous",
+        "escopo": "proprio",
+        "condicoes": [
+          {
+            "tipo": "campoFrontal",
+            "elemento": "Fogo",
+            "verificar": "carta"
+          }
+        ],
+        "efeitos": [
+          {
+            "id": "blockOwnAttack"
+          }
+        ]
+      },
+      {
+        "gatilho": "continuous",
+        "escopo": "proprio",
+        "condicoes": [
+          {
+            "tipo": "campoFrontal",
+            "elemento": "Fogo",
+            "verificar": "elementoAplicado"
+          }
+        ],
+        "efeitos": [
+          {
+            "id": "blockOwnAttack"
+          }
+        ]
+      }
+    ],
+    "habilidadesAtivas": [
+      {
+        "id": "arranhar",
+        "nome": "Arranhar",
+        "custoMana": 4,
+        "alvo": "UnicoInimigo",
+        "filtroAlvo": {
+          "tipo": "Tropa"
+        },
+        "efeitos": [
+          {
+            "id": "damage",
+            "valor": 3
+          }
+        ],
+        "descricao": "Escolha qualquer tropa inimiga e cause 3 de dano. Estruturas absorvem normalmente."
+      }
+    ]
   },
   {
     "numeroCatalogo": "023",
@@ -1996,15 +2087,77 @@
     "numeroCatalogo": "077",
     "nome": "Goblin Sombrio",
     "tipo": "Tropa",
-    "custoMana": 4,
-    "descricao": "",
+    "custoMana": 3,
+    "descricao": "Se uma tropa, mago ou estrutura inimiga tiver ataque atual de 5 ou mais, suas habilidades custam 2 mana a menos. O desconto não multiplica pelo número de inimigos.",
     "imgURL": "/assets/Cards/Goblin Sombrio.png",
     "publicado": true,
     "versao": 1,
-    "hp": 1,
-    "ataque": 2,
-    "manaGerada": 1,
-    "direcaoAtaque": "Frente"
+    "hp": 9,
+    "ataque": 4,
+    "manaGerada": 2,
+    "direcaoAtaque": "Frente",
+    "subtipo": "Monstro",
+    "elemento": "Neutro",
+    "resistencia": ["Neutro"],
+    "fraqueza": ["Fogo"],
+    "habilidadesPassivas": [
+      {
+        "gatilho": "continuous",
+        "escopo": "proprio",
+        "condicoes": [
+          {
+            "tipo": "cartaEmCampo",
+            "jogador": "inimigo",
+            "presente": true,
+            "filtro": {
+              "ataqueMinimo": 5
+            }
+          }
+        ],
+        "efeitos": [
+          {
+            "id": "abilityDiscount",
+            "valor": 2
+          }
+        ]
+      }
+    ],
+    "habilidadesAtivas": [
+      {
+        "id": "teleportar",
+        "nome": "Teleportar",
+        "custoMana": 4,
+        "alvo": "CampoAliado",
+        "efeitos": [
+          {
+            "id": "relocate"
+          }
+        ],
+        "descricao": "Move-se para qualquer outro espaço de tropa aliado ou troca de lugar com uma tropa aliada. Montaria e ocupante vão juntos; estruturas e armamentos permanecem. Respeita Lama e bloqueios de movimento."
+      },
+      {
+        "id": "golpeNoEscuro",
+        "nome": "Golpe no escuro",
+        "custoMana": 5,
+        "alvo": "UnicoInimigo",
+        "efeitos": [
+          {
+            "id": "status",
+            "status": "Atordoado",
+            "duracao": 1
+          },
+          {
+            "id": "status",
+            "alvo": "Proprio",
+            "status": "SemAtaque",
+            "duracao": 1,
+            "unidade": "turno"
+          }
+        ],
+        "descricao": "Atordoa uma tropa ou mago inimigo por 1 ciclo completo. Não causa dano. Esta carta não pode mais atacar neste turno; pode usar após já ter atacado.",
+        "tiposAlvo": ["Tropa", "Mago"]
+      }
+    ]
   },
   {
     "numeroCatalogo": "088",
@@ -2146,7 +2299,7 @@
     "nome": "Salamandra",
     "tipo": "Tropa",
     "custoMana": 4,
-    "descricao": "Ataca uma vez por rodada. Ao receber um ataque básico, envenena o atacante, mesmo se o golpe não causar dano ou for fatal.",
+    "descricao": "Ao ser atacada por um ataque básico, envenena o atacante por 3 rodadas. Arder envenena todas as tropas inimigas. Regenerar cura 3 de vida no início do seu próximo turno e não impede ataques.",
     "imgURL": "/assets/Cards/Salamandra.png",
     "publicado": true,
     "versao": 1,
@@ -2158,15 +2311,52 @@
     "habilidadesPassivas": [
       {
         "gatilho": "onAttacked",
-        "efeito": "aplicarStatusAtacante",
-        "status": "Envenenado",
-        "duracao": 3,
+        "escopo": "proprio",
+        "efeitos": [
+          {
+            "id": "status",
+            "alvo": "atacante",
+            "status": "Envenenado",
+            "duracao": 3
+          }
+        ],
         "descricao": "Ao receber um ataque básico, envenena o atacante, mesmo se o golpe não causar dano ou for fatal."
       }
     ],
     "elemento": "Fogo",
     "resistencia": ["Ar"],
-    "fraqueza": ["Agua"]
+    "fraqueza": ["Agua"],
+    "habilidadesAtivas": [
+      {
+        "id": "arder",
+        "nome": "Arder",
+        "custoMana": 3,
+        "alvo": "TodasTropasInimigas",
+        "efeitos": [
+          {
+            "id": "status",
+            "status": "Envenenado",
+            "duracao": 3
+          }
+        ],
+        "descricao": "Envenena todas as tropas inimigas: 1 de dano por ciclo completo durante 3 rodadas. Reaplicar acrescenta 1 rodada, até 5."
+      },
+      {
+        "id": "regenerar",
+        "nome": "Regenerar",
+        "custoMana": 4,
+        "alvo": "UnicoAliado",
+        "alvoAutomatico": "Proprio",
+        "efeitos": [
+          {
+            "id": "heal",
+            "valor": 3,
+            "inicio": "proximoTurnoAliado"
+          }
+        ],
+        "descricao": "Cura 3 de vida no início do seu próximo turno. Não impede ataques."
+      }
+    ]
   },
   {
     "numeroCatalogo": "110",

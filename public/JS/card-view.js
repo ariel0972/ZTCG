@@ -61,6 +61,22 @@ function effectDescription(effect) {
       stealMana: `Rouba ${Math.round((effect.fracao ?? 0) * 100)}% da mana adversária, arredondada para baixo${effect.valor ? ", mais " + effect.valor : ""}.`,
       returnOnElement: `Volta do cemitério à mão ao usar outra carta de ${effect.elemento}, uma vez nesse ciclo.`,
       attachMana: `Vincula-se ao aliado, concedendo +${effect.valor} de recuperação de mana.`,
+      fieldModifier:
+        "Concede bônus e propriedades enquanto o alvo permanecer em campo: " +
+        [
+          effect.concessao?.bonusAtaque
+            ? "+" + effect.concessao.bonusAtaque + " de ataque básico"
+            : "",
+          ...(effect.concessao?.palavrasChave ?? []),
+          effect.concessao?.elementoAtaque
+            ? "ataques de " + effect.concessao.elementoAtaque
+            : "",
+        ]
+          .filter(Boolean)
+          .join(", ") +
+        ".",
+      relocate:
+        "Move a própria tropa para outro espaço aliado ou troca de lugar com uma aliada, preservando montaria e ocupante.",
       periodicDamage: `Causa ${effect.valor} de dano aos inimigos a cada ciclo completo por ${effect.duracao} rodada(s).`,
       revive: `Revive uma tropa do próprio cemitério em um espaço livre, com +${effect.bonusAtaque ?? 0} de ataque e +${effect.bonusHp ?? 0} de vida.`,
       shuffleGraveyard: `Embaralha até ${effect.valor} tropas escolhidas do próprio cemitério no baralho.`,
@@ -68,7 +84,11 @@ function effectDescription(effect) {
       nextActionDamage: `A próxima ação que causar dano recebe +${effect.valor} de dano até o fim do turno.`,
       damage: `Causa ${effect.valor || 0} de dano.${effect.valorEstrutura === undefined ? "" : " Contra estrutura, causa " + effect.valorEstrutura + "."}`,
       displace: `Desloca uma tropa para ${effect.direcao === "direita" ? "o espaço à direita" : "um espaço vizinho vazio escolhido"}${effect.borda === "mao" ? "; na borda direita, devolve à mão" : effect.borda === "manter" ? "; na borda direita, permanece em campo" : ""}.`,
-      heal: `Cura ${effect.valor || 0} de vida.`,
+      heal:
+        "Cura " +
+        (effect.valor || 0) +
+        " de vida" +
+        (effect.inicio ? " no início do próximo turno." : "."),
       spendAttack:
         "Consome o ataque da tropa e um uso do limite de ataques do mago.",
       guardTarget: `Protege o aliado escolhido por ${effect.duracao} rodada(s), recebendo os ataques básicos e reduzindo ${effect.valor} de cada golpe recebido pela tropa defensora.`,
@@ -88,7 +108,20 @@ function effectDescription(effect) {
       ? `Cura ${effect.curaPosterior.multiplicador} vezes o dano efetivo após ${effect.curaPosterior.rodadas} rodada(s).`
       : "",
     effect.recompensaAoEliminar
-      ? `Ao eliminar ${effect.recompensaAoEliminar.tipo || "o alvo"}, recupera ${effect.recompensaAoEliminar.mana} mana.`
+      ? "Ao eliminar " +
+        (effect.recompensaAoEliminar.tipo || "o alvo") +
+        ", " +
+        [
+          effect.recompensaAoEliminar.mana
+            ? "recupera " + effect.recompensaAoEliminar.mana + " mana"
+            : "",
+          effect.recompensaAoEliminar.compra
+            ? "compra " + effect.recompensaAoEliminar.compra + " carta(s)"
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" e ") +
+        "."
       : "",
   ]
     .filter(Boolean)
@@ -161,6 +194,7 @@ export function passiveDescription(h) {
             interceptAttack: `intercepta ataques básicos${e.colunaAtacante === undefined ? "" : " vindos da coluna " + (e.colunaAtacante + 1)}`,
             attackElement: `os ataques passam a ser de ${e.elemento === "Agua" ? "Água" : e.elemento}`,
             attackLimit: `pode atacar até ${e.valor} vezes por rodada`,
+            abilityDiscount: "habilidades custam " + e.valor + " mana a menos",
             blockOwnAttack: "não pode atacar enquanto a condição valer",
             blockAttack: "impede ataques básicos que correspondam ao filtro",
             summonFromDeck:
@@ -173,9 +207,13 @@ export function passiveDescription(h) {
       .map((c) =>
         c.tipo === "vidaPercentual"
           ? `vida ${c.comparacao === "menor" ? "menor que" : "menor ou igual a"} ${c.percentual}%`
-          : c.tipo === "cartaEmCampo"
-            ? `${c.presente === false ? "sem" : "com"} carta ${JSON.stringify(c.filtro)} no campo ${c.jogador}`
-            : `campo ${c.jogador} vazio`,
+          : c.tipo === "campoFrontal"
+            ? "campo à frente com " +
+              c.elemento +
+              (c.verificar === "carta" ? " na tropa" : " aplicado")
+            : c.tipo === "cartaEmCampo"
+              ? `${c.presente === false ? "sem" : "com"} carta ${JSON.stringify(c.filtro)} no campo ${c.jogador}`
+              : `campo ${c.jogador} vazio`,
       )
       .join(", ");
     const filters = h.filtroEvento

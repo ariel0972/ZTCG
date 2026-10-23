@@ -4,6 +4,12 @@ import { effectRoundDue, nextEffectRound } from "./effect-clock";
 import { reviveDestinations, spellTurnBonusStatus } from "./resurrection";
 import { fieldElementResult } from "./field-effects";
 import { nextActionBonusStatus, addActionDamage } from "./action-bonus";
+import {
+  abilityManaCost,
+  currentBasicAttack,
+  fieldAttackBonus,
+  fieldKeywords,
+} from "./passives";
 import { planDisplacement } from "./displacement";
 import { playableErrors } from "./capabilities";
 import { hiddenFieldCard } from "./hidden-cards";
@@ -530,9 +536,19 @@ export class Game {
       (s) => s.id === id || slotCards(s).some((c) => c.id === id),
     );
   }
+  private fieldView(card: Instance) {
+    return {
+      ...card,
+      palavrasChave: fieldKeywords(card),
+      habilidadesAtivas: card.habilidadesAtivas.map((h) => ({
+        ...h,
+        custoMana: abilityManaCost(card, h.custoMana, this.state.slots),
+      })),
+    };
+  }
   private has(card: Instance, word: string) {
     return (
-      card.palavrasChave.includes(word) ||
+      fieldKeywords(card).includes(word) ||
       card.statuses.some((s) => s.nome === word && s.turnosRestantes > 0)
     );
   }
@@ -1300,7 +1316,8 @@ export class Game {
       (s) => s.column === weaponSlot.column,
     );
   }
-  private removeReviveBonuses(card: Instance) {
+  private removeFieldBonuses(card: Instance) {
+    delete card.fieldModifiers;
     if (!card.reviveBonuses) return;
     card.hp = Math.max(0, (card.hp ?? 0) - card.reviveBonuses.hp);
     card.ataque = Math.max(0, (card.ataque ?? 0) - card.reviveBonuses.ataque);
@@ -1309,7 +1326,7 @@ export class Game {
   }
   private resetCard(card: Instance) {
     this.clearAttachments(card.id);
-    this.removeReviveBonuses(card);
+    this.removeFieldBonuses(card);
     card.hpAtual = card.hp ?? 0;
     card.statuses = [];
     card.attacked = false;
@@ -1357,6 +1374,7 @@ export class Game {
         const player = this.player(slot.ownerId);
         if (slot.structure && slot.structure.hpAtual <= 0) {
           const dead = slot.structure;
+          this.removeFieldBonuses(dead);
           this.event("death", dead);
           player.graveyard.push(dead);
           slot.structure = null;
@@ -1393,7 +1411,7 @@ export class Game {
             slot.card = slot.rider ?? null;
             slot.rider = null;
           }
-          this.removeReviveBonuses(dead);
+          this.removeFieldBonuses(dead);
           player.graveyard.push(dead);
           const reward = dead.deathReward;
           delete dead.deathReward;
@@ -2051,7 +2069,9 @@ export class Game {
     const player = this.player(ownerId);
     if (
       destinationId &&
-      !effects.some((e) => ["displace", "revive", "control"].includes(e.id))
+      !effects.some((e) =>
+        ["displace", "revive", "control", "relocate"].includes(e.id),
+      )
     )
       this.fail("Este efeito não aceita destino de deslocamento.");
     for (const effect of effects) {
@@ -2068,6 +2088,72 @@ export class Game {
           ),
       );
       switch (effect.id) {
+        case "fieldModifier":
+          for (const id of ids) {
+            const target = this.findCard(id);
+            if (
+              !target ||
+              !["Tropa", "Mago", "Estrutura"].includes(target.tipo)
+            )
+              this.fail("Concessão exige carta em campo.");
+            if (!this.impactAllowed(target.id)) continue;
+            (target.fieldModifiers ??= []).push({
+              source: source?.nome ?? cause ?? "Concessão",
+              grant: structuredClone(effect.concessao!),
+            });
+            this.event(
+              "notice",
+              target,
+              "Recebeu bônus e propriedades enquanto permanecer em campo.",
+            );
+          }
+          break;
+        case "relocate": {
+          const from =
+            effect.origem === "alvo"
+              ? this.targetSlot(ids[0])
+              : source && this.targetSlot(source.id);
+          const to = this.state.slots.find(
+            (s) =>
+              s.id ===
+              (effect.origem === "alvo"
+                ? destinationId
+                : (destinationId ?? ids[0])),
+          );
+          if (
+            !from ||
+            !to ||
+            from === to ||
+            from.kind !== "Tropa" ||
+            from.card?.tipo !== "Tropa" ||
+            to.kind !== "Tropa" ||
+            from.ownerId !== ownerId ||
+            to.ownerId !== ownerId
+          )
+            this.fail("Escolha outro espaço de tropa aliado.");
+          if (to.card && to.card.tipo !== "Tropa")
+            this.fail("Troca de lugar exige uma tropa aliada.");
+          if (
+            [from.card, from.rider, to.card, to.rider].some(
+              (c) =>
+                c &&
+                hasStatus(c.statuses, [
+                  "Congelado",
+                  "Incapacitado",
+                  "Cego",
+                  "Atordoado",
+                ]),
+            )
+          )
+            this.fail("Estas tropas não podem se mover.");
+          if (to.terrain || (to.card && from.terrain))
+            this.fail("Nenhuma tropa pode se mover para um pântano.");
+          this.relocateTroops(from, to, false, false);
+          this.event("notice", source!, "Trocou de posição no campo aliado.", {
+            slotId: to.id,
+          });
+          break;
+        }
         case "equipmentGrant":
           player.equipmentGrant = {
             turn: this.state.turn,
@@ -2493,15 +2579,38 @@ export class Game {
               outcome?.killed &&
               reward &&
               (!reward.tipo || reward.tipo === outcome.target.tipo)
-            )
-              this.gainMana(player, reward.mana);
+            ) {
+              if (reward.mana) this.gainMana(player, reward.mana);
+              if (reward.compra) this.draw(player, reward.compra);
+            }
           }
           break;
         case "heal":
           for (const id of ids) {
             const card = this.findCard(id) ?? this.targetSlot(id)?.card;
             if (!card) this.fail("Não é possível curar este alvo.");
-            if (this.impactAllowed(card.id))
+            if (!this.impactAllowed(card.id)) continue;
+            if (effect.inicio) {
+              const until =
+                effect.inicio === "proximoTurnoAliado"
+                  ? this.state.current === card.ownerId
+                    ? 2
+                    : 1
+                  : 2;
+              (card.scheduledHeals ??= []).push({
+                round: this.state.round + 1,
+                turn: this.state.turn + until,
+                amount: effect.valor!,
+                sourceId: source?.id,
+                ownerId,
+                origin: cause ?? source?.nome ?? "Cura programada",
+              });
+              this.event(
+                "notice",
+                card,
+                "Cura de " + effect.valor + " programada para o próximo turno.",
+              );
+            } else
               this.heal(card, effect.valor!, undefined, source ?? player.mage);
           }
           break;
@@ -2665,7 +2774,7 @@ export class Game {
         this.fail("Selecione uma carta em campo ou no seu cemitério.");
       card = p.graveyard.splice(index, 1)[0];
     }
-    this.removeReviveBonuses(card);
+    this.removeFieldBonuses(card);
     delete card.deathReward;
     this.player(card.ownerId)[
       kind === "banish" ? "banished" : "forgotten"
@@ -2822,7 +2931,7 @@ export class Game {
     if (
       cmd.destinationId &&
       !card.efeitos.some((e) =>
-        ["displace", "revive", "control"].includes(e.id),
+        ["displace", "revive", "control", "relocate"].includes(e.id),
       )
     )
       this.fail("Esta carta não aceita destino de deslocamento.");
@@ -2888,7 +2997,9 @@ export class Game {
         ? this.takeActionBonus(user)
         : 0;
       player.hand.splice(index, 1);
-      player.graveyard.push(physical);
+      player[
+        physical.destinoAposUso === "banido" ? "banished" : "graveyard"
+      ].push(physical);
       (player.castCards ??= []).push(card.numeroCatalogo);
       player.castCards = [...new Set(player.castCards)];
       this.event(
@@ -3607,13 +3718,6 @@ export class Game {
         if (card.elemento) this.react(user, ids, card.elemento);
         status(ids, "Cego", effect.duracao ?? 2);
         ongoing("sandstorm", effect.valor ?? 2, effect.duracao ?? 2);
-        if (mageElement === "Ar") {
-          const stolen = enemy.deck.pop();
-          if (stolen) {
-            stolen.ownerId = user;
-            player.hand.push(stolen);
-          }
-        }
         break;
       case "meteors":
         if (ids.some((id) => this.targetSlot(id)?.card?.tipo !== "Tropa"))
@@ -3724,7 +3828,9 @@ export class Game {
       );
     this.spend(player, card.custoMana);
     player.hand.splice(player.hand.indexOf(card), 1);
-    player.graveyard.push(card);
+    player[card.destinoAposUso === "banido" ? "banished" : "graveyard"].push(
+      card,
+    );
     if (card.assinatura) player.counters.unique++;
     else player.counters.spells++;
     player.castCards = [
@@ -3744,7 +3850,7 @@ export class Game {
     if (!card || !["Tropa", "Mago", "Estrutura"].includes(card.tipo))
       return "Selecione uma tropa, mago ou estrutura.";
     if (blockedOwnAttack(card, this.state.slots))
-      return "A passiva desta carta exige uma carta aliada em campo para atacar.";
+      return "Uma condição da passiva desta carta impede o ataque básico.";
     if (
       card.tipo === "Mago" &&
       this.state.slots.some(
@@ -4047,25 +4153,14 @@ export class Game {
     );
   }
   private basicAttackDamage(card: Instance, defender: Instance) {
-    const slot = this.targetSlot(card.id)!;
     return (
-      (card.ataque ?? 0) +
-      card.statuses
-        .filter((s) => s.nome === "BonusAtaque" && s.turnosRestantes > 0)
-        .reduce((sum, s) => sum + (s.valor ?? 0), 0) +
-      adjacentAttackBonus(card, this.state.slots) +
+      currentBasicAttack(card, this.state.slots) +
       targetAttackBonus(card, defender, this.state.slots) +
       (card.numeroCatalogo === "041" &&
       defender.tipo === "Tropa" &&
       this.has(defender, "Sangrando")
         ? (this.player(card.ownerId).piranhaBleedingBonus ?? 0)
-        : 0) +
-      (card.tipo === "Estrutura"
-        ? 0
-        : this.weapons(slot, card).reduce(
-            (sum, c) => sum + (c.bonusAtaque ?? 0),
-            0,
-          ))
+        : 0)
     );
   }
   private basicAttackDefender(target: Slot): Instance {
@@ -4270,7 +4365,7 @@ export class Game {
     if (
       cmd.destinationId &&
       !ability.efeitos?.some((e) =>
-        ["displace", "revive", "control"].includes(e.id),
+        ["displace", "revive", "control", "relocate"].includes(e.id),
       )
     )
       this.fail("Esta habilidade não aceita destino de deslocamento.");
@@ -4361,7 +4456,7 @@ export class Game {
         else if (targets.some((id) => !matches(id)))
           this.fail("O alvo não corresponde ao filtro desta habilidade.");
       }
-      this.spend(p, ability.custoMana);
+      this.spend(p, abilityManaCost(card, ability.custoMana, this.state.slots));
       if (ability.efeitos.some((e) => e.id === "field")) {
         const fieldOwner = ["CampoInimigo", "TodasTropasInimigas"].includes(
           ability.alvo ?? "",
@@ -4398,7 +4493,10 @@ export class Game {
             (c) => c.id === cmd.targets[0] && c.tipo === "Feitico",
           );
           if (index < 0) this.fail("Escolha um feitiço do seu cemitério.");
-          this.spend(p, ability.custoMana);
+          this.spend(
+            p,
+            abilityManaCost(card, ability.custoMana, this.state.slots),
+          );
           const spell = p.graveyard.splice(index, 1)[0];
           this.resetCard(spell);
           p.hand.push(spell);
@@ -4418,7 +4516,10 @@ export class Game {
           );
           if (!target?.card)
             this.fail("Não há tropa inimiga diretamente à frente.");
-          this.spend(p, ability.custoMana);
+          this.spend(
+            p,
+            abilityManaCost(card, ability.custoMana, this.state.slots),
+          );
           this.damage(
             target.id,
             3 + actionBonus,
@@ -4445,7 +4546,10 @@ export class Game {
             (c) => c.id === cmd.targets[0] && c.tipo === "Feitico",
           );
           if (i < 0) this.fail("Escolha um feitiço da sua mão.");
-          this.spend(p, ability.custoMana);
+          this.spend(
+            p,
+            abilityManaCost(card, ability.custoMana, this.state.slots),
+          );
           const discarded = this.discardFromHand(p, i);
           const recovered = this.gainMana(p, 3);
           this.log(
@@ -4458,13 +4562,19 @@ export class Game {
           const target = this.findCard(ids[0]) ?? this.targetSlot(ids[0])?.card;
           if (!target || !["cura", "escudo"].includes(cmd.mode ?? ""))
             this.fail("Escolha alvo aliado e modo.");
-          this.spend(p, ability.custoMana);
+          this.spend(
+            p,
+            abilityManaCost(card, ability.custoMana, this.state.slots),
+          );
           if (cmd.mode === "cura") this.heal(target, 3, undefined, card);
           else applyStatus(target.statuses, "Escudo", 2, 3, this.state.turn);
           break;
         }
         case "ataqueFurtivo":
-          this.spend(p, ability.custoMana);
+          this.spend(
+            p,
+            abilityManaCost(card, ability.custoMana, this.state.slots),
+          );
           this.damage(
             this.opponent(user).mage.id,
             2 + actionBonus,
@@ -4477,7 +4587,10 @@ export class Game {
           );
           break;
         case "ordemDaEspada":
-          this.spend(p, ability.custoMana);
+          this.spend(
+            p,
+            abilityManaCost(card, ability.custoMana, this.state.slots),
+          );
           for (const s of this.state.slots.filter(
             (s) =>
               s.ownerId === this.opponent(user).id && s.card?.tipo === "Tropa",
@@ -4493,7 +4606,10 @@ export class Game {
             );
           break;
         case "armaduraPoderosa":
-          this.spend(p, ability.custoMana);
+          this.spend(
+            p,
+            abilityManaCost(card, ability.custoMana, this.state.slots),
+          );
           card.attacked = true;
           applyStatus(card.statuses, "Guardar", 2, undefined, this.state.turn);
           applyStatus(
@@ -5080,19 +5196,27 @@ export class Game {
         ...slot,
         structure: slot.structure
           ? {
-              ...slot.structure,
+              ...this.fieldView(slot.structure),
               manaRecovery: this.manaRecovery(slot.structure),
               manaAttachments: this.manaAttachments(slot.structure),
+              bonusAtaquePassivo:
+                fieldAttackBonus(slot.structure) +
+                slot.structure.statuses
+                  .filter(
+                    (s) => s.nome === "BonusAtaque" && s.turnosRestantes > 0,
+                  )
+                  .reduce((n, s) => n + (s.valor ?? 0), 0),
             }
           : null,
         rider: slot.rider
           ? {
-              ...slot.rider,
+              ...this.fieldView(slot.rider),
               manaRecovery: this.manaRecovery(slot.rider),
               manaAttachments: this.manaAttachments(slot.rider),
               limiteAtaques: basicAttackLimit(slot.rider, this.state.slots),
               bonusAtaquePassivo:
                 adjacentAttackBonus(slot.rider, this.state.slots) +
+                fieldAttackBonus(slot.rider) +
                 slot.rider.statuses
                   .filter(
                     (s) => s.nome === "BonusAtaque" && s.turnosRestantes > 0,
@@ -5108,12 +5232,13 @@ export class Game {
               )
             : slot.card
               ? {
-                  ...slot.card,
+                  ...this.fieldView(slot.card),
                   manaRecovery: this.manaRecovery(slot.card),
                   manaAttachments: this.manaAttachments(slot.card),
                   limiteAtaques: basicAttackLimit(slot.card, this.state.slots),
                   bonusAtaquePassivo:
                     adjacentAttackBonus(slot.card, this.state.slots) +
+                    fieldAttackBonus(slot.card) +
                     slot.card.statuses
                       .filter(
                         (s) =>
@@ -5221,7 +5346,7 @@ export class Game {
   }
   private notifyContinuousPassives(previous: State) {
     for (const slot of this.state.slots) {
-      for (const source of [slot.card, slot.rider].filter(
+      for (const source of [slot.card, slot.rider, slot.structure].filter(
         (c): c is Instance => !!c,
       )) {
         const before = previous.slots

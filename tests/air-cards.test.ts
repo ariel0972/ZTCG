@@ -362,8 +362,8 @@ test("Mago de Ar compra só por feitiços próprios de Ar, sem buscar Lâmina po
   const hand = g.player("p1").hand.length;
   const beforeDeck = g.player("p1").deck.length;
   cast(g, "057", position(g, "p2:front:2").card!.id);
-  assert.equal(g.player("p1").hand.length, hand + 2);
-  assert.equal(g.player("p1").deck.length, beforeDeck - 2);
+  assert.equal(g.player("p1").hand.length, hand + 1);
+  assert.equal(g.player("p1").deck.length, beforeDeck - 1);
   assert.equal(g.player("p1").mana, 14);
   assert.ok(
     g.state.events?.some(
@@ -379,7 +379,7 @@ test("Mago de Ar compra só por feitiços próprios de Ar, sem buscar Lâmina po
     cardId: spell.id,
     targets: [position(g, "p2:front:2").card!.id],
   });
-  assert.equal(g.player("p1").hand.length, count);
+  assert.equal(g.player("p1").hand.length, count - 1);
 });
 test("Mover livremente concede Campo livre até fim do turno, sem renovar movimento nem alterar palavras-chave", () => {
   const g = ready();

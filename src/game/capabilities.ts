@@ -23,6 +23,8 @@ export const effectIds = [
   "nextActionDamage",
   "attackField",
   "displace",
+  "relocate",
+  "fieldModifier",
   "heal",
   "status",
   "draw",
@@ -114,6 +116,8 @@ const statusIds = [
 ];
 export function playableErrors(card: Card): string[] {
   const errors: string[] = [];
+  if (card.destinoAposUso && card.tipo !== "Feitico")
+    errors.push("Destino após uso exige Feitico.");
   if (card.requerElementoMago && card.tipo !== "Feitico")
     errors.push("Restrição de elemento do mago exige Feitico.");
   if (
@@ -126,6 +130,10 @@ export function playableErrors(card: Card): string[] {
     card.tipo !== "Tropa"
   )
     errors.push("Montaria exige Tropa.");
+  if (card.montaria?.filtro?.ataqueMinimo !== undefined)
+    errors.push(
+      "Ataque mínimo é filtro de condição de desconto, não de montaria.",
+    );
   if (card.montaria && !card.palavrasChave.includes("Montaria"))
     errors.push("Filtro de montaria exige palavra-chave Montaria.");
   if (
@@ -172,6 +180,37 @@ export function playableErrors(card: Card): string[] {
   ) => {
     for (const e of effects) {
       if (
+        e.id === "fieldModifier" &&
+        (!e.concessao ||
+          !Object.keys(e.concessao).length ||
+          ![
+            "UnicoAliado",
+            "UnicoInimigo",
+            "TodosAliados",
+            "TodasTropasInimigas",
+            "TodosInimigos",
+            "Estrutura",
+          ].includes(target ?? ""))
+      )
+        errors.push("fieldModifier exige concessao e alvo em campo.");
+      if (e.origem && e.id !== "relocate")
+        errors.push("Origem de deslocamento exige relocate.");
+      if (e.concessao && e.id !== "fieldModifier")
+        errors.push("Concessão exige fieldModifier.");
+      if (
+        e.concessao?.palavrasChave?.some(
+          (k) => !keywordIds.includes(k) || k === "Reação",
+        )
+      )
+        errors.push("Palavra-chave da concessão não implementada.");
+      if (
+        e.id === "relocate" &&
+        (e.origem === "alvo"
+          ? target !== "UnicoAliado"
+          : !ability || target !== "CampoAliado" || card.tipo !== "Tropa")
+      )
+        errors.push("relocate exige habilidade de Tropa com alvo CampoAliado.");
+      if (
         ["equipmentGrant", "resetAttacks"].includes(e.id) &&
         target !== "Global"
       )
@@ -210,11 +249,11 @@ export function playableErrors(card: Card): string[] {
       if (
         e.alvo &&
         (!ability ||
-          !["damage", "heal", "status"].includes(e.id) ||
+          !["damage", "heal", "status", "fieldModifier"].includes(e.id) ||
           !["Tropa", "Mago", "Estrutura"].includes(card.tipo))
       )
         errors.push(
-          "Alvo Proprio por efeito exige damage, heal ou status em habilidade de Tropa, Mago ou Estrutura.",
+          "Alvo Proprio por efeito exige damage, heal, status ou fieldModifier em habilidade de Tropa, Mago ou Estrutura.",
         );
       const effectTarget = e.alvo === "Proprio" ? "UnicoAliado" : target;
       const configurable = ["arrowRain", "lightOrb"].includes(e.id);
@@ -408,14 +447,15 @@ export function playableErrors(card: Card): string[] {
         );
       if (
         e.inicio &&
-        (e.id !== "status" ||
+        ((e.id !== "status" && e.id !== "heal") ||
+          (e.id === "status" && e.inicio !== "proximaRodada") ||
           e.unidade === "turno" ||
           ["Envenenado", "Queimado", "Sangrando", "Congelado"].includes(
             canonicalStatus(e.status ?? ""),
           ))
       )
         errors.push(
-          "Início na próxima rodada exige status com duração em rodadas sem duração elemental fixa.",
+          "Início adiado exige heal ou status em rodadas sem duração elemental fixa; próximo turno aliado exige heal.",
         );
       if (
         e.id === "displace" &&
@@ -462,9 +502,14 @@ export function playableErrors(card: Card): string[] {
       )
         errors.push("Status/duração inválidos.");
       if (
-        !["equipmentGrant", "sacrifice", "resetAttacks", "control"].includes(
-          e.id,
-        ) &&
+        ![
+          "equipmentGrant",
+          "sacrifice",
+          "resetAttacks",
+          "control",
+          "fieldModifier",
+          "relocate",
+        ].includes(e.id) &&
         e.id !== "searchElemental" &&
         e.id !== "status" &&
         e.id !== "banish" &&
@@ -662,6 +707,17 @@ export function playableErrors(card: Card): string[] {
         errors.push("Vida do alvo exige bônus contínuo de ataque básico.");
       if (h.filtroAlvo && !["onKill", "onAttack", "onHeal"].includes(h.gatilho))
         errors.push("Filtro de alvo exige evento de abate, ataque ou cura.");
+      if (
+        h.filtroEvento?.ataqueMinimo !== undefined ||
+        h.efeitos.some(
+          (e) =>
+            "filtro" in e &&
+            (e.filtro?.ataqueMinimo !== undefined ||
+              ("qualquerDe" in e &&
+                e.qualquerDe?.some((f) => f.ataqueMinimo !== undefined))),
+        )
+      )
+        errors.push("Ataque mínimo exige condição cartaEmCampo de desconto.");
       for (const filter of [
         h.filtroEvento,
         ...(h.condicoes?.flatMap((c) =>
@@ -691,6 +747,16 @@ export function playableErrors(card: Card): string[] {
           ))
       )
         errors.push("Filtro de reação não implementado ou em outro gatilho.");
+      if (
+        h.condicoes?.some(
+          (c) =>
+            c.tipo === "cartaEmCampo" && c.filtro.ataqueMinimo !== undefined,
+        ) &&
+        !h.efeitos.every((e) => e.id === "abilityDiscount")
+      )
+        errors.push(
+          "Filtro por ataque atual exige desconto de habilidades, evitando dependência circular de ataque.",
+        );
       for (const effect of h.efeitos) {
         if (effect.id === "spellDamageTurn" && card.tipo !== "Mago")
           errors.push("Bônus temporário de feitiços exige Mago.");
@@ -712,6 +778,7 @@ export function playableErrors(card: Card): string[] {
             ? [
                 "attackAura",
                 "attackBonus",
+                "abilityDiscount",
                 "manaRecovery",
                 "blockOwnAttack",
                 "attackLimit",
@@ -731,6 +798,7 @@ export function playableErrors(card: Card): string[] {
                     ![
                       "attackAura",
                       "attackBonus",
+                      "abilityDiscount",
                       "blockAttack",
                       "manaRecovery",
                       "reflectAttack",

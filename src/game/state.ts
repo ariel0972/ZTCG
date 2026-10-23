@@ -33,6 +33,10 @@ export interface Instance extends Card {
   concealedTrap?: { effect: Effect; generated?: boolean };
   revivedFromGraveyard?: boolean;
   reviveBonuses?: { hp: number; ataque: number };
+  fieldModifiers?: {
+    source: string;
+    grant: NonNullable<Effect["concessao"]>;
+  }[];
   deathReward?: {
     round: number;
     mana: number;

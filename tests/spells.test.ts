@@ -407,22 +407,32 @@ test("Chuva de Flechas de Água congela, mas seu dano periódico continua atingi
   assert.equal(s.card!.hpAtual, 27);
   assert.equal(g.player("p2").mage.hpAtual, hp - 3);
 });
-test("Bola de Luz impede conjuração do mago Cego; Areia rouba topo apenas com mago Ar", () => {
-  const g = make("Ar"),
-    s = troop(g),
-    deck = g.player("p2").deck.length;
-  cast(g, "009");
-  assert.equal(g.player("p2").deck.length, deck - 1);
-  assert.equal(s.card!.hpAtual, 30);
+test("Bola de Luz impede conjuração do mago Cego", () => {
+  const g = make("Fogo"),
+    s = troop(g);
+  cast(g, "008");
+  assert.equal(s.card!.hpAtual, 27);
   g.state.current = "p2";
   assert.throws(
     () => cast(g, "002", [g.player("p1").mage.id], "p2"),
     /Cego|cego/,
   );
-  const g2 = make("Fogo"),
-    s2 = troop(g2);
-  cast(g2, "008");
-  assert.equal(s2.card!.hpAtual, 27);
+});
+test("Furacão de Areia só cega e causa dano em tropas, sem roubar cartas com mago de Ar", () => {
+  const g = make("Ar"),
+    s = troop(g),
+    deck = g.player("p2").deck.length;
+  const enemyHp = g.player("p2").mage.hpAtual;
+  cast(g, "009");
+  assert.equal(g.player("p2").deck.length, deck);
+  assert.equal(s.card!.hpAtual, 30);
+  assert(s.card!.statuses.some((status) => status.nome === "Cego"));
+  assert(
+    !g.player("p2").mage.statuses.some((status) => status.nome === "Cego"),
+  );
+  endRound(g);
+  assert.equal(s.card!.hpAtual, 28);
+  assert.equal(g.player("p2").mage.hpAtual, enemyHp);
 });
 test("Meteoros escolhe tropas; só Golém próprio habilita todos e nunca mago", () => {
   const g = make(),

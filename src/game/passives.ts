@@ -29,6 +29,7 @@ export const passiveActionIds = [
   "counterAttack",
   "interceptAttack",
   "blockOwnAttack",
+  "abilityDiscount",
   "attackLimit",
   "attackElement",
   "damage",
@@ -87,6 +88,8 @@ export function describePassiveActions(actions: PassiveAction[]) {
           return "Retaliou com seu ataque básico";
         case "interceptAttack":
           return "Interceptou um ataque básico";
+        case "abilityDiscount":
+          return "Habilidades custam " + a.valor + " mana a menos";
         case "blockOwnAttack":
           return "Não pode atacar sem a condição exigida";
         case "attackElement":
@@ -197,6 +200,27 @@ export function passiveMatches(
       return false;
   }
   return (rule.condicoes ?? []).every((condition) => {
+    if (condition.tipo === "campoFrontal") {
+      const position = slots.find((s) =>
+        slotCards(s).some((c) => c.id === source.id),
+      );
+      const front =
+        position &&
+        slots.find(
+          (s) =>
+            s.kind === "Tropa" &&
+            s.ownerId !== source.ownerId &&
+            s.column === 2 - position.column,
+        );
+      return (
+        !!front &&
+        (condition.verificar === "carta"
+          ? [front.card, front.rider].some(
+              (c) => c?.elemento === condition.elemento,
+            )
+          : front.appliedElement === condition.elemento)
+      );
+    }
     if (condition.tipo === "cartaEmCampo") {
       const found = slots.some(
         (s) =>
@@ -204,7 +228,9 @@ export function passiveMatches(
           slotCards(s).some(
             (c) =>
               (c.hp === undefined || c.hpAtual > 0) &&
-              matchesPassiveFilter(c, condition.filtro),
+              matchesPassiveFilter(c, condition.filtro) &&
+              (condition.filtro.ataqueMinimo === undefined ||
+                currentBasicAttack(c, slots) >= condition.filtro.ataqueMinimo),
           ),
       );
       return found === condition.presente;
@@ -271,6 +297,8 @@ export function basicAttackElement(
       for (const action of rule.efeitos)
         if (action.id === "attackElement") element = action.elemento;
     }
+  for (const modifier of card.fieldModifiers ?? [])
+    if (modifier.grant.elementoAtaque) element = modifier.grant.elementoAtaque;
   return element;
 }
 export function basicAttackLimit(card: Instance, slots: Slot[]) {
@@ -323,7 +351,7 @@ export function canMount(
     mount.tipo === "Tropa" &&
     rider.tipo === "Tropa" &&
     mount.id !== rider.id &&
-    mount.palavrasChave.includes("Montaria") &&
+    fieldKeywords(mount).includes("Montaria") &&
     matchesPassiveFilter(rider, mount.montaria?.filtro)
   );
 }
@@ -429,6 +457,9 @@ export function adjacentAttackBonus(card: Instance, slots: Slot[]) {
       const rule = normalizePassive(h);
       if (
         rule.gatilho !== "continuous" ||
+        !rule.efeitos.some(
+          (a) => a.id === "attackBonus" || a.id === "attackAura",
+        ) ||
         !passiveMatches(
           rule,
           source.card,
@@ -554,6 +585,7 @@ export function continuousPassiveActive(
     )
   )
     return false;
+  if (rule.efeitos.some((e) => e.id === "abilityDiscount")) return true;
   const position = slots.find(
     (s) => s.card?.id === source.id && s.kind === "Tropa",
   );
@@ -815,3 +847,108 @@ export const passiveTemplates: { nome: string; passiva: DeclarativePassive }[] =
       },
     },
   ];
+
+passiveTemplates.push(
+  {
+    nome: "Desconto de habilidade com inimigo de ataque alto",
+    passiva: {
+      gatilho: "continuous",
+      escopo: "proprio",
+      condicoes: [
+        {
+          tipo: "cartaEmCampo",
+          jogador: "inimigo",
+          filtro: { ataqueMinimo: 5 },
+          presente: true,
+        },
+      ],
+      efeitos: [{ id: "abilityDiscount", valor: 2 }],
+    },
+  },
+  {
+    nome: "Bloquear ataque com elemento aplicado à frente",
+    passiva: {
+      gatilho: "continuous",
+      escopo: "proprio",
+      condicoes: [
+        {
+          tipo: "campoFrontal",
+          elemento: "Fogo",
+          verificar: "elementoAplicado",
+        },
+      ],
+      efeitos: [{ id: "blockOwnAttack" }],
+    },
+  },
+);
+
+export function fieldAttackBonus(card: Instance) {
+  return (card.fieldModifiers ?? []).reduce(
+    (n, m) => n + (m.grant.bonusAtaque ?? 0),
+    0,
+  );
+}
+export function fieldKeywords(card: Instance) {
+  return [
+    ...new Set([
+      ...card.palavrasChave,
+      ...(card.fieldModifiers ?? []).flatMap(
+        (m) => m.grant.palavrasChave ?? [],
+      ),
+    ]),
+  ];
+}
+export function currentBasicAttack(card: Instance, slots: Slot[]) {
+  if (!["Tropa", "Mago", "Estrutura"].includes(card.tipo)) return 0;
+  const position = slots.find((s) =>
+    slotCards(s).some((c) => c.id === card.id),
+  );
+  const equipped =
+    position &&
+    card.tipo !== "Estrutura" &&
+    (!position.rider || position.rider.id === card.id);
+  const arms =
+    card.tipo === "Mago"
+      ? ["back-left", "back-right"]
+      : position?.column === 0
+        ? ["front-left"]
+        : position?.column === 2
+          ? ["front-right"]
+          : [];
+  const weaponBonus = equipped
+    ? slots
+        .filter(
+          (s) =>
+            s.ownerId === card.ownerId &&
+            arms.some((a) => s.id.endsWith(":" + a)),
+        )
+        .reduce((n, s) => n + (s.card?.bonusAtaque ?? 0), 0)
+    : 0;
+  return (
+    (card.ataque ?? 0) +
+    fieldAttackBonus(card) +
+    weaponBonus +
+    adjacentAttackBonus(card, slots) +
+    card.statuses
+      .filter((s) => s.nome === "BonusAtaque" && s.turnosRestantes > 0)
+      .reduce((n, s) => n + (s.valor ?? 0), 0)
+  );
+}
+export function abilityManaCost(card: Instance, base: number, slots: Slot[]) {
+  const discount = card.habilidadesPassivas
+    .map(normalizePassive)
+    .filter(
+      (r) =>
+        r.gatilho === "continuous" &&
+        r.efeitos.some((e) => e.id === "abilityDiscount") &&
+        passiveMatches(
+          r,
+          card,
+          { ownerId: card.ownerId, cardId: card.id, card },
+          slots,
+        ),
+    )
+    .flatMap((r) => r.efeitos)
+    .reduce((n, e) => n + (e.id === "abilityDiscount" ? e.valor : 0), 0);
+  return Math.max(0, base - discount);
+}

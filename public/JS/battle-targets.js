@@ -30,6 +30,27 @@ export function spellSlotTarget(action, slot, userId) {
   const own = slot.ownerId === userId,
     type = action.alvo;
   if (type === "Global") return false;
+  if (action.efeitos?.some((e) => e.id === "relocate" && e.origem !== "alvo")) {
+    if (
+      !own ||
+      slot.kind !== "Tropa" ||
+      slot.terrain ||
+      (slot.card && slot.card.tipo !== "Tropa") ||
+      [slot.card?.id, slot.rider?.id].includes(action.sourceCardId)
+    )
+      return false;
+    if (
+      [slot.card, slot.rider].some((c) =>
+        c?.statuses?.some(
+          (s) =>
+            ["Congelado", "Cego", "Incapacitado", "Atordoado"].includes(
+              s.nome,
+            ) && s.turnosRestantes > 0,
+        ),
+      )
+    )
+      return false;
+  }
   if (["CampoAliado", "CampoInimigo"].includes(type))
     return (
       slot.kind === "Tropa" &&
@@ -76,6 +97,11 @@ export function spellSlotTarget(action, slot, userId) {
   if (type === "TodosInimigos" && !["Tropa", "Mago"].includes(slot.card?.tipo))
     return false;
   const effects = action.efeitos || [];
+  if (
+    effects.some((e) => e.id === "relocate" && e.origem === "alvo") &&
+    target.tipo !== "Tropa"
+  )
+    return false;
   const displacement = effects.find((e) => e.id === "displace");
   if (
     displacement &&
@@ -136,6 +162,8 @@ export function zoneCardAllowed(action, card) {
   return true;
 }
 export function targetDescription(action) {
+  if (action?.efeitos?.some((e) => e.id === "relocate"))
+    return "Escolha outro espaço de tropa aliado destacado, vazio ou com uma tropa para trocar de lugar. Montaria e ocupante vão juntos; estruturas e armamentos permanecem.";
   if (action?.efeitos?.some((e) => e.id === "displace"))
     return "Escolha uma tropa inimiga destacada. Se o efeito pedir deslocamento, escolha depois um espaço vizinho vazio. Estruturas seguem a regra descrita na carta.";
   if (action?.filtroAlvo?.numeroCatalogo)
@@ -197,6 +225,39 @@ export function displacementChoice(action, targetIds, slots) {
 }
 
 export function destinationChoice(action, targetIds, slots, ownerId) {
+  if (
+    action?.efeitos?.some((e) => e.id === "relocate" && e.origem === "alvo")
+  ) {
+    const source = slots.find((s) =>
+      targetIds?.some((id) => [s.id, s.card?.id, s.rider?.id].includes(id)),
+    );
+    return {
+      required: !!source,
+      destinations: source
+        ? slots
+            .filter(
+              (s) =>
+                s !== source &&
+                s.ownerId === ownerId &&
+                s.kind === "Tropa" &&
+                !s.terrain &&
+                (!s.card || (s.card.tipo === "Tropa" && !source.terrain)) &&
+                ![source.card, source.rider, s.card, s.rider].some((c) =>
+                  c?.statuses?.some(
+                    (st) =>
+                      [
+                        "Cego",
+                        "Congelado",
+                        "Incapacitado",
+                        "Atordoado",
+                      ].includes(st.nome) && st.turnosRestantes > 0,
+                  ),
+                ),
+            )
+            .map((s) => s.id)
+        : [],
+    };
+  }
   if (action?.efeitos?.some((e) => e.id === "control")) {
     const front = slots.filter(
       (s) => s.ownerId === ownerId && s.kind === "Tropa",

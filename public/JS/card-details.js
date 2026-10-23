@@ -217,10 +217,47 @@ export function renderCardDetails(host, card, { reactions = {} } = {}) {
         ),
       );
   }
-  if (card.attacked || card.statuses?.length || card.appliedElement) {
+  if (
+    card.attacked ||
+    card.statuses?.length ||
+    card.appliedElement ||
+    card.fieldModifiers?.length ||
+    card.scheduledHeals?.length
+  ) {
     const current = section("Estado em campo", true);
     if (card.attacked)
       current.append(make("p", "Ataque já utilizado neste turno."));
+    for (const modifier of card.fieldModifiers || []) {
+      const grant = modifier.grant;
+      const summary = [
+        grant.bonusAtaque ? "+" + grant.bonusAtaque + " de ataque básico" : "",
+        ...(grant.palavrasChave || []),
+        grant.elementoAtaque
+          ? "ataques de " +
+            (labels[grant.elementoAtaque] || grant.elementoAtaque)
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      current.append(
+        make(
+          "p",
+          modifier.source +
+            ": " +
+            summary +
+            ". Dura enquanto permanecer em campo.",
+        ),
+      );
+    }
+    for (const heal of card.scheduledHeals || [])
+      current.append(
+        make(
+          "p",
+          "Cura programada: " +
+            heal.amount +
+            " de vida no início do próximo turno previsto.",
+        ),
+      );
     for (const status of card.statuses || []) {
       current.append(
         make(

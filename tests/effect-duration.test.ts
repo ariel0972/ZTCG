@@ -159,10 +159,8 @@ for (const turn of [3, 4]) {
       c.elemento = "Terra";
       cast(g, "057", [c.id]);
       end(g);
-      assert.equal(slot(g, "p2:front:2").card!.statuses.length, 0);
-      end(g);
       assert.ok(
-        slot(g, "p2:front:2").card!.statuses.some(
+        !slot(g, "p2:front:2").card!.statuses.some(
           (s) => s.nome === "SemAtaque",
         ),
       );
@@ -173,7 +171,17 @@ for (const turn of [3, 4]) {
         ),
       );
       end(g);
-      assert.equal(slot(g, "p2:front:2").card!.statuses.length, 0);
+      assert.ok(
+        slot(g, "p2:front:2").card!.statuses.some(
+          (s) => s.nome === "SemAtaque",
+        ),
+      );
+      end(g);
+      assert.ok(
+        !slot(g, "p2:front:2").card!.statuses.some(
+          (s) => s.nome === "SemAtaque",
+        ),
+      );
     },
   );
 }

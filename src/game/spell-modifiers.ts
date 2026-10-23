@@ -88,6 +88,8 @@ export function modifiedSpell<T extends Card>(card: T, mage: Instance): T {
               : 1)) + bonus;
       if (e.valorEstrutura !== undefined) e.valorEstrutura += bonus;
       if (e.bonusAtaque !== undefined) e.bonusAtaque += bonus;
+      if (e.concessao?.bonusAtaque !== undefined)
+        e.concessao.bonusAtaque += bonus;
       if (e.bonusHp !== undefined) e.bonusHp += bonus;
       if (e.id === "bloodScent")
         e.bonusAtaque = (original.bonusAtaque ?? 1) + bonus;

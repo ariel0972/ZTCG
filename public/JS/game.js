@@ -516,7 +516,13 @@ function meHasStatus(name) {
 }
 function targetAction() {
   const action = actionTarget(selected);
-  return action ? { ...action, casterElement: myPlayer().mage.elemento } : null;
+  return action
+    ? {
+        ...action,
+        sourceCardId: selected?.card?.id,
+        casterElement: myPlayer().mage.elemento,
+      }
+    : null;
 }
 function isChoosingSpell() {
   return (
@@ -594,6 +600,14 @@ function displacementBlockReason() {
     state.slots,
     user.id,
   );
+  if (
+    targetAction()?.efeitos?.some(
+      (e) => e.id === "relocate" && e.origem === "alvo",
+    )
+  )
+    return choice.required && !selected?.destinationId
+      ? "Escolha outro espaço aliado destacado para mover ou trocar a tropa."
+      : "";
   if (targetAction()?.efeitos?.some((e) => e.id === "control"))
     return choice.required && !selected?.destinationId
       ? "Escolha um espaço aliado livre e sem Lama para receber a tropa."

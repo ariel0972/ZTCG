@@ -33,7 +33,8 @@ export function mountAllowed(mount, rider, occupied = false) {
 }
 
 export function attackValue(card, slot, slots = []) {
-  if (card.tipo === "Estrutura") return card.ataque || 0;
+  if (card.tipo === "Estrutura")
+    return (card.ataque || 0) + (card.bonusAtaquePassivo || 0);
   const positions =
     slot?.kind === "Mago"
       ? ["back-left", "back-right"]
@@ -69,6 +70,14 @@ export function cardFace(
     return face;
   }
   face.dataset.element = card.elemento || "Neutro";
+  if (card.fieldModifiers?.some((m) => m.grant?.visual === "asasDeFogo")) {
+    face.classList.add("effect-fire-wings");
+    const wings = node("span", "❯❮", "fire-wings-mark");
+    wings.setAttribute("aria-label", "Asas de fogo ativas");
+    wings.title =
+      "Campo livre · ataque de Fogo · bônus enquanto permanecer em campo";
+    face.append(wings);
+  }
   if (card.id) face.dataset.liveCardId = card.id;
   const art = node("div", "", "live-art");
   const img = document.createElement("img");

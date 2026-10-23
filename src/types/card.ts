@@ -84,6 +84,15 @@ export const effectSchema = z
     alvo: z.literal("Proprio").optional(),
     valor: number.optional(),
     descontoMana: number.optional(),
+    concessao: z
+      .object({
+        bonusAtaque: number.optional(),
+        palavrasChave: z.array(z.string().min(1).max(80)).max(20).optional(),
+        elementoAtaque: z.enum(elements).optional(),
+        visual: z.enum(["asasDeFogo"]).optional(),
+      })
+      .strict()
+      .optional(),
     tiposCarta: z.array(z.enum(cardTypes)).min(1).max(5).optional(),
     destinatarios: z
       .array(z.enum(["Tropa", "Mago"]))
@@ -123,7 +132,7 @@ export const effectSchema = z
     elemento: z.enum(elements).optional(),
     unidade: z.enum(["turno", "rodada"]).optional(),
     requerStatus: z.string().max(80).optional(),
-    inicio: z.enum(["proximaRodada"]).optional(),
+    inicio: z.enum(["proximaRodada", "proximoTurnoAliado"]).optional(),
     valorEstrutura: number.optional(),
     bonusAtaque: number.optional(),
     bonusHp: number.optional(),
@@ -156,9 +165,14 @@ export const effectSchema = z
       .strict()
       .optional(),
     recompensaAoEliminar: z
-      .object({ mana: number.max(20), tipo: z.enum(cardTypes).optional() })
+      .object({
+        mana: number.max(20).optional(),
+        compra: number.optional(),
+        tipo: z.enum(cardTypes).optional(),
+      })
       .strict()
       .optional(),
+    origem: z.enum(["fonte", "alvo"]).optional(),
     direcao: z.enum(["direita", "vizinho"]).optional(),
     borda: z.enum(["mao", "manter"]).optional(),
     estrutura: z.enum(["impedirUso", "manter"]).optional(),
@@ -196,6 +210,7 @@ export const actionOptionSchema = z
   .strict();
 export const activeSchema = z
   .object({
+    tiposAlvo: z.array(z.enum(cardTypes)).min(1).max(5).optional(),
     id: identifier,
     nome: z.string().trim().min(1).max(100),
     custoMana: number,
@@ -238,6 +253,7 @@ export const passiveFilterSchema = z
     elemento: z.enum(elements).optional(),
     direcao: z.enum(["Frente", "Diagonal", "Universal"]).optional(),
     status: z.string().max(80).optional(),
+    ataqueMinimo: number.optional(),
   })
   .strict()
   .refine(
@@ -276,6 +292,7 @@ export const passiveActionSchema = z.discriminatedUnion("id", [
     })
     .strict(),
   z.object({ id: z.literal("blockOwnAttack") }).strict(),
+  z.object({ id: z.literal("abilityDiscount"), valor: number.min(1) }).strict(),
   z
     .object({ id: z.literal("attackElement"), elemento: z.enum(elements) })
     .strict(),
@@ -400,6 +417,13 @@ export const declarativePassiveSchema = z
             .strict(),
           z
             .object({
+              tipo: z.literal("campoFrontal"),
+              elemento: z.enum(elements),
+              verificar: z.enum(["carta", "elementoAplicado"]),
+            })
+            .strict(),
+          z
+            .object({
               tipo: z.literal("campoVazio"),
               jogador: z.enum(["aliado", "inimigo"]),
             })
@@ -465,6 +489,7 @@ export const cardSchema = z
     custoMana: number,
     assinatura: z.boolean().default(false),
     requerElementoMago: z.enum(elements).optional(),
+    destinoAposUso: z.enum(["cemiterio", "banido"]).optional(),
     elemento: z.enum(elements).optional(),
     descricao: z.string().max(4000).default(""),
     imgURL: imageSchema.optional(),

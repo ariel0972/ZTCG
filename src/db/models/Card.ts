@@ -33,6 +33,18 @@ const effect = new Schema(
     alvo: { type: String, enum: ["Proprio"] },
     valor: n,
     descontoMana: n,
+    concessao: {
+      type: new Schema(
+        {
+          bonusAtaque: n,
+          palavrasChave: { type: [String], default: undefined },
+          elementoAtaque: { type: String, enum: elements },
+          visual: { type: String, enum: ["asasDeFogo"] },
+        },
+        { _id: false, strict: "throw" },
+      ),
+      default: undefined,
+    },
     destinatarios: {
       type: [{ type: String, enum: ["Tropa", "Mago"] }],
       default: undefined,
@@ -92,7 +104,7 @@ const effect = new Schema(
     carta: String,
     seNaoUsada: String,
     requerStatus: String,
-    inicio: { type: String, enum: ["proximaRodada"] },
+    inicio: { type: String, enum: ["proximaRodada", "proximoTurnoAliado"] },
     valorEstrutura: n,
     bonusAtaque: n,
     bonusHp: n,
@@ -130,13 +142,15 @@ const effect = new Schema(
     recompensaAoEliminar: {
       type: new Schema(
         {
-          mana: { ...n, max: 20, required: true },
+          mana: { ...n, max: 20 },
+          compra: n,
           tipo: { type: String, enum: cardTypes },
         },
         { _id: false, strict: "throw" },
       ),
       default: undefined,
     },
+    origem: { type: String, enum: ["fonte", "alvo"] },
     direcao: { type: String, enum: ["direita", "vizinho"] },
     borda: { type: String, enum: ["mao", "manter"] },
     estrutura: { type: String, enum: ["impedirUso", "manter"] },
@@ -170,6 +184,10 @@ const actionOption = new Schema(
 );
 const active = new Schema(
   {
+    tiposAlvo: {
+      type: [{ type: String, enum: cardTypes }],
+      default: undefined,
+    },
     id: { type: String, required: true },
     nome: { type: String, required: true },
     descricao: { type: String, maxlength: 2000 },
@@ -202,6 +220,7 @@ const passiveFilter = new Schema(
     elemento: { type: String, enum: elements },
     direcao: { type: String, enum: ["Frente", "Diagonal", "Universal"] },
     status: String,
+    ataqueMinimo: n,
   },
   { _id: false, strict: "throw" },
 );
@@ -209,9 +228,11 @@ const passiveCondition = new Schema(
   {
     tipo: {
       type: String,
-      enum: ["campoVazio", "vidaPercentual", "cartaEmCampo"],
+      enum: ["campoVazio", "vidaPercentual", "cartaEmCampo", "campoFrontal"],
     },
     filtro: { type: passiveFilter, default: undefined },
+    elemento: { type: String, enum: elements },
+    verificar: { type: String, enum: ["carta", "elementoAplicado"] },
     presente: Boolean,
     jogador: { type: String, enum: ["aliado", "inimigo"] },
     alvo: { type: String, enum: ["fonte", "cartaEvento", "alvoAtaque"] },
@@ -311,6 +332,7 @@ const schema = new Schema<Card>(
     custoMana: { ...n, required: true },
     assinatura: { type: Boolean, default: false },
     requerElementoMago: { type: String, enum: elements },
+    destinoAposUso: { type: String, enum: ["cemiterio", "banido"] },
     elemento: { type: String, enum: elements },
     descricao: String,
     imgURL: String,

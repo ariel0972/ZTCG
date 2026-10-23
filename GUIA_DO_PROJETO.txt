@@ -2082,3 +2082,8 @@ Pedregulhos mantém impactos individuais para dano, reações e escudos, mas com
 inImpact aceita shareDodgeWithParent para compartilhar a chave de desvio com a ação externa, sem compartilhar o contador de escudos. A retomada aceita chaves de decisões anteriores à correção. Não associar decisões por nome ou número de catálogo: cópias iguais precisam continuar independentes por ID de instância.
 O menu identifica o espaço da carta e usa a identidade da escolha além do prazo; uma nova escolha reabre mesmo que tenha o mesmo horário limite. Os testes de water-golem e field-overlays cobrem as duas escolhas, a ordem no campo, recusa parcial, escudos e retomada de partidas salvas.
 O comando respondDodge aceita choiceKey, enviado pela interface com a chave da escolha exibida. O servidor rejeita STALE_CHOICE se um botão antigo tentar responder à carta seguinte; clientes anteriores sem esse campo continuam compatíveis.
+
+CARTAS E EFEITOS REUTILIZÁVEIS — 23/10/2026
+- tests/reusable-creature-effects.test.ts — Verifica Salamandra, Goblins, Asas, Lâmina e componentes genéricos em outras cartas, incluindo persistência, custos, montarias e duração.
+- scripts/update-creature-effects.ts — Atualiza somente as seis cartas desta expansão no banco, com dry-run, backup e proteção de versão concorrente.
+Concessões em campo, cura agendada e desconto de habilidade são configurados no catálogo. Consulte MANUAL_EFEITOS_CATALOGO.txt para parâmetros. Asas tem indicação visual; nenhuma das novas regras depende do nome ou número dessas seis cartas.

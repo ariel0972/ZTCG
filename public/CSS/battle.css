@@ -2161,3 +2161,38 @@
   color: #ffd891;
   font-size: 10px;
 }
+
+/* Marcador de concessão visual configurado no catálogo. */
+.live-card.effect-fire-wings {
+  outline: 2px solid #ff9b3d;
+  box-shadow:
+    0 0 14px #ff5b2877,
+    inset 0 0 14px #ff9c3333;
+}
+.fire-wings-mark {
+  position: absolute;
+  top: 28%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  font-size: clamp(24px, 4vw, 52px);
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  color: #ffc561;
+  text-shadow:
+    0 0 8px #f30,
+    0 0 18px #ff3d00;
+  pointer-events: none;
+  animation: fire-wings-glow 2s ease-in-out infinite alternate;
+}
+@keyframes fire-wings-glow {
+  to {
+    opacity: 0.65;
+    filter: brightness(1.25);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fire-wings-mark {
+    animation: none;
+  }
+}
