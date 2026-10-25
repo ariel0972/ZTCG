@@ -17,6 +17,7 @@ import {
 } from "../src/services/ranking-projections";
 import { storeAvatar, avatarBytes } from "../src/services/avatars";
 import sharp from "sharp";
+import { monthlyDeckRanking } from "../src/services/monthly-deck-ranking";
 test(
   "MongoDB real isolado: CAS, reinício, idempotência e projeção recuperável",
   {
@@ -207,7 +208,7 @@ test(
           players: [{ userId, deckId }],
           winner: userId,
           reason: "Mago derrotado.",
-          finishedAt: new Date(2026, 0, 1, 0, i),
+          finishedAt: new Date(Date.UTC(2026, 0, 1, 0, i)),
         });
       await rebuildRankings();
       const projected = await User.findById(userId).select("+ranking").lean();
@@ -227,6 +228,42 @@ test(
           .partidas,
         12,
       );
+      const monthlyDate = new Date("2026-01-15T12:00:00Z");
+      let monthly = await monthlyDeckRanking(0, monthlyDate);
+      assert.equal(monthly.total, 0); // Existing twelve matches are before São Paulo midnight.
+      for (let i = 0; i < 10; i++)
+        await Match.create({
+          matchId: "monthly-" + i,
+          players: [{ userId, deckId }],
+          winner: i < 6 ? userId : null,
+          ranked: true,
+          finishedAt: new Date("2026-01-01T03:00:00Z"),
+        });
+      for (const [key, extra] of Object.entries({
+        deleted: { deletedAt: new Date() },
+        unranked: { ranked: false },
+        unfinished: { resultReady: false },
+        next: { finishedAt: new Date("2026-02-01T03:00:00Z") },
+        foreign: { players: [{ userId: "2".repeat(24), deckId }] },
+      }))
+        await Match.create({
+          matchId: "excluded-" + key,
+          players: [{ userId, deckId }],
+          winner: userId,
+          finishedAt: monthlyDate,
+          ...extra,
+        });
+      monthly = await monthlyDeckRanking(0, monthlyDate);
+      assert.equal(monthly.total, 1);
+      assert.equal(monthly.podium[0].ranking.partidas, 10);
+      assert.equal(monthly.podium[0].ranking.vitorias, 6);
+      assert.equal(monthly.podium[0].ranking.rate, 0.6);
+      assert.equal(
+        (await monthlyDeckRanking(0, new Date("2026-02-15T00:00:00Z"))).total,
+        0,
+      );
+      await Deck.updateOne({ _id: deckId }, { $set: { publico: false } });
+      assert.equal((await monthlyDeckRanking(0, monthlyDate)).total, 0);
       await createRankingIndexes();
       const plan: any = await User.find({ "ranking.partidas": { $gte: 1 } })
         .sort({ "ranking.vitorias": -1, "ranking.rate": -1, _id: 1 })

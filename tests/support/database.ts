@@ -63,6 +63,7 @@ export async function fakeDatabase() {
               if (op === "$elemMatch")
                 return actual?.some((entry: any) => matches(entry, v));
               if (op === "$lte") return actual <= v;
+              if (op === "$lt") return actual < v;
               if (op === "$regex")
                 return new RegExp(v, value.$options).test(actual);
               return op === "$options";
@@ -85,6 +86,7 @@ export async function fakeDatabase() {
         Promise.resolve(value).then(resolve, reject),
       select: () => q,
       lean: () => q,
+      option: () => q,
       sort: (sort: any) => {
         if (Array.isArray(value))
           value = [...value].sort((a, b) => {
@@ -315,6 +317,45 @@ export async function fakeDatabase() {
     query(find(matches, filter).length),
   );
   patch(Match, "find", (filter) => query(find(matches, filter)));
+  // Monthly leaderboard fixture. The actual Mongo aggregation is also exercised in mongo.integration.
+  patch(Match, "aggregate", (pipeline) => {
+    const records = find(matches, pipeline[0].$match);
+    const ranked = decks
+      .filter((d) => d.publico && users.some((u) => equal(u._id, d.userId)))
+      .map((d) => {
+        const games = records.filter((m) =>
+          m.players.some(
+            (p: any) => equal(p.userId, d.userId) && equal(p.deckId, d._id),
+          ),
+        );
+        const wins = games.filter((m) => equal(m.winner, d.userId)).length;
+        return {
+          ...d,
+          ownerName: users.find((u) => equal(u._id, d.userId))?.nome,
+          ranking: {
+            partidas: games.length,
+            vitorias: wins,
+            rate: wins / games.length,
+          },
+        };
+      })
+      .filter((d) => d.ranking.partidas >= 10)
+      .sort(
+        (a, b) =>
+          b.ranking.rate - a.ranking.rate ||
+          b.ranking.vitorias - a.ranking.vitorias ||
+          Number(a.createdAt) - Number(b.createdAt) ||
+          String(a._id).localeCompare(String(b._id)),
+      );
+    const skip = pipeline.at(-1).$facet.rows[0].$skip;
+    return query([
+      {
+        podium: ranked.slice(0, 3),
+        rows: ranked.slice(skip, skip + 20),
+        count: [{ total: ranked.length }],
+      },
+    ]);
+  });
   const catalog: Card[] = (initial as unknown[]).map((c) =>
     cardSchema.parse(c),
   );

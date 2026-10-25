@@ -270,7 +270,11 @@ test("custo de vida de habilidade sem dano é permitido no segundo turno", () =>
     slotId: "p2:mage",
     abilityId: "enganarAMorte",
     targets: [dead.id],
+    destinationId: "p2:front:0",
   });
-  assert.equal(g.player("p2").mage.hpAtual, hp - 4);
-  assert.ok(g.player("p2").deck.some((c) => c.id === dead.id));
+  assert.equal(g.player("p2").mage.hpAtual, hp - 5);
+  assert.equal(
+    g.state.slots.find((s) => s.id === "p2:front:0")!.card!.id,
+    dead.id,
+  );
 });

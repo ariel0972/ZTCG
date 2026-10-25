@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 import { createApp } from "../src/application";
 import { fakeDatabase } from "./support/database";
 import { rebuildRankings } from "../src/services/ranking-projections";
+import { rankingMonth } from "../src/services/monthly-deck-ranking";
 import { invalidateRankings } from "../src/services/ranking-cache";
 test("rankings públicos usam histórico real, desempates, mínimo de 10 e paginação sem expor a conta", async () => {
   const db = await fakeDatabase();
@@ -139,6 +140,7 @@ test("baralhos públicos: mínimo por deck, dono correto, desempates, histórico
     for (let i = 0; i < games; i++)
       db.matches.push({
         matchId: `deck-${n}-${i}`,
+        finishedAt: new Date(),
         players: [{ userId, deckId: id(n) }],
         winner: i < wins ? userId : null,
       });
@@ -154,12 +156,29 @@ test("baralhos públicos: mínimo por deck, dono correto, desempates, histórico
   // Never combine this owner's unrelated deck with the other player's deckId.
   db.matches.push({
     matchId: "wrong-participant",
+    finishedAt: new Date(),
     players: [
       { userId: owner, deckId: id(99) },
       { userId: other, deckId: id(1) },
     ],
     winner: owner,
   });
+  const previousMonth = new Date(rankingMonth().start.getTime() - 1);
+  for (const [key, extra] of Object.entries({
+    old: { finishedAt: previousMonth },
+    excluded: { ranked: false },
+    deleted: { deletedAt: new Date() },
+    pending: { resultReady: false },
+  })) {
+    for (let i = 0; i < 10; i++)
+      db.matches.push({
+        matchId: key + i,
+        players: [{ userId: owner, deckId: id(4) }],
+        winner: owner,
+        finishedAt: new Date(),
+        ...extra,
+      });
+  }
   await rebuildRankings(true);
   const server = createServer(createApp([], async () => mongoose));
   await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
@@ -217,4 +236,13 @@ test("baralhos públicos: mínimo por deck, dono correto, desempates, histórico
     await new Promise<void>((r) => server.close(() => r()));
     db.restore();
   }
+});
+
+test("mês de São Paulo muda às 03:00 UTC e trata a virada de ano", () => {
+  const before = rankingMonth(new Date("2027-01-01T02:59:59.999Z"));
+  assert.equal(before.key, "2026-12");
+  assert.equal(before.start.toISOString(), "2026-12-01T03:00:00.000Z");
+  assert.equal(before.end.toISOString(), "2027-01-01T03:00:00.000Z");
+  const after = rankingMonth(new Date("2027-01-01T03:00:00.000Z"));
+  assert.equal(after.key, "2027-01");
 });

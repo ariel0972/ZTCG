@@ -107,7 +107,7 @@ export async function rebuildRankings(
 }
 
 export async function createRankingIndexes() {
-  for (const model of [User, Deck])
+  for (const model of [User, Deck, Match])
     for (const [keys, options] of model.schema.indexes()) {
       if (!String(options.name).startsWith("ranking_")) continue;
       await model.collection.createIndex(keys as Record<string, 1 | -1>, {

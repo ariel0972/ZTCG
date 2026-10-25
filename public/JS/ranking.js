@@ -1,5 +1,6 @@
 import { setImageSource } from "./image-sources.js";
 import { api, navbar, node, profilePath } from "./auth.js";
+import { deckCopyButton } from "./deck-copy.js";
 import { cardTile } from "./card-view.js";
 import { createCardInspector } from "./card-inspection.js";
 void navbar();
@@ -19,6 +20,7 @@ async function showDeck(entry) {
   $("ranking-deck-title").textContent = entry.nome;
   $("ranking-deck-status").textContent = "Carregando cartas…";
   $("ranking-deck-cards").replaceChildren();
+  deckDialog.querySelector(".deck-copy-action")?.remove();
   $("ranking-deck-owner").href = profilePath(entry.dono.id);
   $("ranking-deck-owner").textContent = `Ver perfil de ${entry.dono.nome} →`;
   deckDialog.showModal();
@@ -39,6 +41,9 @@ async function showDeck(entry) {
     );
     if (!deck)
       throw new Error("Este baralho não está mais público ou foi removido.");
+    const copy = node("div", "", "deck-copy-action");
+    copy.append(deckCopyButton(deck));
+    $("ranking-deck-status").after(copy);
     inspector ||= createCardInspector();
     const counts = new Map();
     for (const id of [deck.mago, ...deck.cartas].filter(Boolean))
@@ -146,6 +151,9 @@ async function load() {
   try {
     const data = await api(`/rankings?mode=${mode}&page=${page}`);
     if (current !== request) return;
+    if (mode === "decks")
+      $("ranking-title").textContent =
+        "Baralhos do mês · " + data.month.split("-").reverse().join("/");
     $("ranking-total").textContent =
       `${number(data.total)} ${mode === "decks" ? "baralhos" : "jogadores"}`;
     $("ranking-podium").append(...data.podium.map((p) => entry(p, true)));
@@ -158,7 +166,7 @@ async function load() {
     $("ranking-status").hidden = data.total > 0;
     $("ranking-status").textContent =
       mode === "decks"
-        ? "Ainda não há baralhos públicos com 10 partidas concluídas."
+        ? "Ainda não há baralhos públicos com 10 partidas válidas neste mês."
         : mode === "rate"
           ? "Ainda não há jogadores com 10 partidas concluídas."
           : "Ainda não há jogadores com partidas concluídas.";
@@ -194,7 +202,7 @@ function select(index) {
     index === 2 ? "Os baralhos que mais vencem" : "Os melhores duelistas";
   $("ranking-criteria").textContent =
     index === 2
-      ? "Baralhos públicos com pelo menos 10 partidas. Empates: mais vitórias e, depois, ordem de criação. A taxa usa o histórico do baralho, incluindo partidas anteriores a edições. Clique para ver as cartas."
+      ? "Mês atual no horário de São Paulo. Mínimo de 10 partidas válidas com o baralho neste mês. Classificação pela taxa de vitórias mensal; empates: mais vitórias e ordem de criação. Edições não zeram as partidas do mês. Clique para ver ou copiar."
       : index === 0
         ? "Vitórias de toda a conta. Empates: maior taxa de vitória e, depois, ordem de cadastro."
         : "Mínimo de 10 partidas concluídas. Empates: mais vitórias e, depois, ordem de cadastro. A classificação usa a taxa exata; o percentual exibido é arredondado.";

@@ -2,6 +2,7 @@ import { setImageSource } from "./image-sources.js";
 import { api, token, navbar, message, node, profilePath } from "./auth.js";
 import { cardTile } from "./card-view.js";
 import { createCardInspector } from "./card-inspection.js";
+import { deckCopyButton } from "./deck-copy.js";
 import { friendshipButtons } from "./social-view.js";
 
 const $ = (id) => document.getElementById(id);
@@ -57,6 +58,12 @@ function showDeck(deck) {
   for (const id of [deck.mago, ...deck.cartas].filter(Boolean))
     counts.set(id, (counts.get(id) || 0) + 1);
   $("profile-deck-title").textContent = deck.nome;
+  $("profile-deck-dialog").querySelector(".deck-copy-action")?.remove();
+  if (deck.publico) {
+    const copy = node("div", "", "deck-copy-action");
+    copy.append(deckCopyButton(deck));
+    $("profile-deck-title").after(copy);
+  }
   $("profile-deck-cards").replaceChildren(
     ...[...counts].map(([id, count]) => {
       const card = byId.get(id);

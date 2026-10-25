@@ -20,7 +20,11 @@ export function createBattleEvents(
   let nextVisualAt = 0;
   const visualTimers = new Set();
   function showFieldEffect(event) {
-    if (!["damage", "block", "mana", "elementalReaction"].includes(event.kind))
+    if (
+      !["damage", "block", "mana", "heal", "elementalReaction"].includes(
+        event.kind,
+      )
+    )
       return;
     if (host.ownerDocument.hidden) return;
     const now = Date.now();
@@ -63,6 +67,7 @@ export function createBattleEvents(
     notice: "Aviso",
     mount: "Montaria",
     mana: "Mana recuperada",
+    heal: "Vida recuperada",
     elementalReaction: "Reação elemental",
   };
   function show(event) {
@@ -119,6 +124,7 @@ export function createBattleEvents(
       event.kind !== "elementalReaction" &&
       event.kind !== "block" &&
       event.kind !== "mana" &&
+      event.kind !== "heal" &&
       !globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches
     ) {
       face.animate?.(

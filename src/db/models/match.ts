@@ -29,4 +29,5 @@ const schema = new Schema(
 );
 schema.index({ "players.userId": 1, finishedAt: -1 });
 schema.index({ "players.deckId": 1, finishedAt: -1 });
+schema.index({ finishedAt: 1, ranked: 1 }, { name: "ranking_month_matches" });
 export default model("Match", schema);

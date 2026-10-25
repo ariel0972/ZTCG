@@ -29,6 +29,8 @@ import {
 import { createCardInspector } from "./card-inspection.js";
 import {
   cardFace,
+  structureFace,
+  renderSpellAura,
   bindCardDrag,
   dropAction,
   fieldSource,
@@ -1098,10 +1100,6 @@ function slotView(slot) {
         slot.kind === "Tropa" ? `Tropa · ${slot.column + 1}` : slot.kind,
       ),
     );
-  if (slot.structure)
-    button.append(
-      node("strong", `${slot.structure.nome} · ${slot.structure.hpAtual} vida`),
-    );
   if (slot.terrain)
     button.append(
       node(
@@ -1221,6 +1219,7 @@ function slotView(slot) {
   if (!slot.structure && !slot.rider) return button;
   const wrapper = node("div", "", "board-slot-wrap");
   wrapper.classList.toggle("mounted-slot", !!slot.rider);
+  wrapper.classList.toggle("structured-slot", !!slot.structure);
   wrapper.append(button);
   if (slot.rider) {
     const riderButton = node("button", "", "rider-action");
@@ -1258,12 +1257,18 @@ function slotView(slot) {
     wrapper.append(riderButton);
   }
   if (!slot.structure) return wrapper;
-  const structureButton = node(
-    "button",
-    `Estrutura: ${slot.structure.nome}`,
-    "structure-action",
-  );
+  const structureButton = node("button", "", "structure-action");
   structureButton.type = "button";
+  structureButton.append(structureFace(slot.structure));
+  structureButton.setAttribute(
+    "aria-label",
+    slot.structure.nome +
+      ": " +
+      slot.structure.hpAtual +
+      " de " +
+      slot.structure.hp +
+      " de vida",
+  );
   inspector.bind(structureButton, slot.structure);
   if (isChoosingSpell()) {
     const action = targetAction();
@@ -1326,6 +1331,11 @@ function renderBoard(owner, frontId, backId, reverse = false) {
     ...(reverse ? front.reverse() : front).map(slotView),
   );
   $(backId).replaceChildren(...(reverse ? back.reverse() : back).map(slotView));
+  renderSpellAura(
+    state.players.find((p) => p.id === owner),
+    $(frontId),
+    $(backId),
+  );
 }
 function hud(id, player) {
   const limits = player.mage.limites[0];

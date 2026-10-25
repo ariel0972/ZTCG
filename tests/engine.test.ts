@@ -221,6 +221,7 @@ test("ressurreição inválida não cobra mana; tropas retornam restauradas", ()
   );
   assert.equal(JSON.stringify(g.state), before);
   const dead = inst(g, "021");
+  g.state.slots.find((s) => s.id === "p1:front:0")!.card = null;
   dead.hpAtual = 0;
   g.player("p1").graveyard.push(dead);
   command(g, "p1", {
@@ -228,9 +229,10 @@ test("ressurreição inválida não cobra mana; tropas retornam restauradas", ()
     slotId: "p1:mage",
     abilityId: "enganarAMorte",
     targets: [dead.id],
+    destinationId: "p1:front:0",
   });
   assert.equal(
-    g.player("p1").deck.find((c) => c.id === dead.id)!.hpAtual,
+    g.state.slots.find((s) => s.id === "p1:front:0")!.card!.hpAtual,
     dead.hp,
   );
 });

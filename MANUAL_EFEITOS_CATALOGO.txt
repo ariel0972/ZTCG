@@ -213,7 +213,7 @@ Efeitos especiais de feitiços e field não são aceitos em habilidades genéric
 
 Executores antigos sem lista de efeitos:
 protecaoAquatica: escolher aliado e cura 3 OU Escudo 3 por 2 rodadas.
-Enganar a morte: efeito shuffleGraveyard, seleção de até 3 tropas e custoVida:4.
+Enganar a morte: efeito genérico revive, seleção de 1 tropa no próprio cemitério e custoVida:5 (exige mais de 5 PV). Destino aliado livre sem Lama; sem mobilização nem mana de entrada.
 Ressurreição Sombria foi removida; use o efeito geral revive para entrar em campo.
 ataqueFurtivo: 2 de dano ao mago inimigo, automático.
 ordemDaEspada: 3 de dano às tropas inimigas, estruturas absorvem.
@@ -950,17 +950,15 @@ EXEMPLO_JSON_INICIO 108 — Necromante
       "id": "enganarAMorte",
       "nome": "Enganar a morte",
       "custoMana": 0,
-      "custoVida": 4,
+      "custoVida": 5,
       "alvo": "Cemiterio",
-      "maxAlvos": 3,
       "filtroAlvo": {
         "tipo": "Tropa"
       },
-      "descricao": "Pague 4 de vida para escolher de 1 a 3 tropas do próprio cemitério, devolvê-las ao baralho e embaralhar. Exige mais de 4 de vida.",
+      "descricao": "Pague 5 de vida para reviver uma tropa do próprio cemitério em um espaço aliado livre e sem Lama, com vida normal. Exige mais de 5 de vida. Não gasta mobilização nem gera mana de entrada.",
       "efeitos": [
         {
-          "id": "shuffleGraveyard",
-          "valor": 3
+          "id": "revive"
         }
       ]
     }

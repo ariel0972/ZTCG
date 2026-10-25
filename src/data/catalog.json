@@ -3189,17 +3189,15 @@
         "id": "enganarAMorte",
         "nome": "Enganar a morte",
         "custoMana": 0,
-        "custoVida": 4,
+        "custoVida": 5,
         "alvo": "Cemiterio",
-        "maxAlvos": 3,
         "filtroAlvo": {
           "tipo": "Tropa"
         },
-        "descricao": "Pague 4 de vida para escolher de 1 a 3 tropas do próprio cemitério, devolvê-las ao baralho e embaralhar. Exige mais de 4 de vida.",
+        "descricao": "Pague 5 de vida para reviver uma tropa do próprio cemitério em um espaço aliado livre e sem Lama, com vida normal. Exige mais de 5 de vida. Não gasta mobilização nem gera mana de entrada.",
         "efeitos": [
           {
-            "id": "shuffleGraveyard",
-            "valor": 3
+            "id": "revive"
           }
         ]
       }

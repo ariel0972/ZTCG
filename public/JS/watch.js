@@ -2,7 +2,7 @@ import { createCoinToss } from "./coin-toss.js";
 import { navbar, node, profilePath } from "./auth.js";
 import { gameTransport } from "./game-transport.js";
 import { createCardInspector } from "./card-inspection.js";
-import { cardFace } from "./battle-ui.js";
+import { cardFace, structureFace, renderSpellAura } from "./battle-ui.js";
 import { createMatchChat } from "./match-chat.js";
 import { createBattleEvents } from "./battle-events.js";
 import { createFieldMenu, publicFieldNotice } from "./field-overlays.js";
@@ -43,6 +43,7 @@ function slotView(slot) {
   wrapper.dataset.kind = slot.kind;
   wrapper.dataset.slotId = slot.id;
   if (slot.terrain) wrapper.dataset.terrain = slot.terrain.nome;
+  wrapper.classList.toggle("structured-slot", !!slot.structure);
   for (const [card, cls] of [
     [slot.card, ""],
     [slot.rider, "spectator-rider"],
@@ -53,7 +54,13 @@ function slotView(slot) {
     button.type = "button";
     button.setAttribute("aria-label", `Ver ${card.nome}`);
     button.append(
-      cardFace(card, { slot, slots: state.slots, reactions: state.reactions }),
+      card.tipo === "Estrutura"
+        ? structureFace(card)
+        : cardFace(card, {
+            slot,
+            slots: state.slots,
+            reactions: state.reactions,
+          }),
     );
     if (!card.oculta) {
       button.onclick = () => inspector.inspect(card);
@@ -91,6 +98,7 @@ function board(player, frontId, backId, reverse = false) {
   $(backId).replaceChildren(
     ...(reverse ? back.reverse() : back).filter(Boolean).map(slotView),
   );
+  renderSpellAura(player, $(frontId), $(backId));
 }
 function hud(player, host) {
   const identity = node("div", "", "duelist-identity"),

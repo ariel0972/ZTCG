@@ -85,6 +85,40 @@ test("API: cadastro, login, CRUD, revisões, privacidade e catálogo", async () 
     assert.equal((await request(`/user/${"2".repeat(24)}`)).status, 403);
     assert.equal((await request(`/decks/user/${"2".repeat(24)}`)).status, 403);
     assert.equal((await request("/decks", "GET", undefined, "")).status, 401);
+    const publicDeck = db.decks[1];
+    publicDeck.publico = true;
+    publicDeck.ranking = { partidas: 99, vitorias: 99 };
+    const copied = await request("/decks/" + publicDeck._id + "/copy", "POST", {
+      userId: publicDeck.userId,
+      publico: true,
+      ranking: publicDeck.ranking,
+    });
+    assert.equal(copied.status, 201);
+    const copy = db.decks.find((d) => d._id === copied.data.deck._id)!;
+    assert.notEqual(copy._id, publicDeck._id);
+    assert.equal(copy.userId, "1".repeat(24));
+    assert.equal(copy.publico, false);
+    assert.equal(copy.ranking, undefined);
+    assert.equal(copy.revisao, 0);
+    assert.deepEqual(copy.cartas, publicDeck.cartas);
+    assert.equal(copy.mago, publicDeck.mago);
+    copy.cartas.push("001");
+    assert.notDeepEqual(copy.cartas, publicDeck.cartas);
+    publicDeck.publico = false;
+    assert.equal(
+      (await request("/decks/" + publicDeck._id + "/copy", "POST", {})).status,
+      404,
+    );
+    assert.equal(
+      (await request("/decks/" + publicDeck._id + "/copy", "POST", {}, ""))
+        .status,
+      401,
+    );
+    assert.equal(
+      (await request("/decks/invalid/copy", "POST", {})).status,
+      422,
+    );
+    db.decks.splice(db.decks.indexOf(copy), 1);
     const created = await request("/decks/user", "POST", {
       nome: "Rascunho",
       icone: "/assets/icons/feitiço.svg",

@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { z } from "zod";
 import User from "../db/models/user";
-import Deck from "../db/models/decks";
 import { deckDTO } from "../services/decks";
 import { rankingCache } from "../services/ranking-cache";
+import { monthlyDeckRanking } from "../services/monthly-deck-ranking";
 export const rankingRoutes = Router();
 rankingRoutes.get("/", async (req, res) => {
   const mode = z
@@ -20,62 +20,27 @@ rankingRoutes.get("/", async (req, res) => {
   const started = performance.now();
   const loadRanking = async () => {
     const minimum = mode === "wins" ? 1 : 10;
-    const filter = {
-      "ranking.partidas": { $gte: minimum },
-      ...(mode === "decks" ? { publico: true } : {}),
-    };
+    const monthly =
+      mode === "decks" ? await monthlyDeckRanking(page) : undefined;
+    const filter = { "ranking.partidas": { $gte: minimum } };
     const sort: Record<string, 1 | -1> =
       mode === "wins"
-        ? {
-            "ranking.vitorias": -1 as const,
-            "ranking.rate": -1 as const,
-            _id: 1 as const,
-          }
-        : mode === "rate"
-          ? {
-              "ranking.rate": -1 as const,
-              "ranking.vitorias": -1 as const,
-              _id: 1 as const,
-            }
-          : {
-              "ranking.rate": -1 as const,
-              "ranking.vitorias": -1 as const,
-              createdAt: 1 as const,
-              _id: 1 as const,
-            };
-    // Separate bounded index reads: pagination limits database work, not just JSON.
-    const read = async (skip: number, limit: number): Promise<any[]> =>
-      mode === "decks"
-        ? Deck.find(filter)
-            .select("nome icone userId +ranking")
-            .sort(sort)
-            .skip(skip)
-            .limit(limit)
-            .lean()
-        : User.find(filter)
-            .select("nome avatarURL +ranking")
-            .sort(sort)
-            .skip(skip)
-            .limit(limit)
-            .lean();
-    const [podium, rows, total] = await Promise.all([
-      read(0, 3),
-      read(3 + page * 20, 20),
-      mode === "decks"
-        ? Deck.countDocuments(filter)
-        : User.countDocuments(filter),
-    ]);
-    const owners =
-      mode === "decks"
-        ? await User.find({
-            _id: {
-              $in: [...new Set([...podium, ...rows].map((d) => d.userId))],
-            },
-          })
-            .select("nome")
-            .lean()
-        : [];
-    const names = new Map(owners.map((u) => [String(u._id), u.nome]));
+        ? { "ranking.vitorias": -1, "ranking.rate": -1, _id: 1 }
+        : { "ranking.rate": -1, "ranking.vitorias": -1, _id: 1 };
+    const read = (skip: number, limit: number) =>
+      User.find(filter)
+        .select("nome avatarURL +ranking")
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .lean();
+    const [podium, rows, total] = monthly
+      ? [monthly.podium, monthly.rows, monthly.total]
+      : await Promise.all([
+          read(0, 3),
+          read(3 + page * 20, 20),
+          User.countDocuments(filter),
+        ]);
     const dto = (row: any, position: number) => {
       const rank = row.ranking;
       const common = {
@@ -90,10 +55,7 @@ rankingRoutes.get("/", async (req, res) => {
         ? {
             ...common,
             icone: deckDTO(row).icone,
-            dono: {
-              id: String(row.userId),
-              nome: names.get(String(row.userId)),
-            },
+            dono: { id: String(row.userId), nome: row.ownerName },
           }
         : {
             ...common,
@@ -108,10 +70,13 @@ rankingRoutes.get("/", async (req, res) => {
       mode,
       page,
       minimumMatches: minimum,
+      ...(monthly
+        ? { month: monthly.month.key, timeZone: monthly.month.timeZone }
+        : {}),
       total,
       hasMore: 3 + (page + 1) * 20 < total,
-      podium: podium.map((r, i) => dto(r, i + 1)),
-      [mode === "decks" ? "decks" : "players"]: rows.map((r, i) =>
+      podium: podium.map((r: any, i: number) => dto(r, i + 1)),
+      [mode === "decks" ? "decks" : "players"]: rows.map((r: any, i: number) =>
         dto(r, 4 + page * 20 + i),
       ),
     };
@@ -119,10 +84,10 @@ rankingRoutes.get("/", async (req, res) => {
   const data =
     mode === "decks"
       ? await loadRanking()
-      : await rankingCache.get(`${mode}:${page}`, loadRanking);
+      : await rankingCache.get(mode + ":" + page, loadRanking);
   res.setHeader(
     "Server-Timing",
-    `ranking;dur=${(performance.now() - started).toFixed(1)}`,
+    "ranking;dur=" + (performance.now() - started).toFixed(1),
   );
   res.setHeader(
     "Cache-Control",

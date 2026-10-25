@@ -1908,7 +1908,8 @@ Necromante e ressurreição configurável — 16/10/2026:
   escolha completa, custo de vida e seção de indicadores de reação.
 - Necromante: 18 PV, ataque 2, recuperação 4; limites 1/2/3/2, elemento Neutro,
   fraqueza Zarcos e resistência Neutro, seguindo a arte. Enganar a morte paga
-  4 de vida (exige mais de 4), escolhe até 3 tropas e embaralha no baralho.
+  5 de vida (exige mais de 5) e revive 1 tropa escolhida no próprio cemitério,
+  com vida normal, em espaço livre sem Lama; não consome mobilização nem gera mana de entrada.
   Ressurreição Sombria foi removida do catálogo e do motor.
 - Ressurreição aliada acumula +2 de dano em todos os feitiços até o fim do turno.
   Sacrifício cura 2 e recupera 1 mana; mantém seu uso da habilidade do mago.
@@ -2093,3 +2094,30 @@ COMPRAS, CEMITÉRIO E AJUSTES DE AR — 25/10/2026
 - tests/turn-feedback.test.ts — Verifica desvio só de inimigos, Vórtice imóvel, Queimação, roubo, troca, retirada na preparação e privacidade das animações.
 - scripts/update-turn-feedback.ts — Atualiza somente efeitos e descrições de 008/009/019/094, preservando custos, atributos e artes, com backup e controle de versão.
 Eventos draw/zoneTransfer são derivados da diferença de zonas ao concluir a resolução. A compra é anonimizada para adversários/espectadores. Configurações de troca e deslocamento permanecem genéricas no catálogo.
+
+ATUALIZAÇÃO — ESTRUTURAS, CURA, AMPLIFICAÇÃO E BARALHOS MENSAIS (25/10/2026)
+- src/services/monthly-deck-ranking.ts — Calcula mês de São Paulo e ranking mensal em agregação Mongo: dez partidas válidas, taxa mensal, dono e baralho público, desempates e paginação.
+- public/JS/deck-copy.js — Botão compartilhado de cópia de baralho público para conta autenticada; cria cópia privada e oferece abrir no editor.
+- scripts/update-necro-revive.ts — Atualização direcionada e idempotente apenas da habilidade Enganar a morte; backup antes de aplicar e controle otimista de versão, preservando ajustes administrativos.
+- tests/field-presentation.test.ts — Verifica imagem/vida independente da estrutura, aura unilateral e expiração da amplificação, e preservação/idempotência da migração do Necromante.
+
+Enganar a morte usa revive genérico e custa somente 5 de vida (mais de 5 PV).
+Revive uma tropa do cemitério próprio, vida normal, sem mobilização nem mana
+por entrada; exige espaço aliado vazio sem Lama. Mantém +2 de dano de feitiço
+por tropa revivida. Não altera as passivas nem atributos administrativos.
+Estruturas mostram retrato, nome, contador e barra de vida em faixa separada,
+com recuo de 16px no desktop e 14px no celular. Espectadores usam a mesma face.
+Curas reais, vida máxima adicional e bônus de vida de armamentos emitem heal
+com healing.amount, ID e espaço do beneficiário. Ganho nulo não emite animação.
+Animação verde e limitada respeita movimento reduzido, sequência e reconexão.
+spellBoost ativo aplica aura animada às duas fileiras do dono, sem alterar o
+outro lado. Várias cópias mostram contagem; expiração remove a aura.
+O ranking de jogadores continua acumulado. Baralhos usam somente partidas
+válidas encerradas no mês atual, de 00:00 do dia 1 ao próximo mês em São Paulo.
+Exclui deletedAt, ranked:false e resultados ainda não prontos. Mínimo dez por
+baralho/dono naquele mês, taxa e vitórias mensais, createdAt e ID para desempate.
+A agregação usa índice finishedAt/ranked e não altera XP/histórico acumulado.
+POST /decks/:id/copy exige autenticação e baralho ainda público. Copia apenas
+nome, referências do catálogo, mago, ícone e verso; novo ID, dono autenticado,
+revisão zero e privado, sem ranking/histórico. Valida referências e limites do
+catálogo; ignora campos de dono/estatísticas enviados pelo cliente.

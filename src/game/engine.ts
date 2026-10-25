@@ -1271,6 +1271,7 @@ export class Game {
     if (card.hpAtual > 0) delete card.killedBy;
     const healed = card.hpAtual > previous;
     if (healed) {
+      this.reportHealthGain(card, card.hpAtual - previous, source);
       this.trigger("onHealed", {
         ownerId: card.ownerId,
         cardId: card.id,
@@ -1286,6 +1287,18 @@ export class Game {
         });
     }
     return healed;
+  }
+  private adjustHealth(card: Instance, amount: number) {
+    card.hpAtual += amount;
+    this.reportHealthGain(card, amount);
+  }
+  private reportHealthGain(card: Instance, amount: number, source?: Instance) {
+    if (amount <= 0) return;
+    this.event("heal", card, "+" + amount + " de vida", {
+      healing: { amount },
+      slotId: this.targetSlot(card.id)?.id,
+      originOwnerId: source?.ownerId ?? card.ownerId,
+    });
   }
   private equipmentGrant(user: string, slot: Slot) {
     const grant = this.player(user).equipmentGrant;
@@ -1365,6 +1378,7 @@ export class Game {
       | "reaction"
       | "damage"
       | "mana"
+      | "healing"
       | "originOwnerId"
       | "summary"
       | "movement"
@@ -1470,9 +1484,9 @@ export class Game {
           if (slot.rider?.id === dead.id) {
             slot.rider = null;
             if (slot.card && slot.card.hpAtual > 0)
-              slot.card.hpAtual += this.weapons(slot).reduce(
-                (n, w) => n + (w.bonusHp ?? 0),
-                0,
+              this.adjustHealth(
+                slot.card,
+                this.weapons(slot).reduce((n, w) => n + (w.bonusHp ?? 0), 0),
               );
           } else {
             slot.card = slot.rider ?? null;
@@ -1741,9 +1755,9 @@ export class Game {
       );
       if (index < 0) return false;
       const card = owner.deck.splice(index, 1)[0];
-      card.hpAtual += this.weapons(destination).reduce(
-        (n, w) => n + (w.bonusHp ?? 0),
-        0,
+      this.adjustHealth(
+        card,
+        this.weapons(destination).reduce((n, w) => n + (w.bonusHp ?? 0), 0),
       );
       destination.card = card;
       this.event("summon", card);
@@ -1794,6 +1808,7 @@ export class Game {
         if (!action.valor || target.hpAtual <= 0) return false;
         target.hp = (target.hp ?? 0) + action.valor;
         target.hpAtual += action.valor;
+        this.reportHealthGain(target, action.valor, source);
         if (target.hpAtual > 0) delete target.killedBy;
         return true;
       case "status":
@@ -1931,8 +1946,8 @@ export class Game {
     const after = this.weapons(to).reduce((n, w) => n + (w.bonusHp ?? 0), 0);
     const leaving = from.rider ?? from.card,
       arriving = to.rider ?? to.card;
-    if (leaving) leaving.hpAtual += after - before;
-    if (arriving) arriving.hpAtual += before - after;
+    if (leaving) this.adjustHealth(leaving, after - before);
+    if (arriving) this.adjustHealth(arriving, before - after);
     [from.card, to.card] = [to.card, from.card];
     if (carryStructure)
       [from.structure, to.structure] = [to.structure, from.structure];
@@ -2077,7 +2092,7 @@ export class Game {
         0,
       ),
       newBonus = this.weapons(to).reduce((n, w) => n + (w.bonusHp ?? 0), 0);
-    rider.hpAtual += newBonus - oldBonus;
+    this.adjustHealth(rider, newBonus - oldBonus);
     if (to.card) to.card.hpAtual -= newBonus;
     from.card = null;
     to.rider = rider;
@@ -2114,9 +2129,9 @@ export class Game {
       );
     const before = this.weapons(from).reduce((n, w) => n + (w.bonusHp ?? 0), 0),
       after = this.weapons(to).reduce((n, w) => n + (w.bonusHp ?? 0), 0);
-    rider.hpAtual += after - before;
+    this.adjustHealth(rider, after - before);
     from.rider = null;
-    if (from.card) from.card.hpAtual += before;
+    if (from.card) this.adjustHealth(from.card, before);
     to.card = rider;
     this.spendMountAttack(user, rider);
     this.log(
@@ -2827,9 +2842,9 @@ export class Game {
       else if (slot.rider?.id === card.id) {
         slot.rider = null;
         if (slot.card && slot.card.hpAtual > 0)
-          slot.card.hpAtual += this.weapons(slot).reduce(
-            (n, w) => n + (w.bonusHp ?? 0),
-            0,
+          this.adjustHealth(
+            slot.card,
+            this.weapons(slot).reduce((n, w) => n + (w.bonusHp ?? 0), 0),
           );
       } else {
         if (card.tipo === "Armamento")
@@ -2981,6 +2996,7 @@ export class Game {
         if (card.subtipo === "Planta") {
           card.hp = (card.hp ?? 0) + 1;
           card.hpAtual++;
+          this.reportHealthGain(card, 1);
         } else {
           applyStatus(
             card.statuses,
@@ -3193,9 +3209,9 @@ export class Game {
         slot.rider = card;
       } else slot.card = card;
       if (card.tipo === "Tropa") {
-        card.hpAtual += this.weapons(slot, card).reduce(
-          (n, w) => n + (w.bonusHp ?? 0),
-          0,
+        this.adjustHealth(
+          card,
+          this.weapons(slot, card).reduce((n, w) => n + (w.bonusHp ?? 0), 0),
         );
         player.counters.summons++;
         this.trigger("onSummon", {
@@ -3212,7 +3228,10 @@ export class Game {
         player.counters.equipment = (player.counters.equipment ?? 0) + 1;
         for (const beneficiary of this.weaponBeneficiaries(slot))
           for (const troop of [beneficiary.rider ?? beneficiary.card])
-            if (troop) troop.hpAtual += card.bonusHp ?? 0;
+            if (troop) {
+              troop.hpAtual += card.bonusHp ?? 0;
+              this.reportHealthGain(troop, card.bonusHp ?? 0, card);
+            }
         this.trigger("onEquip", { ownerId: user, cardId: card.id });
       }
     }
@@ -3686,9 +3705,9 @@ export class Game {
           if (slot.rider?.id === troop.id) {
             slot.rider = null;
             if (slot.card && slot.card.hpAtual > 0)
-              slot.card.hpAtual += this.weapons(slot).reduce(
-                (n, w) => n + (w.bonusHp ?? 0),
-                0,
+              this.adjustHealth(
+                slot.card,
+                this.weapons(slot).reduce((n, w) => n + (w.bonusHp ?? 0), 0),
               );
           } else {
             slot.card = slot.rider ?? null;

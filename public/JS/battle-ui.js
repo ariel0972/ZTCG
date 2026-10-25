@@ -55,6 +55,45 @@ export function attackValue(card, slot, slots = []) {
       .reduce((n, s) => n + (s.card?.bonusAtaque || 0), 0)
   );
 }
+export function structureFace(card) {
+  const face = node("div", "", "structure-face");
+  face.dataset.liveCardId = card.id;
+  const art = cardFace(card).querySelector(".live-art");
+  if (art) art.className = "structure-portrait";
+  const info = node("span", "", "structure-info");
+  const name = node("strong", card.nome);
+  const hp = Math.max(0, card.hpAtual ?? 0);
+  const max = Math.max(1, card.hp ?? hp, hp);
+  const health = node("span", hp + " / " + max + " PV", "structure-health");
+  const bar = node("progress", "", "structure-health-bar");
+  bar.max = max;
+  bar.value = hp;
+  bar.setAttribute("aria-label", "Vida de " + card.nome);
+  info.append(name, health, bar);
+  if (art) face.append(art);
+  face.append(info);
+  return face;
+}
+// Derive side visuals from reusable spell modifiers, including stacked copies.
+export function renderSpellAura(player, front, back) {
+  const boosts = (player.mage.statuses ?? []).filter(
+    (s) => s.spellBoost && s.turnosRestantes > 0,
+  );
+  const count = boosts.length;
+  for (const row of [front, back]) {
+    row.classList.toggle("spell-boost-field", count > 0);
+    row.dataset.spellBoosts = String(count);
+    row.dataset.fieldOwner = player.id;
+    row.querySelector(":scope > .spell-boost-label")?.remove();
+  }
+  if (count) {
+    const label = node("span", "Amplificação · " + count, "spell-boost-label");
+    label.title = boosts
+      .map((s) => s.nome + ": " + s.turnosRestantes + " rodadas")
+      .join(" · ");
+    front.append(label);
+  }
+}
 export function cardFace(
   card,
   { slot, slots, hand = false, previous, reactions = {} } = {},

@@ -88,12 +88,13 @@ function cast(
   act(g, { type: "play", cardId: c.id, targets, destinationId }, user);
   return c;
 }
-const deceive = (g: Game, targets: string[]) =>
+const deceive = (g: Game, targets: string[], destinationId = "p1:front:0") =>
   act(g, {
     type: "ability",
     slotId: "p1:mage",
     abilityId: "enganarAMorte",
     targets,
+    destinationId,
   });
 function reaction(g: Game, target: string, user = "p1") {
   return cast(
@@ -138,27 +139,51 @@ test("Necromante e Reviver Tropa seguem as artes e todos os parâmetros persiste
   assert.equal(m.hp, 18);
   assert.equal(m.recuperacaoMana, 4);
   assert.equal(m.habilidadesAtivas.length, 1);
-  assert.equal(m.habilidadesAtivas[0].custoVida, 4);
+  assert.equal(m.habilidadesAtivas[0].custoVida, 5);
 });
-test("Enganar escolhe até três tropas, paga só vida e embaralha sem reviver", () => {
+test("Enganar paga 5 de vida e revive uma tropa sem mobilização nem mana de entrada", () => {
   const g = make();
   g.player("p1").mana = 0;
-  const cards = Array.from({ length: 4 }, () => dead(g));
-  deceive(g, [cards[0].id, cards[2].id]);
-  assert.equal(g.player("p1").mage.hpAtual, 14);
+  g.player("p1").counters.summons = 1;
+  const cards = [dead(g), dead(g)];
+  deceive(g, [cards[0].id]);
+  assert.equal(g.player("p1").mage.hpAtual, 13);
   assert.equal(g.player("p1").mana, 0);
-  assert.deepEqual(
-    g.player("p1").graveyard.map((c) => c.id),
-    [cards[1].id, cards[3].id],
+  assert.equal(g.player("p1").counters.summons, 1);
+  assert.equal(g.player("p1").graveyard.length, 1);
+  assert.equal(slot(g, "p1:front:0").card!.id, cards[0].id);
+  assert.equal(slot(g, "p1:front:0").card!.hpAtual, 8);
+  assert.equal(slot(g, "p1:front:0").card!.ataque, 2);
+  assert.equal(
+    g
+      .player("p1")
+      .mage.statuses.find((s) => s.nome === "Bônus de dano de feitiço")!.valor,
+    2,
   );
-  assert.ok(
-    g.player("p1").deck.some((c) => c.id === cards[0].id && c.hpAtual === 8),
-  );
-  assert.equal(g.player("p1").mage.statuses.length, 0);
   assert.equal(g.player("p1").mage.usedAbility, true);
 });
+test("Enganar rejeita espaço ocupado, Lama, destino ausente e múltiplas tropas sem cobrar vida", () => {
+  for (const mode of ["occupied", "mud", "missing", "multiple"]) {
+    const g = make();
+    const c = dead(g);
+    const other = dead(g);
+    if (mode === "occupied") slot(g, "p1:front:0").card = instance("023");
+    if (mode === "mud")
+      slot(g, "p1:front:0").terrain = { nome: "Lama", rodadasRestantes: 2 };
+    const before = JSON.stringify(g.exportState());
+    assert.throws(() =>
+      deceive(
+        g,
+        mode === "multiple" ? [c.id, other.id] : [c.id],
+        mode === "missing" ? "" : "p1:front:0",
+      ),
+    );
+    assert.equal(JSON.stringify(g.exportState()), before);
+  }
+});
+
 test("custos de vida e alvos inválidos revertem toda a ação; segunda habilidade não existe", () => {
-  for (const hp of [1, 4]) {
+  for (const hp of [1, 4, 5]) {
     const g = make();
     const c = dead(g);
     g.player("p1").mage.hpAtual = hp;

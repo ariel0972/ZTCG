@@ -32,6 +32,43 @@ router.post("/user", async (req: AuthRequest, res) => {
     content: "Deck criado.",
   });
 });
+router.post("/:id/copy", async (req: AuthRequest, res) => {
+  const id = String(req.params.id);
+  if (!Types.ObjectId.isValid(id)) throw new AppError(422, "ID inválido.");
+  const original = await Deck.collection.findOne({
+    _id: new Types.ObjectId(id),
+    publico: true,
+  });
+  if (!original) throw new AppError(404, "Baralho público não encontrado.");
+  const source = deckDTO(original);
+  const input = deckInput.parse({
+    nome: (source.nome + " (cópia)").slice(0, 80),
+    cartas: source.cartas,
+    mago: source.mago,
+    icone: source.icone,
+    verso: source.verso,
+    publico: false,
+  });
+  const errors = [
+    ...source.avisosMigracao,
+    ...validateDeck(input, await getCatalog()),
+  ];
+  if (errors.length)
+    throw new AppError(
+      422,
+      "Este baralho precisa ser revisado antes de copiar.",
+      "INVALID_DECK",
+      errors,
+    );
+  const deck = await Deck.create({ ...input, userId: req.userId, revisao: 0 });
+  res
+    .status(201)
+    .json({
+      success: true,
+      deck: deckDTO(deck.toObject()),
+      content: "Cópia privada criada nos seus baralhos.",
+    });
+});
 router.get("/:id/play", async (req: AuthRequest, res) => {
   const { deck, catalog } = await ownedDeck(
     String(req.params.id),

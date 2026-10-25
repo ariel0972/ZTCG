@@ -612,3 +612,53 @@ test("reações e danos têm intervalo visual de 60 ms e troca de partida cancel
     dom.window.close();
   }
 });
+
+test("cura informa ganho efetivo, ignora cura nula e Florescer informa vida adicional", () => {
+  const { g, card, slot } = fixture();
+  card.hpAtual = 29;
+  (g as any).heal(card, 5, undefined, g.player("p1").mage);
+  let event = g.state.events!.at(-1)!;
+  assert.equal(event.kind, "heal");
+  assert.deepEqual(event.healing, { amount: 1 });
+  assert.equal(event.slotId, slot.id);
+  assert.equal(event.card.id, card.id);
+  const sequence = event.sequence;
+  (g as any).heal(card, 5);
+  assert.equal(g.state.events!.at(-1)!.sequence, sequence);
+  (g as any).heal(card, 5, 3);
+  assert.deepEqual(g.state.events!.at(-1)!.healing, { amount: 3 });
+  card.subtipo = "Planta";
+  slot.terrain = { nome: "Lama", rodadasRestantes: 2 };
+  (g as any).react("p1", [card.id], "Agua");
+  event = g.state.events!.filter((e) => e.kind === "heal").at(-1)!;
+  assert.deepEqual(event.healing, { amount: 1 });
+  const restored = Game.restore(JSON.parse(JSON.stringify(g.exportState())));
+  assert.deepEqual(
+    restored.spectatorSnapshot().events,
+    g.snapshot("p1").events,
+  );
+});
+test("cura usa indicador verde próprio e respeita movimento reduzido", async () => {
+  const modulePath = "../public/JS/battle-effects.js";
+  const { createBattleEffects } = await import(modulePath);
+  const dom = browserFixture();
+  (dom.window as any).matchMedia = () => ({ matches: true });
+  const view = createBattleEffects(dom.window.document.body);
+  try {
+    view.show({ kind: "heal", card: { id: "c" }, healing: { amount: 3 } });
+    const effect = dom.window.document.querySelector<HTMLElement>(
+      ".battle-effect--heal",
+    )!;
+    assert.match(effect.textContent!, /\+3 vida/);
+    assert.equal(effect.style.getPropertyValue("--effect-color"), "#83f5ae");
+    assert.equal(effect.classList.contains("battle-effect--still"), true);
+    view.show({ kind: "heal", card: { id: "c" }, healing: { amount: 0 } });
+    assert.equal(
+      dom.window.document.querySelectorAll(".battle-effect").length,
+      1,
+    );
+  } finally {
+    view.close();
+    dom.window.close();
+  }
+});

@@ -2273,3 +2273,135 @@
     animation: card-zone-still 0.7s ease-out both;
   }
 }
+
+/* Structures retain their own portrait and health below the protected troop. */
+.match-page .board-slot-wrap.structured-slot {
+  height: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-self: start;
+}
+.match-page .structured-slot > .structure-action,
+.match-page.spectator-page
+  .spectator-slot.structured-slot
+  .spectator-structure {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  height: auto;
+  min-height: 46px;
+  padding: 3px;
+  margin: 0;
+  z-index: 2;
+  border: 1px solid #a7bfd0;
+  border-radius: 9px;
+  background: #172c38;
+  color: #eaf5fa;
+}
+.structure-face {
+  display: grid;
+  grid-template-columns: 32% minmax(0, 1fr);
+  gap: 5px;
+  align-items: center;
+  min-height: 40px;
+  text-align: left;
+}
+.match-page .structure-face > .structure-portrait {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  height: 40px;
+  grid-column: 1;
+  grid-row: 1;
+  border-radius: 5px;
+  overflow: hidden;
+}
+.structure-portrait img,
+.structure-portrait svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.structure-info {
+  line-height: 1.1;
+  grid-column: 2;
+  grid-row: 1;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.structure-info strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+}
+.structure-health {
+  font-size: 11px;
+  font-weight: 700;
+  color: #aef0c5;
+}
+.structure-health-bar {
+  width: 100%;
+  height: 5px;
+  accent-color: #6fdfa0;
+}
+.spectator-page .spectator-slot.structured-slot {
+  height: auto;
+  gap: 16px;
+}
+.board-row.spell-boost-field {
+  position: relative;
+  isolation: isolate;
+}
+.board-row.spell-boost-field::before {
+  content: "";
+  position: absolute;
+  inset: -6px -8px;
+  z-index: -1;
+  pointer-events: none;
+  border: 1px solid #aa8cff88;
+  border-radius: 18px;
+  background:
+    radial-gradient(ellipse at 25% 75%, #9872ff32, transparent 65%),
+    repeating-linear-gradient(
+      120deg,
+      transparent 0 30px,
+      #a1baff0e 33px 36px,
+      transparent 39px 70px
+    );
+  box-shadow:
+    inset 0 0 30px #8c75ff25,
+    0 0 16px #806bff28;
+  animation: amplify-field 3s ease-in-out infinite alternate;
+}
+.spell-boost-label {
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  pointer-events: none;
+  white-space: nowrap;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: #372d58;
+  color: #e0d5ff;
+  font-size: 9px;
+}
+@keyframes amplify-field {
+  to {
+    background-position: 35px -12px;
+    border-color: #caadff;
+    box-shadow:
+      inset 0 0 40px #a891ff42,
+      0 0 22px #9474ff44;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .board-row.spell-boost-field::before {
+    animation: none;
+  }
+}
