@@ -100,6 +100,8 @@ export const effectSchema = z
       .max(2)
       .optional(),
     ignorarLimite: z.boolean().optional(),
+    trocaAliada: z.boolean().optional(),
+    elementoMago: z.enum(elements).optional(),
     recompensaSacrificio: z
       .object({
         mana: number.max(20),
@@ -175,6 +177,7 @@ export const effectSchema = z
     origem: z.enum(["fonte", "alvo"]).optional(),
     direcao: z.enum(["direita", "vizinho"]).optional(),
     borda: z.enum(["mao", "manter"]).optional(),
+    semDestino: z.literal("manter").optional(),
     estrutura: z.enum(["impedirUso", "manter"]).optional(),
     filtroAlvo: z
       .object({

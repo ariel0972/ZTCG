@@ -2087,3 +2087,9 @@ CARTAS E EFEITOS REUTILIZÁVEIS — 23/10/2026
 - tests/reusable-creature-effects.test.ts — Verifica Salamandra, Goblins, Asas, Lâmina e componentes genéricos em outras cartas, incluindo persistência, custos, montarias e duração.
 - scripts/update-creature-effects.ts — Atualiza somente as seis cartas desta expansão no banco, com dry-run, backup e proteção de versão concorrente.
 Concessões em campo, cura agendada e desconto de habilidade são configurados no catálogo. Consulte MANUAL_EFEITOS_CATALOGO.txt para parâmetros. Asas tem indicação visual; nenhuma das novas regras depende do nome ou número dessas seis cartas.
+
+COMPRAS, CEMITÉRIO E AJUSTES DE AR — 25/10/2026
+- public/JS/card-transfers.js — Anima transferências reais de baralho/mão/campo para mão ou cemitério, com versos privados, movimento reduzido e limpeza limitada.
+- tests/turn-feedback.test.ts — Verifica desvio só de inimigos, Vórtice imóvel, Queimação, roubo, troca, retirada na preparação e privacidade das animações.
+- scripts/update-turn-feedback.ts — Atualiza somente efeitos e descrições de 008/009/019/094, preservando custos, atributos e artes, com backup e controle de versão.
+Eventos draw/zoneTransfer são derivados da diferença de zonas ao concluir a resolução. A compra é anonimizada para adversários/espectadores. Configurações de troca e deslocamento permanecem genéricas no catálogo.

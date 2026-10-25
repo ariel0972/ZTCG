@@ -18,6 +18,7 @@ export interface Status extends EffectClock {
   expiraNoTurno?: number;
   requerStatus?: string;
   protegidoId?: string;
+  trocaAliada?: boolean;
 }
 const aliases: Record<string, string> = {
   Atordoamento: "Atordoado",

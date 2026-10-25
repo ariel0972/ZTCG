@@ -11,6 +11,9 @@ export const commandSchema = z.discriminatedUnion("type", [
     .strict(),
   z.object({ ...base, type: z.literal("discardHand"), cardId: id }).strict(),
   z
+    .object({ ...base, type: z.literal("withdrawPreparation"), slotId: id })
+    .strict(),
+  z
     .object({
       ...base,
       type: z.literal("chooseRevive"),

@@ -28,6 +28,7 @@ export const effectIds = [
   "heal",
   "status",
   "draw",
+  "stealDeck",
   "mana",
   "searchElemental",
   "banish",
@@ -179,6 +180,26 @@ export function playableErrors(card: Card): string[] {
     ability = false,
   ) => {
     for (const e of effects) {
+      if (
+        e.trocaAliada !== undefined &&
+        (e.id !== "status" || e.status !== "Campo livre")
+      )
+        errors.push("trocaAliada exige status Campo livre.");
+      if (e.semDestino && (e.id !== "displace" || e.direcao !== "vizinho"))
+        errors.push("semDestino exige deslocamento para vizinho.");
+      if (
+        e.id === "stealDeck" &&
+        (!e.valor ||
+          ![
+            "Global",
+            "DeckOponente",
+            "TodosInimigos",
+            "TodasTropasInimigas",
+          ].includes(target ?? ""))
+      )
+        errors.push(
+          "stealDeck exige quantidade e alvo automático ou DeckOponente.",
+        );
       if (
         e.id === "fieldModifier" &&
         (!e.concessao ||

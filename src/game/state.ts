@@ -16,6 +16,13 @@ export interface BattleEvent {
   summary?: string;
   originOwnerId?: string;
   card: { id: string; nome: string; imgURL: string; ownerId: string };
+  movement?: {
+    from: "deck" | "hand" | "field";
+    to: "hand" | "graveyard";
+    fromOwnerId: string;
+    toOwnerId: string;
+    fromSlotId?: string;
+  };
   slotId?: string;
   reaction?: ReactionName;
   damage?: BattleDamage;

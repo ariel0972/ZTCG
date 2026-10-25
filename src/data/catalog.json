@@ -24,7 +24,7 @@
     "nome": "Bola de luz",
     "tipo": "Feitico",
     "custoMana": 4,
-    "descricao": "Aplica Cego a todos os inimigos por 1 rodada. Um mago Cego não pode conjurar feitiços. Com Mago de Fogo, também causa 3 de dano, somando seu bônus acumulado de feitiços de Fogo.",
+    "descricao": "Aplica Cego por 1 rodada e Queimação a todas as tropas e ao mago inimigos: 1 de dano por ciclo completo durante 2 rodadas. Com Mago de Fogo, mantém os 3 de dano imediato e o bônus de feitiços.",
     "imgURL": "/assets/Cards/Bola de luz.png",
     "publicado": true,
     "versao": 2,
@@ -39,7 +39,81 @@
         "variantesMago": [
           {
             "elemento": "Fogo",
-            "causaDano": true
+            "causaDano": true,
+            "efeitos": [
+              {
+                "id": "status",
+                "alvo": "TodosInimigos",
+                "status": "Queimado",
+                "duracao": 2,
+                "valor": 1
+              }
+            ]
+          },
+          {
+            "elemento": "Agua",
+            "causaDano": false,
+            "efeitos": [
+              {
+                "id": "status",
+                "alvo": "TodosInimigos",
+                "status": "Queimado",
+                "duracao": 2,
+                "valor": 1
+              }
+            ]
+          },
+          {
+            "elemento": "Terra",
+            "causaDano": false,
+            "efeitos": [
+              {
+                "id": "status",
+                "alvo": "TodosInimigos",
+                "status": "Queimado",
+                "duracao": 2,
+                "valor": 1
+              }
+            ]
+          },
+          {
+            "elemento": "Ar",
+            "causaDano": false,
+            "efeitos": [
+              {
+                "id": "status",
+                "alvo": "TodosInimigos",
+                "status": "Queimado",
+                "duracao": 2,
+                "valor": 1
+              }
+            ]
+          },
+          {
+            "elemento": "Zarcos",
+            "causaDano": false,
+            "efeitos": [
+              {
+                "id": "status",
+                "alvo": "TodosInimigos",
+                "status": "Queimado",
+                "duracao": 2,
+                "valor": 1
+              }
+            ]
+          },
+          {
+            "elemento": "Neutro",
+            "causaDano": false,
+            "efeitos": [
+              {
+                "id": "status",
+                "alvo": "TodosInimigos",
+                "status": "Queimado",
+                "duracao": 2,
+                "valor": 1
+              }
+            ]
           }
         ]
       }
@@ -377,7 +451,7 @@
     "nome": "Furacão de Areia",
     "tipo": "Feitico",
     "custoMana": 4,
-    "descricao": "Aplica Cego por 1 rodada às tropas inimigas e causa 2 de dano a elas após um ciclo completo. Não atinge magos nem rouba cartas.",
+    "descricao": "Aplica Cego e causa 2 de dano às tropas inimigas após 1 ciclo completo. Com Mago de Ar, rouba 1 carta do topo do baralho inimigo para sua mão, além da compra normal da passiva do mago.",
     "imgURL": "/assets/Cards/Furacão de Areia.png",
     "publicado": true,
     "versao": 2,
@@ -393,6 +467,11 @@
         "id": "periodicDamage",
         "valor": 2,
         "duracao": 1
+      },
+      {
+        "id": "stealDeck",
+        "valor": 1,
+        "elementoMago": "Ar"
       }
     ],
     "maxAlvos": 1,
@@ -463,7 +542,7 @@
     "nome": "Esfera de Vórtice",
     "tipo": "Feitico",
     "custoMana": 4,
-    "descricao": "Escolha uma tropa inimiga e um espaço vizinho vazio: move a tropa e causa 2 de dano. Se ela estiver em uma estrutura, causa 5 de dano à estrutura em vez disso e não move a tropa. Montaria e ocupante são movidos juntos.",
+    "descricao": "Move uma tropa inimiga para um espaço vizinho vazio e causa 2 de dano. Se não houver vizinho livre, causa o dano sem mover. Com estrutura, causa 5 de dano à estrutura e não move a tropa. Montaria e ocupante vão juntos.",
     "imgURL": "/assets/Cards/Esfera de Vórtice.png",
     "publicado": true,
     "versao": 1,
@@ -474,7 +553,8 @@
       {
         "id": "displace",
         "direcao": "vizinho",
-        "estrutura": "manter"
+        "estrutura": "manter",
+        "semDestino": "manter"
       },
       {
         "id": "damage",
@@ -2912,7 +2992,7 @@
     "nome": "Mago de ar",
     "tipo": "Mago",
     "custoMana": 0,
-    "descricao": "Sempre que você conjura um feitiço de Ar, compra 1 carta. Mover livremente (3 mana): concede Campo livre às tropas aliadas até o fim do turno. Cada tropa pode se mover uma vez; não renova movimentos já usados.",
+    "descricao": "Sempre que conjura um feitiço de Ar, compra 1 carta. Mover livremente concede Campo livre neste turno e permite trocar tropas aliadas de lugar, consumindo o movimento das duas.",
     "imgURL": "/assets/Cards/Mago de ar.png",
     "publicado": true,
     "versao": 1,
@@ -2957,13 +3037,14 @@
         "filtroAlvo": {
           "tipo": "Tropa"
         },
-        "descricao": "Concede Campo livre às tropas aliadas em campo até o fim do turno, sem renovar movimentos já usados.",
+        "descricao": "Concede Campo livre às tropas aliadas neste turno, permitindo trocar duas tropas de lugar. A troca gasta o deslocamento das duas; não renova movimentos já usados. Respeita bloqueios de movimento e Lama.",
         "efeitos": [
           {
             "id": "status",
             "status": "Campo livre",
             "duracao": 1,
-            "unidade": "turno"
+            "unidade": "turno",
+            "trocaAliada": true
           }
         ]
       }

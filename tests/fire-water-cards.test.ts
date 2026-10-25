@@ -351,7 +351,7 @@ test("Cauterizar rejeita inimigos, respeita escudos, resistência e recompensa s
     assert.equal(slot(h, "p1:front:0").card!.scheduledHeals, undefined);
   }
 });
-test("Furacão de Areia aplica Cego e dano em tropas por um ciclo, preservando apenas a compra da passiva de Ar", () => {
+test("Furacão de Areia aplica Cego e dano em tropas por um ciclo, somando roubo e compra da passiva de Ar", () => {
   const g = make();
   changeMage(g, "019");
   const enemy = troop(g, "p2:front:2");
@@ -363,7 +363,7 @@ test("Furacão de Areia aplica Cego e dano em tropas por um ciclo, preservando a
     1,
   );
   assert.equal(g.state.ongoingSpells![0].rounds, 1);
-  assert.equal(g.player("p1").hand.length, oldHand + 1);
+  assert.equal(g.player("p1").hand.length, oldHand + 2);
   nextRound(g);
   assert.equal(slot(g, "p2:front:2").card!.hpAtual, 38);
   assert.equal(g.state.ongoingSpells!.length, 0);

@@ -10,6 +10,7 @@ import {
   zoneCardAllowed,
   targetDescription,
   destinationChoice,
+  movementTarget,
 } from "./battle-targets.js";
 import { renderReviveChoice } from "./revive-choice.js";
 import { createHandNavigation } from "./hand-navigation.js";
@@ -361,6 +362,8 @@ function selectSlot(slot, asStructure = false, asRider = false) {
       return;
     }
     if (selected.type === "move") {
+      if (!movementTarget(selected.slot, slot, state.phase === "PREPARATION"))
+        return;
       void command({
         type: "move",
         slotId: selected.slot.id,
@@ -679,7 +682,7 @@ function renderActions() {
           : selected.type === "attack"
             ? `${selected.card.tipo === "Mago" ? "Universal" : selected.card.direcaoAtaque || selected.slot.card?.direcaoAtaque || "Frente"} · ${selected.slot.attackTargets?.[selected.source]?.length || 0} alvo(s) disponível(is). Escolha um alvo destacado para atacar.`
             : selected.type === "move"
-              ? "Escolha um campo aliado vazio para reposicionar."
+              ? "Escolha um campo aliado destacado para mover ou trocar de lugar."
               : selected.type === "mount"
                 ? "Escolha uma montaria destacada. Montar consome o ataque desta tropa."
                 : selected.type === "play" && selected.card.tipo !== "Feitico"
@@ -799,6 +802,16 @@ function renderActions() {
                       : "",
         ),
       );
+      if (
+        state.phase === "PREPARATION" &&
+        card.tipo === "Tropa" &&
+        fieldSource(card, slot) === "card"
+      )
+        panel.append(
+          actionButton("Retirar para a mão", () =>
+            command({ type: "withdrawPreparation", slotId: slot.id }),
+          ),
+        );
       if (
         card.tipo === "Tropa" &&
         fieldSource(card, slot) === "card" &&
@@ -1121,6 +1134,21 @@ function slotView(slot) {
   )
     button.classList.add("selected");
   button.dataset.actionsBlocked = String(!myTurn() || pending);
+  if (selected?.type === "move") {
+    const valid =
+      movementTarget(selected.slot, slot, state.phase === "PREPARATION") &&
+      myTurn() &&
+      !pending;
+    button.classList.add(valid ? "spell-target" : "spell-unavailable");
+    if (valid)
+      button.append(
+        node(
+          "span",
+          slot.card ? "Trocar de lugar" : "Mover para cá",
+          "attack-target-label",
+        ),
+      );
+  }
   if (selected?.type === "mount") {
     const valid = selected.slot.mountTargets?.includes(slot.id);
     button.classList.add(valid ? "spell-target" : "spell-unavailable");
@@ -1330,6 +1358,10 @@ function hud(id, player) {
   ]) {
     const item = node("div", "", `resource ${kind}`);
     item.append(node("b", String(value)), node("small", label));
+    if (kind === "cards") {
+      item.dataset.cardZone = "hand";
+      item.dataset.zoneOwner = player.id;
+    }
     resources.append(item);
   }
   const actions = node("div", "", "duelist-limits");
@@ -1563,6 +1595,15 @@ function render() {
     enemy.graveyard.length,
     enemy.deckAppearance?.verso,
   );
+  for (const [id, owner, type] of [
+    ["deck-zone", me.id, "deck"],
+    ["graveyard", me.id, "graveyard"],
+    ["enemy-deck-zone", enemy.id, "deck"],
+    ["enemy-graveyard", enemy.id, "graveyard"],
+  ]) {
+    $(id).dataset.cardZone = type;
+    $(id).dataset.zoneOwner = owner;
+  }
   turnAnnouncement.update(state, user.id);
   $("preparation-controls").hidden =
     state.phase !== "PREPARATION" || state.status !== "ACTIVE";
@@ -1868,6 +1909,7 @@ async function load() {
         rematch.disabled = false;
         message("");
       }
+      battleEvents.capture();
       state = data;
       render();
       battleEvents.update(data);

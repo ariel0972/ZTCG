@@ -22,6 +22,7 @@ const values = new Set([
   "trap",
   "heal",
   "draw",
+  "stealDeck",
   "mana",
   "stealMana",
   "attachMana",

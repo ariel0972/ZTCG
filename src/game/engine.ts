@@ -12,7 +12,7 @@ import {
 } from "./passives";
 import { planDisplacement } from "./displacement";
 import { playableErrors } from "./capabilities";
-import { hiddenFieldCard } from "./hidden-cards";
+import { hiddenFieldCard, cardBackImage } from "./hidden-cards";
 import { chooseAction } from "./action-options";
 import type { Instance, Slot, Player, State, DeckDefinition } from "./state";
 import type { BattleEvent, BattleDamage } from "./state";
@@ -88,6 +88,7 @@ export class Game {
     dodgeKey: number;
     kind: "attack" | "spell" | "ability";
     name: string;
+    ownerId?: string;
     blocked: Map<string, boolean>;
   };
   private random() {
@@ -100,7 +101,10 @@ export class Game {
     kind: "attack" | "spell" | "ability",
     name: string,
     operation: () => T,
-    { shareDodgeWithParent = false }: { shareDodgeWithParent?: boolean } = {},
+    {
+      shareDodgeWithParent = false,
+      ownerId,
+    }: { shareDodgeWithParent?: boolean; ownerId?: string } = {},
   ): T {
     const previous = this.impact;
     const key = this.resolution ? this.resolution.impactIndex++ : 0;
@@ -109,6 +113,7 @@ export class Game {
       dodgeKey: shareDodgeWithParent && previous ? previous.dodgeKey : key,
       kind,
       name,
+      ownerId: ownerId ?? previous?.ownerId,
       blocked: new Map(),
     };
     try {
@@ -126,24 +131,28 @@ export class Game {
     // Banishment bypasses the spell shield, but never a chosen dodge.
     if (cached !== undefined && !banishment) return !cached;
     const key = `${impact.dodgeKey}:${target.id}`;
-    const dodge = target.habilidadesPassivas
-      .map(normalizePassive)
-      .some(
-        (p) =>
-          p.gatilho === "onTargeted" &&
-          p.efeitos.some(
-            (e) =>
-              e.id === "dodgeImpact" &&
-              (target.dodgedRound === undefined ||
-                this.state.round - target.dodgedRound > (e.esperaRodadas ?? 0)),
-          ) &&
-          passiveMatches(
-            p,
-            target,
-            { ownerId: target.ownerId, cardId: target.id, card: target },
-            this.state.slots,
-          ),
-      );
+    const enemyImpact = !!impact.ownerId && impact.ownerId !== target.ownerId;
+    const dodge =
+      enemyImpact &&
+      target.habilidadesPassivas
+        .map(normalizePassive)
+        .some(
+          (p) =>
+            p.gatilho === "onTargeted" &&
+            p.efeitos.some(
+              (e) =>
+                e.id === "dodgeImpact" &&
+                (target.dodgedRound === undefined ||
+                  this.state.round - target.dodgedRound >
+                    (e.esperaRodadas ?? 0)),
+            ) &&
+            passiveMatches(
+              p,
+              target,
+              { ownerId: target.ownerId, cardId: target.id, card: target },
+              this.state.slots,
+            ),
+        );
     let decision = this.resolution?.decisions[key];
     // Resume pending volleys saved before shared dodge decisions were introduced.
     if (
@@ -176,7 +185,7 @@ export class Game {
         return false;
       }
     }
-    if (decision === true) return false;
+    if (enemyImpact && decision === true) return false;
     if (impact.kind === "spell" && !banishment) {
       const shield = target.statuses.find(
         (s) =>
@@ -222,6 +231,7 @@ export class Game {
     }
     try {
       const result = this.performResolution(operation);
+      this.recordTransfers(base);
       this.state.version = version + 1;
       return result ?? { duplicate: false, version: this.state.version };
     } catch (error) {
@@ -828,17 +838,21 @@ export class Game {
         );
         continue;
       }
-      this.inImpact("spell", field.card.nome, () =>
-        this.damage(
-          card.id,
-          result.damage,
-          undefined,
-          field.piercing,
-          field.element,
-          this.findSourceCard(field.card.id),
-          `${field.card.nome} após o ataque de ${card.nome}`,
-          field.ownerId,
-        ),
+      this.inImpact(
+        "spell",
+        field.card.nome,
+        () =>
+          this.damage(
+            card.id,
+            result.damage,
+            undefined,
+            field.piercing,
+            field.element,
+            this.findSourceCard(field.card.id),
+            `${field.card.nome} após o ataque de ${card.nome}`,
+            field.ownerId,
+          ),
+        { ownerId: field.ownerId },
       );
     }
     this.state.fieldEffects = this.state.fieldEffects?.filter(
@@ -1347,7 +1361,13 @@ export class Game {
     message?: string,
     details?: Pick<
       BattleEvent,
-      "slotId" | "reaction" | "damage" | "mana" | "originOwnerId" | "summary"
+      | "slotId"
+      | "reaction"
+      | "damage"
+      | "mana"
+      | "originOwnerId"
+      | "summary"
+      | "movement"
     >,
   ) {
     this.state.eventSequence = (this.state.eventSequence ?? 0) + 1;
@@ -1364,6 +1384,53 @@ export class Game {
       },
     });
     this.state.events = this.state.events.slice(-40);
+  }
+  private recordTransfers(previous: State) {
+    const before = new Map<
+      string,
+      { from: "deck" | "hand" | "field"; ownerId: string; slotId?: string }
+    >();
+    for (const p of previous.players) {
+      for (const c of p.deck) before.set(c.id, { from: "deck", ownerId: p.id });
+      for (const c of p.hand) before.set(c.id, { from: "hand", ownerId: p.id });
+    }
+    for (const slot of previous.slots)
+      for (const c of slotCards(slot))
+        before.set(c.id, {
+          from: "field",
+          ownerId: slot.ownerId,
+          slotId: slot.id,
+        });
+    const oldGrave = new Set(
+      previous.players.flatMap((p) => p.graveyard.map((c) => c.id)),
+    );
+    for (const p of this.state.players) {
+      for (const c of p.hand) {
+        const old = before.get(c.id);
+        if (old?.from === "deck")
+          this.event("draw", c, "Comprou uma carta.", {
+            movement: {
+              from: "deck",
+              to: "hand",
+              fromOwnerId: old.ownerId,
+              toOwnerId: p.id,
+            },
+          });
+      }
+      for (const c of p.graveyard) {
+        if (oldGrave.has(c.id)) continue;
+        const old = before.get(c.id);
+        this.event("zoneTransfer", c, undefined, {
+          movement: {
+            from: old?.from ?? "field",
+            to: "graveyard",
+            fromOwnerId: old?.ownerId ?? p.id,
+            toOwnerId: p.id,
+            fromSlotId: old?.slotId,
+          },
+        });
+      }
+    }
   }
   private resolve() {
     let changed = true,
@@ -2075,6 +2142,8 @@ export class Game {
     )
       this.fail("Este efeito não aceita destino de deslocamento.");
     for (const effect of effects) {
+      if (effect.elementoMago && effect.elementoMago !== player.mage.elemento)
+        continue;
       if (effect.alvo === "Proprio" && (!source || !this.targetSlot(source.id)))
         this.fail(
           "Efeito na própria carta exige uma habilidade de origem em campo.",
@@ -2668,6 +2737,7 @@ export class Game {
               );
               applied.valor = Math.max(applied.valor ?? 0, effect.valor ?? 0);
             }
+            if (effect.trocaAliada) applied.trocaAliada = true;
             if (applied && effect.requerStatus)
               applied.requerStatus = effect.requerStatus;
             applied.originOwnerId = source?.ownerId ?? ownerId;
@@ -2678,6 +2748,14 @@ export class Game {
               cardId: card.id,
               status: effect.status,
             });
+          }
+          break;
+        case "stealDeck":
+          for (let i = 0; i < effect.valor!; i++) {
+            const stolen = this.opponent(ownerId).deck.pop();
+            if (!stolen) break;
+            stolen.ownerId = ownerId;
+            player.hand.push(stolen);
           }
           break;
         case "draw":
@@ -3171,16 +3249,20 @@ export class Game {
     actionBonus = 0,
     temporaryBonus = 0,
   ) {
-    return this.inImpact("spell", card.nome, () =>
-      this.resolveSpellOnce(
-        user,
-        card,
-        ids,
-        bonus,
-        destinationId,
-        actionBonus,
-        temporaryBonus,
-      ),
+    return this.inImpact(
+      "spell",
+      card.nome,
+      () =>
+        this.resolveSpellOnce(
+          user,
+          card,
+          ids,
+          bonus,
+          destinationId,
+          actionBonus,
+          temporaryBonus,
+        ),
+      { ownerId: user },
     );
   }
   private resolveSpellOnce(
@@ -3764,21 +3846,27 @@ export class Game {
             : spell.kind === "arrowRain"
               ? "Chuva de Flechas"
               : "Furacão de Areia");
-        this.inImpact("spell", name, () => {
-          if (spell.element) this.react(spell.ownerId, targets, spell.element);
-          for (const id of targets)
-            this.damage(
-              id,
-              spell.damage +
-                temporarySpellDamageBonus(this.player(spell.ownerId).mage),
-              undefined,
-              false,
-              spell.element,
-              undefined,
-              `${name} (${this.player(spell.ownerId).nome}, fim do ciclo)`,
-              spell.ownerId,
-            );
-        });
+        this.inImpact(
+          "spell",
+          name,
+          () => {
+            if (spell.element)
+              this.react(spell.ownerId, targets, spell.element);
+            for (const id of targets)
+              this.damage(
+                id,
+                spell.damage +
+                  temporarySpellDamageBonus(this.player(spell.ownerId).mage),
+                undefined,
+                false,
+                spell.element,
+                undefined,
+                `${name} (${this.player(spell.ownerId).nome}, fim do ciclo)`,
+                spell.ownerId,
+              );
+          },
+          { ownerId: spell.ownerId },
+        );
         spell.rounds--;
         this.log(`${name} causou dano no fim do ciclo.`);
         this.resolve();
@@ -4047,43 +4135,48 @@ export class Game {
     if (card.tipo === "Tropa" && target.card?.concealedTrap) {
       const trap = target.card;
       const spec = trap.concealedTrap!;
-      this.inImpact("spell", trap.nome, () => {
-        target.card = null;
-        delete trap.concealedTrap;
-        if (!spec.generated) this.player(target.ownerId).graveyard.push(trap);
-        this.event(
-          "reaction",
-          trap,
-          `${trap.nome} foi revelada e cancelou o ataque de ${card.nome}.`,
-          { slotId: target.id },
-        );
-        this.damage(
-          card.id,
-          spec.effect.valor! +
-            (spec.effect.bonusContraSubtipos?.subtipos.includes(card.subtipo!)
-              ? spec.effect.bonusContraSubtipos.valor
-              : 0),
-          undefined,
-          spec.effect.perfurante ?? true,
-          spec.effect.elemento ?? trap.elemento,
-          trap,
-          `Armadilha: ${trap.nome}`,
-        );
-        this.effects(
-          trap.ownerId,
-          [
-            {
-              id: "status",
-              status: spec.effect.status,
-              duracao: spec.effect.duracao,
-            },
-          ],
-          [card.id],
-          trap.elemento,
-          trap,
-          trap.nome,
-        );
-      });
+      this.inImpact(
+        "spell",
+        trap.nome,
+        () => {
+          target.card = null;
+          delete trap.concealedTrap;
+          if (!spec.generated) this.player(target.ownerId).graveyard.push(trap);
+          this.event(
+            "reaction",
+            trap,
+            `${trap.nome} foi revelada e cancelou o ataque de ${card.nome}.`,
+            { slotId: target.id },
+          );
+          this.damage(
+            card.id,
+            spec.effect.valor! +
+              (spec.effect.bonusContraSubtipos?.subtipos.includes(card.subtipo!)
+                ? spec.effect.bonusContraSubtipos.valor
+                : 0),
+            undefined,
+            spec.effect.perfurante ?? true,
+            spec.effect.elemento ?? trap.elemento,
+            trap,
+            `Armadilha: ${trap.nome}`,
+          );
+          this.effects(
+            trap.ownerId,
+            [
+              {
+                id: "status",
+                status: spec.effect.status,
+                duracao: spec.effect.duracao,
+              },
+            ],
+            [card.id],
+            trap.elemento,
+            trap,
+            trap.nome,
+          );
+        },
+        { ownerId: trap.ownerId },
+      );
       this.afterAttackFields(card);
       return;
     }
@@ -4209,16 +4302,20 @@ export class Game {
     reactionCard?: Instance,
     interception?: { cardId: string; valor: number; origin: string },
   ) {
-    return this.inImpact("attack", `Ataque de ${card.nome}`, () =>
-      this.completeAttackOnce(
-        card,
-        target,
-        damage,
-        element,
-        reflect,
-        reactionCard,
-        interception,
-      ),
+    return this.inImpact(
+      "attack",
+      `Ataque de ${card.nome}`,
+      () =>
+        this.completeAttackOnce(
+          card,
+          target,
+          damage,
+          element,
+          reflect,
+          reactionCard,
+          interception,
+        ),
+      { ownerId: card.ownerId },
     );
   }
   private completeAttackOnce(
@@ -4324,8 +4421,11 @@ export class Game {
     this.resolvePendingAttack(reflect);
   }
   private ability(user: string, cmd: Extract<Command, { type: "ability" }>) {
-    return this.inImpact("ability", `Habilidade ${cmd.abilityId}`, () =>
-      this.abilityOnce(user, cmd),
+    return this.inImpact(
+      "ability",
+      `Habilidade ${cmd.abilityId}`,
+      () => this.abilityOnce(user, cmd),
+      { ownerId: user },
     );
   }
   private abilityOnce(
@@ -5007,32 +5107,76 @@ export class Game {
         case "ability":
           this.ability(user, cmd);
           break;
+        case "withdrawPreparation": {
+          if (this.state.phase !== "PREPARATION")
+            this.fail("Retirar tropas é exclusivo da preparação.");
+          const from = this.ownSlot(cmd.slotId, user);
+          if (from.card?.tipo !== "Tropa")
+            this.fail("Selecione uma tropa sua para retirar.");
+          const group = [from.card, from.rider].filter(
+            (c): c is Instance => !!c,
+          );
+          from.card = null;
+          from.rider = null;
+          for (const card of group) {
+            this.resetCard(card);
+            this.player(user).hand.push(card);
+          }
+          this.player(user).counters.summons = Math.max(
+            0,
+            this.player(user).counters.summons - group.length,
+          );
+          this.log(
+            this.player(user).nome +
+              " retirou sua tropa para a mão durante a preparação.",
+          );
+          break;
+        }
         case "move": {
           const from = this.ownSlot(cmd.slotId, user),
             to = this.ownSlot(cmd.destinationId, user);
+          const preparing = this.state.phase === "PREPARATION";
           if (
-            this.state.phase !== "PREPARATION" &&
-            (!from.card ||
-              !this.has(from.card, "Campo livre") ||
-              from.card.moved)
+            from === to ||
+            from.kind !== "Tropa" ||
+            to.kind !== "Tropa" ||
+            from.card?.tipo !== "Tropa" ||
+            (to.card && to.card.tipo !== "Tropa")
           )
-            this.fail("Campo livre permite um movimento por turno.");
-          if (this.state.phase !== "PREPARATION" && to.card)
-            this.fail("Escolha um slot livre para mover a tropa.");
-          if (from.kind !== "Tropa" || to.kind !== "Tropa")
-            this.fail("Reposicione somente tropas.");
+            this.fail("Escolha outro espaço de tropa aliado.");
+          const group = [from.card, from.rider, to.card, to.rider].filter(
+            (c): c is Instance => !!c,
+          );
+          const swap = from.card.statuses.some(
+            (s) =>
+              s.nome === "Campo livre" &&
+              s.turnosRestantes > 0 &&
+              s.trocaAliada,
+          );
           if (
-            !from.card ||
-            [from.card, to.card].some(
-              (c) =>
-                c &&
-                hasStatus(c.statuses, ["Congelado", "Incapacitado", "Cego"]),
+            !preparing &&
+            (!this.has(from.card, "Campo livre") || group.some((c) => c.moved))
+          )
+            this.fail(
+              "Campo livre permite um movimento por turno; cada tropa só pode se mover uma vez.",
+            );
+          if (!preparing && to.card && !swap)
+            this.fail("Escolha um slot livre para mover a tropa.");
+          if (
+            group.some((c) =>
+              hasStatus(c.statuses, [
+                "Congelado",
+                "Incapacitado",
+                "Cego",
+                "Atordoado",
+              ]),
             )
           )
             this.fail("Estas tropas não podem se mover.");
           if (to.terrain || (to.card && from.terrain))
             this.fail("Nenhuma tropa pode se mover para um pântano.");
-          this.relocateTroops(from, to);
+          this.relocateTroops(from, to, preparing, false);
+          if (!preparing) for (const c of group) c.moved = true;
           break;
         }
         case "endTurn":
@@ -5147,7 +5291,21 @@ export class Game {
             .filter((s) => !this.equipmentPlacementError(user, s))
             .map((s) => s.id)
         : [],
-      events: this.state.events ?? [],
+      events: (this.state.events ?? []).map((event) =>
+        event.kind === "draw" && event.card.ownerId !== user
+          ? {
+              ...event,
+              card: {
+                id: "hidden-draw:" + event.sequence,
+                nome: "Carta comprada",
+                imgURL: cardBackImage(
+                  this.player(event.card.ownerId).deckAppearance.verso,
+                ),
+                ownerId: event.card.ownerId,
+              },
+            }
+          : event,
+      ),
       reactions: reactionDescriptions,
       ongoingSpells: this.state.ongoingSpells,
       fieldEffects: this.state.fieldEffects,

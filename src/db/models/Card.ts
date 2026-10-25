@@ -50,6 +50,8 @@ const effect = new Schema(
       default: undefined,
     },
     ignorarLimite: Boolean,
+    trocaAliada: Boolean,
+    elementoMago: { type: String, enum: elements },
     recompensaSacrificio: {
       type: new Schema(
         {
@@ -153,6 +155,7 @@ const effect = new Schema(
     origem: { type: String, enum: ["fonte", "alvo"] },
     direcao: { type: String, enum: ["direita", "vizinho"] },
     borda: { type: String, enum: ["mao", "manter"] },
+    semDestino: { type: String, enum: ["manter"] },
     estrutura: { type: String, enum: ["impedirUso", "manter"] },
     filtroAlvo: {
       type: new Schema(

@@ -332,13 +332,8 @@ test("Esfera atinge só estrutura com 5, não move nem exige vizinho livre, incl
     } else assert.equal(position(g, "p2:front:2").structure!.hpAtual, 15);
   }
 });
-test("Esfera recusa destino não vizinho, ocupado, aliado, com Lama ou ausente e reverte compra passiva", () => {
-  for (const destination of [
-    undefined,
-    "p2:front:0",
-    "p1:front:1",
-    "p2:front:1",
-  ]) {
+test("Esfera recusa destino não vizinho, ocupado ou aliado e reverte compra passiva", () => {
+  for (const destination of ["p2:front:0", "p1:front:1", "p2:front:1"]) {
     const g = ready();
     airMage(g);
     position(g, "p2:front:1").card = card("020", "p2");

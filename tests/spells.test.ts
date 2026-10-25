@@ -418,13 +418,13 @@ test("Bola de Luz impede conjuração do mago Cego", () => {
     /Cego|cego/,
   );
 });
-test("Furacão de Areia só cega e causa dano em tropas, sem roubar cartas com mago de Ar", () => {
+test("Furacão de Areia só cega e causa dano em tropas e rouba uma carta com mago de Ar", () => {
   const g = make("Ar"),
     s = troop(g),
     deck = g.player("p2").deck.length;
   const enemyHp = g.player("p2").mage.hpAtual;
   cast(g, "009");
-  assert.equal(g.player("p2").deck.length, deck);
+  assert.equal(g.player("p2").deck.length, deck - 1);
   assert.equal(s.card!.hpAtual, 30);
   assert(s.card!.statuses.some((status) => status.nome === "Cego"));
   assert(

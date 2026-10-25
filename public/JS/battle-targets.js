@@ -208,19 +208,20 @@ export function displacementChoice(action, targetIds, slots) {
   );
   if (!effect || !source || (source.structure && effect.estrutura === "manter"))
     return { required: false, destinations: [] };
+  const destinations = slots
+    .filter(
+      (s) =>
+        s.ownerId === source.ownerId &&
+        s.kind === "Tropa" &&
+        Math.abs(s.column - source.column) === 1 &&
+        !s.card &&
+        !s.rider &&
+        !s.terrain,
+    )
+    .map((s) => s.id);
   return {
-    required: true,
-    destinations: slots
-      .filter(
-        (s) =>
-          s.ownerId === source.ownerId &&
-          s.kind === "Tropa" &&
-          Math.abs(s.column - source.column) === 1 &&
-          !s.card &&
-          !s.rider &&
-          !s.terrain,
-      )
-      .map((s) => s.id),
+    required: destinations.length > 0 || effect.semDestino !== "manter",
+    destinations,
   };
 }
 
@@ -289,4 +290,45 @@ export function destinationChoice(action, targetIds, slots, ownerId) {
           : [],
     };
   return displacementChoice(action, targetIds, slots);
+}
+
+export function movementTarget(from, to, preparing = false) {
+  if (
+    !from?.card ||
+    from === to ||
+    from.id === to.id ||
+    from.ownerId !== to.ownerId ||
+    from.kind !== "Tropa" ||
+    to.kind !== "Tropa" ||
+    from.card.tipo !== "Tropa" ||
+    (to.card && to.card.tipo !== "Tropa")
+  )
+    return false;
+  const group = [from.card, from.rider, to.card, to.rider].filter(Boolean);
+  if (
+    to.terrain ||
+    (to.card && from.terrain) ||
+    group.some((c) =>
+      c.statuses?.some(
+        (s) =>
+          [
+            "Congelado",
+            "Congelamento",
+            "Cego",
+            "Incapacitado",
+            "Atordoado",
+          ].includes(s.nome) && s.turnosRestantes > 0,
+      ),
+    )
+  )
+    return false;
+  if (preparing) return true;
+  const permission = from.card.statuses?.find(
+    (s) => s.nome === "Campo livre" && s.turnosRestantes > 0,
+  );
+  return (
+    !!(from.card.palavrasChave?.includes("Campo livre") || permission) &&
+    !group.some((c) => c.moved) &&
+    (!to.card || !!permission?.trocaAliada)
+  );
 }

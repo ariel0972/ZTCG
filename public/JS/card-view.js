@@ -95,6 +95,12 @@ function effectDescription(effect) {
       draw: `Compra ${effect.valor || 0} carta(s).`,
       mana: `Recupera ${effect.valor || 0} de mana.`,
       status: `Aplica ${effect.status || "um status"}${effect.valor === undefined ? "" : ` com intensidade ${effect.valor}`}${effect.duracao === undefined ? "" : ` por ${effect.duracao} ${effect.unidade === "turno" ? "turno(s)" : "rodada(s)"}`}${effect.requerStatus ? ` enquanto houver ${effect.requerStatus}` : ""}.`,
+      stealDeck:
+        "Rouba " +
+        (effect.valor || 0) +
+        " carta(s) do topo do baralho inimigo" +
+        (effect.elementoMago ? " com mago de " + effect.elementoMago : "") +
+        ".",
       searchNamed: `Busca uma cópia da carta ${effect.carta} no baralho${effect.seNaoUsada ? ` se a carta ${effect.seNaoUsada} ainda não foi conjurada nesta partida` : ""} e embaralha somente quando encontra.`,
       banish: "Bane o alvo.",
       forget: "Esquece o alvo.",

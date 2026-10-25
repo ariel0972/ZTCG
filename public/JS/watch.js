@@ -117,6 +117,7 @@ function hud(player, host) {
 }
 function render(data) {
   if (stopped) return;
+  battleEvents.capture();
   state = data;
   coinToss.update(state);
   document.body.classList.add("in-match");

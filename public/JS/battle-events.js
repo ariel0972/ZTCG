@@ -1,10 +1,12 @@
 // Sequence numbers survive persistence and prevent replay on reconnect.
 import { createBattleEffects } from "./battle-effects.js";
+import { createCardTransfers } from "./card-transfers.js";
 export function createBattleEvents(
   host = document.body,
   { getViewerId = () => undefined, noticeDurationMs = 3200 } = {},
 ) {
   const effects = createBattleEffects(host);
+  const transfers = createCardTransfers(host);
   const panel = document.createElement("section");
   panel.className = "battle-events";
   panel.setAttribute("aria-label", "Últimas jogadas");
@@ -48,6 +50,7 @@ export function createBattleEvents(
     lastFadeAt = 0;
   }
   const labels = {
+    draw: "Comprou uma carta",
     summon: "Entrou em campo",
     spell: "Feitiço usado",
     attack: "Atacou",
@@ -63,6 +66,7 @@ export function createBattleEvents(
     elementalReaction: "Reação elemental",
   };
   function show(event) {
+    if (event.kind === "zoneTransfer") return;
     if (panel.children.length >= 6) {
       pending.push(event);
       // The full history remains available even during a long burst.
@@ -82,6 +86,11 @@ export function createBattleEvents(
     image.decoding = "async";
     const text = document.createElement("span");
     text.textContent =
+      (event.kind === "draw"
+        ? card.nome === "Carta comprada"
+          ? "Comprou uma carta."
+          : "Comprou: " + card.nome
+        : "") ||
       event.summary ||
       (["attack", "block"].includes(event.kind) && event.message
         ? event.message
@@ -122,6 +131,9 @@ export function createBattleEvents(
     }
   }
   return {
+    capture() {
+      transfers.capture();
+    },
     notify(event) {
       show(event);
       showFieldEffect(event);
@@ -133,13 +145,18 @@ export function createBattleEvents(
         sequence = events.at(-1)?.sequence || 0;
         clear();
         effects.reset();
+        transfers.reset();
+        transfers.capture();
         return;
       }
       const fresh = events.filter((e) => e.sequence > sequence);
       if (!fresh.length) return;
       sequence = fresh.at(-1).sequence;
       // Keep field feedback for every hit, even when the toast list is capped.
-      for (const event of fresh) showFieldEffect(event);
+      for (const event of fresh) {
+        showFieldEffect(event);
+        transfers.show(event);
+      }
       for (const event of fresh) {
         show(event);
       }
@@ -147,6 +164,7 @@ export function createBattleEvents(
     close() {
       clear();
       effects.close();
+      transfers.close();
       panel.remove();
     },
   };

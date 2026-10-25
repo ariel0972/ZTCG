@@ -2196,3 +2196,80 @@
     animation: none;
   }
 }
+
+.card-transfer-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1600;
+  pointer-events: none;
+  overflow: hidden;
+}
+.card-transfer {
+  position: absolute;
+  width: 70px;
+  height: 98px;
+  border: 2px solid #e7c47b;
+  border-radius: 8px;
+  background: #12232e;
+  box-shadow:
+    0 4px 22px #0009,
+    0 0 18px #f6d38c66;
+  overflow: hidden;
+  animation: card-zone-flight 0.8s cubic-bezier(0.2, 0.65, 0.3, 1) both;
+}
+.card-transfer img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.card-transfer span {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 3px 0;
+  background: #081522df;
+  color: #ffe7b2;
+  font: bold 10px system-ui;
+  text-align: center;
+}
+@keyframes card-zone-flight {
+  0% {
+    transform: translate(var(--fromX), var(--fromY)) rotate(-8deg) scale(0.85);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  50% {
+    transform: translate(var(--midX), var(--midY)) rotate(5deg) scale(1.12);
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--toX), var(--toY)) rotate(0) scale(0.6);
+    opacity: 0;
+  }
+}
+.card-transfer--still {
+  left: var(--toX);
+  top: var(--toY);
+  animation: card-zone-still 0.7s ease-out both;
+}
+@keyframes card-zone-still {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-transfer {
+    left: var(--toX);
+    top: var(--toY);
+    animation: card-zone-still 0.7s ease-out both;
+  }
+}

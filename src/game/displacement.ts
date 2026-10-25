@@ -38,6 +38,23 @@ export function planDisplacement(
     if (effect.borda !== "mao") return fail("Não há espaço à direita.");
     return { source, destination: undefined, bounce: true, stationary: false };
   }
+  if (
+    effect.direcao === "vizinho" &&
+    effect.semDestino === "manter" &&
+    !slots.some(
+      (s) =>
+        s.ownerId === source.ownerId &&
+        s.kind === "Tropa" &&
+        Math.abs(s.column - source.column) === 1 &&
+        !s.card &&
+        !s.rider &&
+        !s.terrain,
+    )
+  ) {
+    if (destinationId)
+      return fail("Não há vizinho livre para o destino informado.");
+    return { source, destination: undefined, bounce: false, stationary: true };
+  }
   const destination = slots.find(
     (s) =>
       s.ownerId === source.ownerId &&
