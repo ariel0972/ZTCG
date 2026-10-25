@@ -1,3 +1,4 @@
+import { entryCost, materialOptions } from "./entry-cost";
 import { modifiedSpell, currentSpellCost } from "./spell-modifiers";
 import { createCoinToss, resolveCoinToss, type CoinFace } from "./coin-toss";
 import { effectRoundDue, nextEffectRound } from "./effect-clock";
@@ -946,7 +947,7 @@ export class Game {
       this.state.phase !== "PREPARATION" ||
       p.preparation.started ||
       p.preparation.redraws >= 3 ||
-      p.hand.some((c) => c.tipo === "Tropa")
+      p.hand.some((c) => c.tipo === "Tropa" && !entryCost(c))
     )
       this.fail(
         "Reembaralhe apenas uma mão inicial sem tropa, até três vezes, antes de jogar.",
@@ -2386,6 +2387,7 @@ export class Game {
         case "spellBoost":
           player.mage.statuses.push({
             nome: source?.nome ?? "Amplificação",
+            sourceCardId: source?.tipo === "Feitico" ? source.id : undefined,
             valor: effect.valor,
             turnosRestantes: effect.duracao!,
             unidade: "rodada",
@@ -3014,6 +3016,111 @@ export class Game {
         break;
     }
   }
+  private payEntryCost(
+    user: string,
+    card: Instance,
+    ids: string[] | undefined,
+    mana: number,
+  ) {
+    const rule = entryCost(card);
+    const chosen = ids ?? [];
+    const options = materialOptions(this.state, user, card);
+    if (
+      (!rule && chosen.length) ||
+      (rule &&
+        (chosen.length !== rule.quantidade ||
+          new Set(chosen).size !== chosen.length))
+    )
+      this.fail(
+        rule
+          ? "Escolha exatamente " +
+              rule.quantidade +
+              " materiais diferentes para o custo de entrada."
+          : "Esta carta não exige materiais.",
+      );
+    const selected = chosen.map((id) => options.find((o) => o.card.id === id));
+    if (selected.some((o) => !o))
+      this.fail("Material inválido: confira origem, tipo de carta e elemento.");
+    const player = this.player(user);
+    this.spend(player, mana);
+    // Validate every material before changing any zone or running a passive.
+    for (const option of selected) {
+      const material = option!.card;
+      if (option!.origem === "mao") {
+        this.discardFromHand(
+          player,
+          player.hand.findIndex((c) => c.id === material.id),
+        );
+        this.log(
+          player.nome +
+            " descartou " +
+            material.nome +
+            " para jogar " +
+            card.nome +
+            ".",
+        );
+      } else if (material.tipo === "Tropa" || material.tipo === "Estrutura") {
+        material.hpAtual = 0;
+        delete material.killedBy;
+      }
+    }
+    for (const option of selected.filter((o) => o!.origem === "campo")) {
+      const material = option!.card;
+      if (material.tipo === "Armamento") {
+        const slot = this.targetSlot(material.id)!;
+        for (const receiver of this.weaponBeneficiaries(slot)) {
+          const target = receiver.rider ?? receiver.card;
+          if (target) target.hpAtual -= material.bonusHp ?? 0;
+        }
+        slot.card = null;
+        player.graveyard.push(material);
+      } else if (material.tipo === "Feitico") {
+        const slot = this.targetSlot(material.id);
+        if (slot?.card?.id === material.id) slot.card = null;
+        this.state.ongoingSpells = this.state.ongoingSpells?.filter(
+          (s) => s.id !== material.id,
+        );
+        this.state.fieldEffects = this.state.fieldEffects?.filter(
+          (s) => s.card.id !== material.id,
+        );
+        for (const a of [...(this.state.attachments ?? [])])
+          if (a.source.id === material.id) this.removeAttachment(a);
+        for (const slot of this.state.slots)
+          for (const c of slotCards(slot))
+            c.statuses = c.statuses.filter(
+              (s) => s.sourceCardId !== material.id,
+            );
+        if (!player.graveyard.some((c) => c.id === material.id))
+          player.graveyard.push(material);
+      }
+      this.trigger("onSacrifice", {
+        ownerId: user,
+        cardId: material.id,
+        card: material,
+        element: material.elemento,
+        slotId: option!.slotId,
+      });
+      if (["Armamento", "Feitico"].includes(material.tipo)) {
+        this.event("death", material);
+        this.trigger("onDeath", {
+          ownerId: user,
+          cardId: material.id,
+          card: material,
+          element: material.elemento,
+        });
+      }
+      this.log(
+        player.nome +
+          " sacrificou " +
+          material.nome +
+          " para jogar " +
+          card.nome +
+          ".",
+      );
+    }
+    if (chosen.length) this.resolve();
+    return this.state.status === "ACTIVE";
+  }
   private play(user: string, cmd: Extract<Command, { type: "play" }>) {
     const player = this.player(user),
       index = player.hand.findIndex((c) => c.id === cmd.cardId),
@@ -3029,6 +3136,10 @@ export class Game {
       )
     )
       this.fail("Esta carta não aceita destino de deslocamento.");
+    if (this.state.phase === "PREPARATION" && entryCost(physical))
+      this.fail(
+        "Invocações e cartas com custo de entrada são bloqueadas durante a preparação.",
+      );
     const limits = player.mage.limites[0];
     if (card.tipo === "Feitico" && this.state.phase === "PREPARATION")
       this.fail("Feitiços são bloqueados durante a preparação.");
@@ -3063,6 +3174,10 @@ export class Game {
         (card.assinatura ? limits.feiticosUnicos : limits.feiticosUsados)
       )
         this.fail("Limite de feitiços atingido.");
+      if (cmd.targets.some((id) => cmd.materiais?.includes(id)))
+        this.fail("Um alvo da jogada não pode ser consumido como material.");
+      if (!this.payEntryCost(user, physical, cmd.materiais, card.custoMana))
+        return;
       const selection = this.spellSelection(card, user, cmd.targets);
       const ids = this.validateTargets(
         user,
@@ -3080,7 +3195,6 @@ export class Game {
         })
       )
         this.fail("Tipo de alvo não permitido por este feitiço.");
-      this.spend(player, card.custoMana);
       const bonus = spellDamageBonus(player.mage, card.elemento);
       const temporaryBonus = temporarySpellDamageBonus(player.mage);
       const actionBonus = this.causesDamage(
@@ -3090,7 +3204,10 @@ export class Game {
       )
         ? this.takeActionBonus(user)
         : 0;
-      player.hand.splice(index, 1);
+      player.hand.splice(
+        player.hand.findIndex((c) => c.id === physical.id),
+        1,
+      );
       player[
         physical.destinoAposUso === "banido" ? "banished" : "graveyard"
       ].push(physical);
@@ -3149,6 +3266,27 @@ export class Game {
       );
     } else {
       if (!cmd.slotId) this.fail("Selecione um slot.");
+      if (card.tipo === "Armamento") {
+        const blocked = this.equipmentPlacementError(
+          user,
+          this.ownSlot(cmd.slotId, user),
+        );
+        if (blocked) this.fail(blocked);
+      }
+      if (
+        !this.payEntryCost(
+          user,
+          physical,
+          cmd.materiais,
+          this.state.phase === "PREPARATION" && card.tipo === "Tropa"
+            ? 0
+            : card.tipo === "Armamento" &&
+                this.equipmentGrant(user, this.ownSlot(cmd.slotId, user))
+              ? 0
+              : card.custoMana,
+        )
+      )
+        return;
       const slot = this.ownSlot(cmd.slotId, user);
       if (card.tipo === "Mago") this.fail("O mago já está em campo.");
       if (card.tipo === "Armamento") {
@@ -3190,15 +3328,10 @@ export class Game {
         player.counters.summons >= limits.tropasMobilizadas
       )
         this.fail("Limite de mobilização atingido.");
-      this.spend(
-        player,
-        this.state.phase === "PREPARATION" && card.tipo === "Tropa"
-          ? 0
-          : card.tipo === "Armamento" && this.equipmentGrant(user, slot)
-            ? 0
-            : card.custoMana,
+      player.hand.splice(
+        player.hand.findIndex((c) => c.id === physical.id),
+        1,
       );
-      player.hand.splice(index, 1);
       this.event("summon", card);
       if (card.tipo === "Estrutura") slot.structure = card;
       else if (card.tipo === "Tropa" && slot.card) {
@@ -3250,6 +3383,9 @@ export class Game {
         card.requerElementoMago === player.mage.elemento) &&
       !hasStatus(player.mage.statuses, ["Cego"]) &&
       player.mana >= card.custoMana &&
+      (!entryCost(card) ||
+        materialOptions(this.state, player.id, card).length >=
+          entryCost(card)!.quantidade) &&
       (card.assinatura
         ? player.counters.unique < player.mage.limites[0].feiticosUnicos
         : player.counters.spells < player.mage.limites[0].feiticosUsados)
@@ -3374,6 +3510,8 @@ export class Game {
     return [target.id];
   }
   private openingCardBlockReason(card: Instance) {
+    if (this.state.phase === "PREPARATION" && entryCost(card))
+      return "Invocações e cartas com custo de entrada são bloqueadas durante a preparação.";
     if (this.state.phase !== "BATTLE") return "";
     if (this.state.turn === 1 && card.tipo !== "Tropa")
       return "No primeiro turno após a preparação, só é permitido mobilizar tropas.";
@@ -3919,11 +4057,13 @@ export class Game {
     this.resolve();
     this.state.version++;
   }
-  private respondSpell(user: string, cardId?: string) {
+  private respondSpell(user: string, cardId?: string, materiais?: string[]) {
     const pending = this.state.pendingSpell;
     if (!pending || user === pending.casterId)
       this.fail("Não há resposta disponível para você.");
     if (!cardId) {
+      if (materiais?.length)
+        this.fail("Materiais exigem uma carta de resposta.");
       this.resolvePendingSpell();
       return;
     }
@@ -3933,7 +4073,7 @@ export class Game {
       this.fail(
         "Este feitiço de Água com Reação não está disponível para responder.",
       );
-    this.spend(player, card.custoMana);
+    if (!this.payEntryCost(user, card, materiais, card.custoMana)) return;
     player.hand.splice(player.hand.indexOf(card), 1);
     player[card.destinoAposUso === "banido" ? "banished" : "graveyard"].push(
       card,
@@ -5115,7 +5255,7 @@ export class Game {
           this.respondAttack(user, cmd.reflect);
           break;
         case "respondSpell":
-          this.respondSpell(user, cmd.cardId);
+          this.respondSpell(user, cmd.cardId, cmd.materiais);
           break;
         case "play":
           this.play(user, cmd);
@@ -5505,6 +5645,31 @@ export class Game {
                       this.equipmentGrant(p.id, s),
                   )
                     ? { custoMana: 0, equipamentoGratuito: true }
+                    : {}),
+                  custoEntrada: entryCost(c),
+                  ...(entryCost(c)
+                    ? {
+                        materiaisEntrada: materialOptions(
+                          this.state,
+                          p.id,
+                          c,
+                        ).map((o) => ({
+                          id: o.card.id,
+                          nome: o.card.nome,
+                          tipo: o.card.tipo,
+                          elemento: o.card.elemento,
+                          custoMana: o.card.custoMana,
+                          imgURL: o.card.imgURL,
+                          publicado: o.card.publicado,
+                          origemMaterial: o.origem,
+                          slotMaterial: o.slotId,
+                        })),
+                        materialBlockedReason:
+                          materialOptions(this.state, p.id, c).length <
+                          entryCost(c)!.quantidade
+                            ? "Não há materiais suficientes para pagar o custo de entrada."
+                            : "",
+                      }
                     : {}),
                   canDiscard: this.canDiscard(c),
                   alvo: this.spellTarget(effective, p.id),

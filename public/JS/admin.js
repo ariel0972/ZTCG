@@ -1,7 +1,15 @@
+import { createEntryCostEditor } from "./entry-cost-editor.js";
 import { api, navbar, message, node } from "./auth.js";
 import { initializeAdminShell, setAdminAccess } from "./admin-shell.js";
 initializeAdminShell("cards");
 const $ = (id) => document.getElementById(id);
+const entryEditor = createEntryCostEditor(document, {
+  onChange: () => {
+    $("validation").textContent =
+      "Custo atualizado no rascunho. Valide e salve a carta.";
+  },
+  onError: (e) => message(e.message, true),
+});
 let cards = [],
   version = 1,
   passiveTemplates = [];
@@ -9,6 +17,7 @@ function edit(card) {
   version = card.versao || 1;
   $("card-json").value = JSON.stringify(card, null, 2);
   $("validation").textContent = "";
+  entryEditor.show(card);
 }
 async function load() {
   const user = await navbar();

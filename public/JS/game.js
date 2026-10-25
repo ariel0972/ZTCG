@@ -1,3 +1,8 @@
+import {
+  createMaterialChoice,
+  entryCostRule,
+  describeEntryCost,
+} from "./entry-cost.js";
 import { createCoinToss } from "./coin-toss.js";
 import { setImageSource } from "./image-sources.js";
 import {
@@ -45,6 +50,8 @@ import {
   dodgeChoiceTitle,
 } from "./field-overlays.js";
 let deckSelector;
+const materialChoice = createMaterialChoice();
+let choosingMaterials = false;
 const battleEvents = createBattleEvents(document.body, {
   getViewerId: () => user?.id,
 });
@@ -226,7 +233,17 @@ function send(event, data) {
   });
 }
 async function command(command) {
-  if (pending || !state) return;
+  if (pending || choosingMaterials || !state) return;
+  if (["play", "respondSpell"].includes(command.type) && command.cardId) {
+    const card = myPlayer().hand.find((c) => c.id === command.cardId);
+    if (card && entryCostRule(card) && !command.materiais) {
+      choosingMaterials = true;
+      const materiais = await materialChoice.choose(card, state);
+      choosingMaterials = false;
+      if (!materiais) return;
+      command = { ...command, materiais };
+    }
+  }
   pending = true;
   inspector.hide();
   matchConnection.textContent = "Enviando jogada…";
@@ -475,6 +492,7 @@ function handBlock(card) {
   const p = myPlayer(),
     limits = p.mage.limites[0];
   if (card.handBlockedReason) return card.handBlockedReason;
+  if (card.materialBlockedReason) return card.materialBlockedReason;
   if (card.tipo === "Tropa") {
     if (p.combatStarted) return "Você já atacou neste turno.";
     if (p.counters.summons >= limits.tropasMobilizadas)
@@ -725,6 +743,8 @@ function renderActions() {
         handBlock(card),
       ),
     );
+    if (entryCostRule(card))
+      panel.append(node("p", describeEntryCost(card), "hint"));
     if (card.canDiscard)
       panel.append(
         actionButton(
@@ -1624,7 +1644,7 @@ function render() {
     pending ||
     me.preparation.started ||
     me.preparation.redraws >= 3 ||
-    me.hand.some((c) => c.tipo === "Tropa");
+    me.hand.some((c) => c.tipo === "Tropa" && !entryCostRule(c));
   $("mulligan").textContent = `Reembaralhar mão (${me.preparation.redraws}/3)`;
   $("bonus-draw-controls").hidden = !me.preparation.bonusDraws;
   $("bonus-draw-label").textContent =
@@ -1921,6 +1941,7 @@ async function load() {
       }
       battleEvents.capture();
       state = data;
+      materialChoice.update(state);
       render();
       battleEvents.update(data);
       if (data.status === "FINISHED" && !acknowledgedResults.has(data.id)) {
@@ -1976,6 +1997,7 @@ window.addEventListener("pagehide", () => {
   handNavigation.close();
   turnAnnouncement.close();
   coinToss.close();
+  materialChoice.close();
 });
 
 window.addEventListener("pageshow", (event) => {

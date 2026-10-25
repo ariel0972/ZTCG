@@ -334,6 +334,23 @@ const schema = new Schema<Card>(
     tipo: { type: String, enum: cardTypes, required: true },
     custoMana: { ...n, required: true },
     assinatura: { type: Boolean, default: false },
+    custoEntrada: {
+      type: new Schema(
+        {
+          quantidade: { type: Number, min: 1, max: 5, required: true },
+          tiposCarta: {
+            type: [String],
+            enum: ["Tropa", "Feitico", "Estrutura", "Armamento"],
+            required: true,
+          },
+          origens: { type: [String], enum: ["mao", "campo"], required: true },
+          mesmoElemento: Boolean,
+          elementos: { type: [String], enum: elements, default: undefined },
+        },
+        { _id: false, strict: "throw" },
+      ),
+      default: undefined,
+    },
     requerElementoMago: { type: String, enum: elements },
     destinoAposUso: { type: String, enum: ["cemiterio", "banido"] },
     elemento: { type: String, enum: elements },

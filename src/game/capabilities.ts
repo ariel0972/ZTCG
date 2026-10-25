@@ -119,6 +119,8 @@ export function playableErrors(card: Card): string[] {
   const errors: string[] = [];
   if (card.destinoAposUso && card.tipo !== "Feitico")
     errors.push("Destino após uso exige Feitico.");
+  if (card.custoEntrada && card.tipo === "Mago")
+    errors.push("O mago inicial não pode ter custo de entrada.");
   if (card.requerElementoMago && card.tipo !== "Feitico")
     errors.push("Restrição de elemento do mago exige Feitico.");
   if (

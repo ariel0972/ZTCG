@@ -1918,3 +1918,37 @@ AJUSTES GENÉRICOS DE AR E FEEDBACK — 25/10/2026
 - Bola de Luz configura Queimado 1/2 rodadas pelas variantes existentes, preservando Cego e dano imediato do mago de Fogo. O veneno, Sangramento e Queimação continuam usando ciclos completos.
 - O desvio usa a autoria de cada impacto: somente origem inimiga abre a escolha ou consome espera; efeitos aliados e cura não acionam desvio. Feitiços periódicos, armadilhas, ataques devolvidos e Pedregulhos mantêm autoria própria e decisões independentes.
 - draw e zoneTransfer informam animações de zonas reais; não movimentam cartas nem atrasam a resolução do jogo. A identidade da compra aparece somente ao dono; oponente e espectador recebem verso anônimo. Reconexões não repetem eventos antigos. Retirar durante preparação devolve o grupo à mão e desconta as mobilizações, sem recuperar mana, pois a entrada foi gratuita.
+
+CUSTO DE ENTRADA / INVOCAÇÕES
+O custo é adicional à mana ao jogar uma carta da mão; serve também para feitiços,
+estruturas e armamentos. Configure no painel Catálogo em Custo de entrada / invocação.
+Exemplo para Golém Neutro ou de Água:
+"subtipo": "Invocação",
+"custoEntrada": {
+  "quantidade": 1,
+  "tiposCarta": ["Tropa"],
+  "origens": ["mao", "campo"],
+  "mesmoElemento": true
+}
+O jogador escolhe uma tropa do mesmo elemento original: descarte da mão ou sacrifício
+do campo. Paga também mana e mobilização. Invocação sem custoEntrada exige por padrão 1 Tropa ou
+Feitiço do mesmo elemento, da mão ou do campo; os Goléns restringem o custo a Tropa.
+Para outra carta exigir dois feitiços de Fogo somente da mão:
+"custoEntrada": {
+  "quantidade": 2,
+  "tiposCarta": ["Feitico"],
+  "origens": ["mao"],
+  "elementos": ["Fogo"]
+}
+quantidade aceita 1–5; tiposCarta aceita Tropa, Feitico, Estrutura, Armamento.
+origens aceita mao e/ou campo. mesmoElemento:true compara ao elemento original da carta
+jogada; elementos aceita uma lista de elementos específicos. Não use ambos juntos.
+Sem os dois filtros, qualquer elemento é aceito. Não pode consumir a própria carta nem
+cartas inimigas ou do cemitério. Aplicações elementais temporárias não alteram o filtro.
+Feitiços só contam como material do campo enquanto estiverem ativos; consumir um efeito
+contínuo encerra-o. Sacrificar tropa ignora estrutura/status e ativa passivas normais;
+descartar da mão ativa passivas de descarte, sem fingir morte ou sacrifício do campo.
+Cartas com custo de entrada não entram na preparação. Ressurreições e entradas diretas
+por efeitos são isentas; o efeito que as coloca em campo mantém seu próprio custo.
+Para retirar custoEntrada de uma carta comum, remova a propriedade. Em Invocação isso
+restaura o custo padrão obrigatório, sem tornar a entrada gratuita.

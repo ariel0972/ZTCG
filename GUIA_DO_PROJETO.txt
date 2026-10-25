@@ -2121,3 +2121,32 @@ POST /decks/:id/copy exige autenticação e baralho ainda público. Copia apenas
 nome, referências do catálogo, mago, ícone e verso; novo ID, dono autenticado,
 revisão zero e privado, sem ranking/histórico. Valida referências e limites do
 catálogo; ignora campos de dono/estatísticas enviados pelo cliente.
+
+CUSTOS DE ENTRADA E INVOCAÇÕES — 25/10/2026
+- src/game/entry-cost.ts — Resolve custo de materiais configurável e regra padrão global das invocações; filtra materiais próprios por quantidade, tipo, origem e elemento original.
+- public/JS/entry-cost.js — Descrição compartilhada do custo e seletor acessível de materiais antes da jogada; cancela na mudança de versão e não executa pagamentos ao cancelar.
+- public/JS/entry-cost-editor.js — Formulário do catálogo para quantidade, tipos, elemento e origem de materiais, aplicado ao rascunho JSON antes de validar/salvar.
+- scripts/update-invocation-costs.ts — Migração direcionada apenas de custoEntrada dos Goléns 025/026, com simulação, backup, versão concorrente e idempotência.
+- tests/entry-cost.test.ts — Cobre materiais/mana atômicos, filtros, sacrifícios, feitiços contínuos, bônus de equipamento, preparação, ressurreição, privacidade e persistência.
+- tests/entry-cost-ui.test.ts — Cobre escolha da quantidade exata, cancelamento e invalidação do menu, e configuração visual do custo no catálogo.
+
+custoEntrada define quantidade (1–5), tiposCarta (Tropa/Feitico/Estrutura/Armamento),
+origens (mao/campo) e mesmoElemento:true ou elementos:[...]. Sem filtro elemental,
+qualquer elemento é permitido. Elemento aplicado ao espaço ou à carta não muda o
+material: compara elemento original do catálogo; ausência equivale a Neutro.
+Todas as cartas com subtipo Invocação têm custo padrão de 1 Tropa ou Feitiço do mesmo elemento,
+da mão ou campo, mesmo sem custoEntrada explícito. Os Goléns possuem essa configuração
+explícita no catálogo. Pode customizar o custo para qualquer carta exceto o mago inicial.
+Mão: descarta ao cemitério, ativa efeitos próprios de descarte. Campo: sacrifica a
+carta selecionada, ativa onSacrifice/onDeath; estruturas protegem de dano, não de custos.
+Montaria e ocupante são materiais separados; a morte segue a resolução normal do jogo.
+Armas sacrificadas removem bônus. Feitiços ativos (contínuos, Barreira, Raiz e Amplificar)
+podem ser materiais se o custo permitir Feitico/campo: seu efeito é encerrado e a carta
+permanece/vai ao cemitério uma vez. Feitiço comum já resolvido no cemitério não é material.
+O pagamento acompanha a jogada e a mana no mesmo comando, com materiais:[ids]. Falha
+restaura integralmente o estado; IDs repetidos, inimigos, cemitério, a própria carta,
+tipo/elemento errado e quantidade diferente são recusados. Reações também pagam custos.
+Invocações/cartas com custo de entrada são bloqueadas na preparação; mão só delas permite
+reembaralhar. Reviver e entradas diretas por efeitos não pagam custo nem mana de entrada.
+O catálogo mostra formulário próprio, descrição gerada e JSON; o schema público inclui
+a regra padrão. As opções da mão são enviadas somente ao dono, com metadados mínimos.

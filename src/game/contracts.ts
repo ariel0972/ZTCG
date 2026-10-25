@@ -45,12 +45,18 @@ export const commandSchema = z.discriminatedUnion("type", [
     .object({ ...base, type: z.literal("respondAttack"), reflect: z.boolean() })
     .strict(),
   z
-    .object({ ...base, type: z.literal("respondSpell"), cardId: id.optional() })
+    .object({
+      ...base,
+      type: z.literal("respondSpell"),
+      cardId: id.optional(),
+      materiais: z.array(id).max(5).optional(),
+    })
     .strict(),
   z
     .object({
       ...base,
       type: z.literal("play"),
+      materiais: z.array(id).max(5).optional(),
       mode: id.optional(),
       cardId: id,
       slotId: id.optional(),

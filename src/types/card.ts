@@ -484,6 +484,24 @@ export const imageSchema = z
     (v) => /^\/(?!\/)[^\\]*$/.test(v) || /^https?:\/\//.test(v),
     "Use caminho /assets/... ou URL http(s).",
   );
+export const entryCostSchema = z
+  .object({
+    quantidade: z.number().int().min(1).max(5),
+    tiposCarta: z
+      .array(z.enum(["Tropa", "Feitico", "Estrutura", "Armamento"]))
+      .min(1)
+      .max(4),
+    origens: z
+      .array(z.enum(["mao", "campo"]))
+      .min(1)
+      .max(2),
+    mesmoElemento: z.boolean().optional(),
+    elementos: z.array(z.enum(elements)).min(1).max(6).optional(),
+  })
+  .strict()
+  .refine((c) => !(c.mesmoElemento && c.elementos), {
+    message: "Escolha mesmoElemento ou elementos específicos, não ambos.",
+  });
 export const cardSchema = z
   .object({
     numeroCatalogo: z.string().regex(/^\d{3,6}$/),
@@ -491,6 +509,7 @@ export const cardSchema = z
     tipo: z.enum(cardTypes),
     custoMana: number,
     assinatura: z.boolean().default(false),
+    custoEntrada: entryCostSchema.optional(),
     requerElementoMago: z.enum(elements).optional(),
     destinoAposUso: z.enum(["cemiterio", "banido"]).optional(),
     elemento: z.enum(elements).optional(),

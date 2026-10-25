@@ -228,3 +228,33 @@
     flex: 1 1 140px;
   }
 }
+
+.entry-cost-editor {
+  border: 1px solid var(--line);
+  padding: 12px;
+  border-radius: 10px;
+  margin: 12px 0;
+}
+.entry-cost-editor summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.entry-cost-editor fieldset {
+  margin: 12px 0;
+  border: 1px solid var(--line);
+}
+.entry-cost-editor input[type="checkbox"] {
+  width: auto;
+  margin-right: 6px;
+}
+
+.entry-cost-editor fieldset label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+.entry-cost-editor fieldset input[type="checkbox"] {
+  flex: 0 0 auto;
+  margin: 0;
+}

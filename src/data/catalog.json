@@ -1965,7 +1965,13 @@
           }
         ]
       }
-    ]
+    ],
+    "custoEntrada": {
+      "quantidade": 1,
+      "tiposCarta": ["Tropa"],
+      "origens": ["mao", "campo"],
+      "mesmoElemento": true
+    }
   },
   {
     "numeroCatalogo": "027",
@@ -2684,7 +2690,13 @@
     "elemento": "Agua",
     "resistencia": ["Fogo"],
     "fraqueza": ["Terra"],
-    "subtipo": "Invocação"
+    "subtipo": "Invocação",
+    "custoEntrada": {
+      "quantidade": 1,
+      "tiposCarta": ["Tropa"],
+      "origens": ["mao", "campo"],
+      "mesmoElemento": true
+    }
   },
   {
     "numeroCatalogo": "041",

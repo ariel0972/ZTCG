@@ -301,7 +301,21 @@ export function dropAction(source, slot, state, userId) {
         !slot.structure
         ? "play"
         : null;
-    if (slot.card && !mountAllowed(slot.card, card, !!slot.rider)) return null;
+    const group = [slot.card, slot.rider].filter(Boolean);
+    const canSacrificeDestination =
+      card.tipo === "Tropa" &&
+      card.custoEntrada?.quantidade >= group.length &&
+      group.every((c) =>
+        card.materiaisEntrada?.some(
+          (m) => m.id === c.id && m.origemMaterial === "campo",
+        ),
+      );
+    if (
+      slot.card &&
+      !mountAllowed(slot.card, card, !!slot.rider) &&
+      !canSacrificeDestination
+    )
+      return null;
     if (card.tipo === "Tropa")
       return !state.players.find((p) => p.id === userId).combatStarted &&
         (slot.kind === "Tropa" ||

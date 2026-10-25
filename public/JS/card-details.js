@@ -4,6 +4,7 @@ import {
   abilityCost,
   passiveDescription,
 } from "./card-view.js";
+import { describeEntryCost } from "./entry-cost.js";
 
 const paths = {
   mana: ["M9 3h6M10 3v7l-5 8a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-8V3", "M8 15h8"],
@@ -136,6 +137,8 @@ export function renderCardDetails(host, card, { reactions = {} } = {}) {
       `${card.recuperacaoMana} mana por turno`,
     );
   stats.append(list);
+  const entryCost = describeEntryCost(card);
+  if (entryCost) stats.append(make("p", entryCost, "card-entry-cost"));
   if (card.assinatura)
     stats.append(
       make("p", "Feitiço de assinatura: usa o limite separado do mago."),

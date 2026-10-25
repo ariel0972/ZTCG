@@ -9,6 +9,7 @@ export interface Status extends EffectClock {
     bonus: number;
     descontoMana: number;
   };
+  sourceCardId?: string;
   originOwnerId?: string;
   origin?: string;
   nome: string;

@@ -85,6 +85,99 @@
                 tropa. Campo livre permite mover a montaria com seu ocupante uma
                 vez por turno.
               </p>
+              <details class="entry-cost-editor">
+                <summary>Custo de entrada / invocação</summary>
+                <p class="hint">
+                  Configure um custo adicional à mana para qualquer carta.
+                  Invocações sem configuração usam 1 Tropa ou Feitiço do mesmo
+                  elemento original, da mão ou do campo. Não podem entrar na
+                  preparação; reviver e entradas por efeitos não pagam esse
+                  custo.
+                </p>
+                <label
+                  >Quantidade de materiais<input
+                    id="entry-quantity"
+                    type="number"
+                    min="1"
+                    max="5"
+                    value="1"
+                /></label>
+                <fieldset>
+                  <legend>Tipos de material aceitos</legend>
+                  <label
+                    ><input
+                      type="checkbox"
+                      name="entry-type"
+                      value="Tropa"
+                      checked
+                    />
+                    Tropa</label
+                  >
+                  <label
+                    ><input type="checkbox" name="entry-type" value="Feitico" />
+                    Feitiço</label
+                  >
+                  <label
+                    ><input
+                      type="checkbox"
+                      name="entry-type"
+                      value="Estrutura"
+                    />
+                    Estrutura</label
+                  >
+                  <label
+                    ><input
+                      type="checkbox"
+                      name="entry-type"
+                      value="Armamento"
+                    />
+                    Armamento</label
+                  >
+                </fieldset>
+                <fieldset>
+                  <legend>Origem</legend>
+                  <label
+                    ><input
+                      type="checkbox"
+                      name="entry-origin"
+                      value="mao"
+                      checked
+                    />
+                    Descartar da mão</label
+                  >
+                  <label
+                    ><input
+                      type="checkbox"
+                      name="entry-origin"
+                      value="campo"
+                      checked
+                    />
+                    Sacrificar do campo</label
+                  >
+                </fieldset>
+                <label
+                  >Elemento dos materiais<select id="entry-element">
+                    <option value="mesmo">
+                      Mesmo elemento original da carta
+                    </option>
+                    <option value="qualquer">Qualquer elemento</option>
+                    <option>Neutro</option>
+                    <option value="Agua">Água</option>
+                    <option>Fogo</option>
+                    <option>Ar</option>
+                    <option>Terra</option>
+                    <option>Zarcos</option>
+                  </select></label
+                >
+                <div class="toolbar">
+                  <button id="apply-entry-cost" type="button">
+                    Aplicar custo ao JSON</button
+                  ><button id="remove-entry-cost" type="button" class="quiet">
+                    Remover configuração específica
+                  </button>
+                </div>
+                <p id="entry-cost-help" class="hint" role="status"></p>
+              </details>
               <textarea
                 id="card-json"
                 class="admin-editor"

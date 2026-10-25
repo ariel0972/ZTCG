@@ -8,6 +8,7 @@ import {
   targets,
   triggers,
 } from "../types/card";
+import { invocationCost } from "../game/entry-cost";
 import { deckRules } from "../domain/deck";
 import { passiveTemplates } from "../game/passives";
 import {
@@ -36,6 +37,7 @@ cardRoutes.get("/schema", (_req, res) => {
     passivas: passiveIds,
     passivasLegadas: legacyPassiveIds,
     modelosPassivos: passiveTemplates,
+    custoInvocacaoPadrao: invocationCost,
     schema: z.toJSONSchema(cardSchema, { unrepresentable: "any" }),
   });
 });
