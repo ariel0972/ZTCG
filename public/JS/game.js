@@ -696,7 +696,7 @@ function renderActions() {
   $("selection-help").hidden = !needsTarget;
   if (selected) {
     $("menu-title").textContent = selected.card.nome;
-    menu.style.left = `${Math.max(10, Math.min(menuAnchor.x + 12, window.innerWidth - 260))}px`;
+    menu.style.left = `${Math.max(12, Math.min(menuAnchor.x + 12, window.innerWidth - menu.offsetWidth - 12))}px`;
     menu.style.top = `${Math.max(10, Math.min(menuAnchor.y, window.innerHeight - 380))}px`;
     inspector.hide();
   }

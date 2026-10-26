@@ -518,14 +518,14 @@
 }
 .card-action-menu {
   position: fixed;
-  width: min(248px, calc(100vw - 24px));
+  width: min(212px, calc(100vw - 24px));
   z-index: 150;
   border: 1px solid #b5a076;
   border-radius: 14px;
   background: #142333f5;
   box-shadow: 0 14px 45px #000a;
-  padding: 10px;
-  max-height: min(560px, calc(100dvh - 24px));
+  padding: 8px;
+  max-height: min(440px, calc(100dvh - 24px));
   overflow-y: auto;
   backdrop-filter: blur(12px);
 }
@@ -534,9 +534,9 @@
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-  margin-bottom: 9px;
+  margin-bottom: 6px;
   color: #e7d3a7;
-  font-size: 13px;
+  font-size: 12px;
 }
 .card-menu-heading button {
   padding: 2px 8px;
@@ -546,14 +546,15 @@
 }
 .card-action-menu .action-panel {
   display: grid;
-  gap: 6px;
+  gap: 4px;
 }
 .card-action-menu .action-panel button {
   width: 100%;
   text-align: left;
-  padding: 7px 10px;
-  min-height: 36px;
-  font-size: 12px;
+  padding: 5px 7px;
+  min-height: 30px;
+  font-size: 11px;
+  line-height: 1.25;
   border: 1px solid #68839566;
   background: #23364b;
   border-radius: 7px;
@@ -568,11 +569,27 @@
   display: block;
   font-size: 9px;
   color: #b9a894;
-  margin-top: 4px;
+  margin-top: 2px;
+  line-height: 1.25;
 }
 .card-action-menu .hint {
+  font-size: 10px;
+  line-height: 1.4;
+  margin: 3px 0;
+}
+.card-action-menu .action-panel .menu-card-image {
+  min-height: 0;
+  padding: 3px;
+}
+.card-action-menu .menu-card-image img {
+  max-height: 44px;
+}
+.card-action-menu .card-rules-notes {
+  margin-top: 6px;
+  padding-top: 6px;
+}
+.card-action-menu .card-rules-notes summary {
   font-size: 11px;
-  line-height: 1.5;
 }
 .target-cue {
   position: fixed;

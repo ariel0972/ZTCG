@@ -2197,3 +2197,9 @@ CORREÇÃO DO CARREGAMENTO DE PERFIL — 25/10/2026
 profile.js mantém a importação explícita de setImageSource para ícones dos baralhos,
 mesmo com a aparência do avatar delegada a profile-appearance.js. O caso de perfil
 sem baralhos não exercita esse caminho e não substitui o teste de regressão completo.
+
+MENU DE CARTAS COMPACTO — 26/10/2026
+Menu de ações usa largura de 212px, prévia de 44px e espaçamentos menores,
+preservando avisos e o acesso às regras. Em dispositivos de toque, botões de ação
+mantêm altura mínima de 44px. Posição horizontal usa a largura real do menu para
+permanecer dentro da tela; menus longos continuam roláveis.
