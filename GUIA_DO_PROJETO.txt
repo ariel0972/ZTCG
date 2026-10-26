@@ -2191,3 +2191,9 @@ estados impeditivos e limites gastos não geram aviso. Cancelar não envia coman
 confirmar confere partida/turno/versão atuais. Mudança de estado fecha diálogo antigo.
 Clique externo fecha também seleções play/ability/attack/move; alvos do campo, mãos,
 menus de zonas e diálogos permanecem utilizáveis. Não gasta ações ou mana ao cancelar.
+
+CORREÇÃO DO CARREGAMENTO DE PERFIL — 25/10/2026
+- tests/profile-page.test.ts — Carrega a página real com baralho/ícone e histórico não vazios; verifica nome, moldura, ausência de erro e abertura das cartas do baralho.
+profile.js mantém a importação explícita de setImageSource para ícones dos baralhos,
+mesmo com a aparência do avatar delegada a profile-appearance.js. O caso de perfil
+sem baralhos não exercita esse caminho e não substitui o teste de regressão completo.

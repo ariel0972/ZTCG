@@ -1,3 +1,4 @@
+import { setImageSource } from "./image-sources.js";
 import {
   profileFrames,
   applyProfileAppearance,
