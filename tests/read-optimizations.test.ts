@@ -15,7 +15,7 @@ import {
 import Match from "../src/db/models/match";
 import User from "../src/db/models/user";
 
-test("avatares: WebP 192px sem metadados, formato validado e rejeição de entradas inválidas", async () => {
+test("avatares: WebP 384px sem metadados, formato validado e rejeição de entradas inválidas", async () => {
   const input = await sharp({
     create: { width: 900, height: 600, channels: 3, background: "red" },
   })
@@ -24,13 +24,13 @@ test("avatares: WebP 192px sem metadados, formato validado e rejeição de entra
   const prepared = await prepareAvatar(input);
   const meta = await sharp(prepared.data).metadata();
   assert.equal(meta.format, "webp");
-  assert.equal(meta.width, 192);
-  assert.equal(meta.height, 192);
+  assert.equal(meta.width, 384);
+  assert.equal(meta.height, 384);
   assert.equal(meta.exif, undefined);
   await assert.rejects(prepareAvatar(Buffer.from("not an image")), {
     status: 422,
   });
-  await assert.rejects(prepareAvatar(Buffer.alloc(201 * 1024)), {
+  await assert.rejects(prepareAvatar(Buffer.alloc(2 * 1024 * 1024 + 1)), {
     status: 422,
   });
   await assert.rejects(

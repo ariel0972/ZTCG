@@ -22,7 +22,9 @@ profileRoutes.get("/:id", async (req: AuthRequest, res) => {
     .default(0)
     .parse(req.query.page);
   const owner = id === req.userId;
-  const user = await User.findById(id).select("nome avatarURL").lean();
+  const user = await User.findById(id)
+    .select("nome avatarURL bannerURL avatarFrame")
+    .lean();
   if (!user) throw new AppError(404, "Jogador não encontrado.");
   const [experience, decks, matches] = await Promise.all([
     profileExperience(id),
@@ -47,7 +49,13 @@ profileRoutes.get("/:id", async (req: AuthRequest, res) => {
   res.json({
     success: true,
     owner,
-    user: { id, nome: user.nome, avatarURL: user.avatarURL },
+    user: {
+      id,
+      nome: user.nome,
+      avatarURL: user.avatarURL,
+      bannerURL: user.bannerURL ?? "",
+      avatarFrame: user.avatarFrame ?? "none",
+    },
     stats,
     decks: decks.map((row) => {
       const deck = deckDTO(row);

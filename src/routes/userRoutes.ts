@@ -129,6 +129,8 @@ export async function publicUser(user: any) {
     _id: String(user._id),
     nome: user.nome,
     avatarURL: user.avatarURL,
+    bannerURL: user.bannerURL ?? "",
+    avatarFrame: user.avatarFrame ?? "none",
     nivel: stats.nivel,
     titulo: stats.titulo,
     xp: stats.xp,
@@ -187,7 +189,7 @@ router.post(
   rateLimit(12),
   express.raw({
     type: ["image/png", "image/jpeg", "image/webp"],
-    limit: "200kb",
+    limit: "2mb",
   }),
   async (req, res) => {
     if (!Buffer.isBuffer(req.body))
@@ -195,10 +197,47 @@ router.post(
     res.json({ success: true, avatarURL: await storeAvatar(req.body) });
   },
 );
+router.post(
+  "/banner",
+  checkToken,
+  rateLimit(12),
+  express.raw({
+    type: ["image/png", "image/jpeg", "image/webp"],
+    limit: "2mb",
+  }),
+  async (req, res) => {
+    if (!Buffer.isBuffer(req.body))
+      throw new AppError(422, "Envie uma imagem PNG, JPG ou WebP.");
+    res.json({
+      success: true,
+      bannerURL: await storeAvatar(req.body, "banner"),
+    });
+  },
+);
 router.put("/user/edit", checkToken, async (req: AuthRequest, res) => {
   const input = z
     .object({
       nome: playerName,
+      bannerURL: z
+        .string()
+        .max(100)
+        .refine(
+          (v) => v === "" || /^\/avatars\/[a-f\d]{64}\.webp$/.test(v),
+          "Banner inválido.",
+        )
+        .optional(),
+      avatarFrame: z
+        .enum([
+          "none",
+          "gold",
+          "silver",
+          "fire",
+          "water",
+          "earth",
+          "air",
+          "zarcos",
+        ])
+        .optional(),
       avatarURL: z
         .string()
         .max(280000)

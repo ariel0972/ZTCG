@@ -1,4 +1,8 @@
-import { setImageSource } from "./image-sources.js";
+import {
+  profileFrames,
+  applyProfileAppearance,
+  prepareProfileUpload,
+} from "./profile-appearance.js";
 import { api, token, navbar, message, node, profilePath } from "./auth.js";
 import { cardTile } from "./card-view.js";
 import { createCardInspector } from "./card-inspection.js";
@@ -7,6 +11,77 @@ import { friendshipButtons } from "./social-view.js";
 
 const $ = (id) => document.getElementById(id);
 const inspector = createCardInspector();
+let draftAppearance = {},
+  preparedImages = {},
+  imageTasks = {},
+  imageVersions = {};
+const showAppearance = () =>
+  applyProfileAppearance(
+    { avatar: $("avatar"), cover: $("profile-cover") },
+    draftAppearance,
+  );
+for (const [id, label] of profileFrames) {
+  const option = document.createElement("option");
+  option.value = id;
+  option.textContent = label;
+  $("avatar-frame").append(option);
+}
+$("avatar-frame").onchange = () => {
+  draftAppearance.avatarFrame = $("avatar-frame").value;
+  showAppearance();
+};
+for (const [kind, id, key] of [
+  ["avatar", "photo", "avatarURL"],
+  ["banner", "banner-photo", "bannerURL"],
+]) {
+  $(id).onchange = () => {
+    const file = $(id).files[0],
+      version = (imageVersions[kind] ?? 0) + 1;
+    imageVersions[kind] = version;
+    if (!file) {
+      delete preparedImages[kind];
+      draftAppearance[key] =
+        profile?.user?.[key] ?? (kind === "avatar" ? "/assets/avatar.png" : "");
+      showAppearance();
+      return;
+    }
+    const work = prepareProfileUpload(file, kind)
+      .then((prepared) => {
+        if (imageVersions[kind] !== version) return;
+        preparedImages[kind] = prepared;
+        draftAppearance[key] = prepared.preview;
+        showAppearance();
+      })
+      .catch((error) => {
+        if (imageVersions[kind] !== version) return;
+        delete preparedImages[kind];
+        $(id).value = "";
+        draftAppearance[key] =
+          profile?.user?.[key] ??
+          (kind === "avatar" ? "/assets/avatar.png" : "");
+        showAppearance();
+        message(error.message, true);
+        throw error;
+      });
+    imageTasks[kind] = work;
+    work
+      .finally(() => {
+        if (imageTasks[kind] === work) delete imageTasks[kind];
+      })
+      .catch(() => {});
+  };
+}
+function restoreImage(kind) {
+  imageVersions[kind] = (imageVersions[kind] ?? 0) + 1;
+  delete preparedImages[kind];
+  delete imageTasks[kind];
+  $(kind === "avatar" ? "photo" : "banner-photo").value = "";
+  draftAppearance[kind === "avatar" ? "avatarURL" : "bannerURL"] =
+    kind === "avatar" ? "/assets/avatar.png" : "";
+  showAppearance();
+}
+$("remove-banner").onclick = () => restoreImage("banner");
+$("reset-avatar").onclick = () => restoreImage("avatar");
 async function loadFriendship() {
   const controls = $("profile-friendship");
   controls.hidden = !user || profileId === user.id;
@@ -227,7 +302,9 @@ async function load() {
     catalog = cards.cards;
     $("player-name").textContent = data.user.nome;
     document.title = `${data.user.nome} · Zacornia`;
-    setImageSource($("avatar"), data.user.avatarURL || "/assets/avatar.png");
+    draftAppearance = { ...data.user };
+    $("avatar-frame").value = data.user.avatarFrame || "none";
+    showAppearance();
     $("profile-subtitle").textContent = data.owner
       ? "Seu perfil de duelista"
       : "Perfil do duelista";
@@ -314,37 +391,47 @@ $("more-history").onclick = async () => {
 };
 $("profile-form").onsubmit = async (e) => {
   e.preventDefault();
-  const button = e.target.querySelector("button");
-  button.disabled = true;
+  const controls = [...e.target.querySelectorAll("input, select, button")];
+  for (const control of controls) control.disabled = true;
   try {
-    let avatarURL = user.avatarURL;
-    const file = $("photo").files[0];
-    if (file) {
-      if (
-        file.size > 200 * 1024 ||
-        !["image/png", "image/jpeg", "image/webp"].includes(file.type)
-      )
-        throw new Error("Use PNG, JPG ou WebP de até 200 KB.");
-      const upload = await api("/auth/avatar", {
-        method: "POST",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-      avatarURL = upload.avatarURL;
+    await Promise.all(Object.values(imageTasks));
+    const appearance = {
+      avatarURL: profile.user.avatarURL || "/assets/avatar.png",
+      bannerURL: profile.user.bannerURL || "",
+      avatarFrame: $("avatar-frame").value,
+    };
+    for (const kind of ["avatar", "banner"]) {
+      const key = kind === "avatar" ? "avatarURL" : "bannerURL",
+        prepared = preparedImages[kind];
+      if (prepared) {
+        const upload = await api("/auth/" + kind, {
+          method: "POST",
+          headers: { "Content-Type": prepared.blob.type },
+          body: prepared.blob,
+        });
+        appearance[key] = upload[key];
+      } else if (!draftAppearance[key]?.startsWith("data:"))
+        appearance[key] = draftAppearance[key] ?? appearance[key];
     }
     const result = await api("/auth/user/edit", {
       method: "PUT",
-      body: JSON.stringify({ nome: $("name").value, avatarURL }),
+      body: JSON.stringify({ nome: $("name").value, ...appearance }),
     });
     user = result.user;
-    setImageSource($("avatar"), user.avatarURL);
+    profile.user = { ...profile.user, ...user };
+    draftAppearance = { ...profile.user };
+    preparedImages = {};
+    imageTasks = {};
+    $("photo").value = "";
+    $("banner-photo").value = "";
+    showAppearance();
     $("player-name").textContent = user.nome;
     message("Perfil atualizado.");
     await navbar();
   } catch (e) {
     message(e.message, true);
   } finally {
-    button.disabled = false;
+    for (const control of controls) control.disabled = false;
   }
 };
 $("share-profile").onclick = async () => {

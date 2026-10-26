@@ -3,8 +3,10 @@ const schema = new Schema(
   {
     _id: { type: String, required: true },
     data: { type: Buffer, required: true },
-    original: { type: Buffer, required: true, select: false },
-    originalType: { type: String, required: true, select: false },
+    // Legacy originals stay readable; new uploads keep only the optimized WebP.
+    original: { type: Buffer, select: false },
+    originalType: { type: String, select: false },
+    kind: { type: String, enum: ["avatar", "banner"] },
     createdAt: { type: Date, default: Date.now },
   },
   { versionKey: false },

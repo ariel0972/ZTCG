@@ -22,7 +22,7 @@
     </header>
     <main class="page profile-page">
       <section class="profile-hero" aria-label="Perfil do duelista">
-        <div class="profile-cover">
+        <div id="profile-cover" class="profile-cover">
           <p class="eyebrow">ZACORNIA · DUELISTAS</p>
           <span class="cover-rune" aria-hidden="true">✧</span>
         </div>
@@ -107,11 +107,30 @@
               maxlength="80"
               required /></label
           ><label
-            >Avatar (PNG, JPG ou WebP; até 200 KB)<input
+            >Foto de perfil (PNG, JPG ou WebP; até 8 MB)<input
               id="photo"
               type="file"
               accept="image/png,image/jpeg,image/webp" /></label
-          ><button class="primary">Salvar perfil</button>
+          ><label
+            >Banner (PNG, JPG ou WebP; até 8 MB)<input
+              id="banner-photo"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+          /></label>
+          <label>Moldura da foto<select id="avatar-frame"></select></label>
+          <p class="hint profile-image-hint">
+            A imagem será recortada no centro e convertida em WebP. Banner
+            recomendado: 1600 × 500. As mudanças aparecem na prévia acima; salve
+            para aplicar.
+          </p>
+          <div class="profile-image-actions">
+            <button id="remove-banner" class="quiet" type="button">
+              Restaurar banner padrão</button
+            ><button id="reset-avatar" class="quiet" type="button">
+              Restaurar foto padrão
+            </button>
+          </div>
+          <button class="primary" type="submit">Salvar perfil</button>
         </form>
       </details>
       <section id="decks-section" class="surface profile-section">

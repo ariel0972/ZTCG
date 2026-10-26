@@ -2166,3 +2166,28 @@ O campo tem indicação central, contador e animação de fogo nos dois lados, i
 para espectadores; movimento reduzido mantém indicação estática. Desconto não afeta
 habilidades, soma a outros descontos de cartas e nunca deixa custo negativo.
 Furacão 004 não possui mais dano periódico no mago nem combinação com Bola de Fogo.
+
+PERFIL PERSONALIZÁVEL E CONFIRMAÇÃO DE TURNO — 25/10/2026
+- public/JS/profile-appearance.js — Prévia compartilhada de banner/moldura e otimização local: origem até 8 MB, recorte central, saída até 2 MB, sem ampliar imagens pequenas.
+- public/JS/battle-confirmations.js — Confirma fim de turno enquanto há ataques legais, invalida diálogo por versão e define cliques externos que cancelam ações preparadas.
+- tests/profile-appearance.test.ts — Confere imagens maiores, recortes, WebP sem originais, autorização, persistência, validação, privacidade e prévia das molduras.
+- tests/battle-confirmations.test.ts — Verifica ataques restantes, cancelamento externo preservando alvos e diálogos, confirmação e invalidação de estado.
+
+Perfil aceita banner próprio e molduras none/gold/silver/fire/water/earth/air/zarcos.
+user.bannerURL e avatarFrame aparecem no perfil público e /auth/me; edição autenticada
+valida identificadores. Clientes antigos sem esses campos preservam a aparência atual.
+POST /auth/avatar e /auth/banner recebem binário até 2 MB; arquivos de origem até 8 MB
+são reduzidos no navegador antes do envio para respeitar a Vercel. O servidor confere
+formato/pixels e recodifica WebP (avatar até 384×384; banner até 1600×500), sem EXIF.
+Novos documentos AvatarImage guardam só data WebP, kind e data de criação. Originais
+legados não são apagados nem reprocessados. O caminho por hash/cache/ETag é preservado.
+O editor mostra recorte central em prévia, permite restaurar padrões e só persiste
+após Salvar. Não há mudança de plano/cota do MongoDB nem contratação de armazenamento.
+
+O aviso de passar turno consulta attackTargets do snapshot autoritativo, incluindo
+mago, tropas, montarias e estruturas com ataque legal. Continua aparecendo após um
+ataque se outro ainda for permitido. Preparação, abertura bloqueada, cartas sem alvo,
+estados impeditivos e limites gastos não geram aviso. Cancelar não envia comando;
+confirmar confere partida/turno/versão atuais. Mudança de estado fecha diálogo antigo.
+Clique externo fecha também seleções play/ability/attack/move; alvos do campo, mãos,
+menus de zonas e diálogos permanecem utilizáveis. Não gasta ações ou mana ao cancelar.

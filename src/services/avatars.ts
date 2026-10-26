@@ -4,9 +4,17 @@ import Avatar from "../db/models/avatar";
 import { AppError } from "../lib/errors";
 import { ReadCache } from "../lib/read-cache";
 const images = new ReadCache<Buffer | null>(60000, 100);
-export async function prepareAvatar(original: Buffer) {
-  if (!original.length || original.length > 200 * 1024)
-    throw new AppError(422, "Use imagem de até 200 KB.");
+export const profileImageUploadLimit = 2 * 1024 * 1024;
+export type ProfileImageKind = "avatar" | "banner";
+export async function prepareAvatar(
+  original: Buffer,
+  kind: ProfileImageKind = "avatar",
+) {
+  if (!original.length || original.length > profileImageUploadLimit)
+    throw new AppError(
+      422,
+      "A imagem otimizada deve ter até 2 MB. Escolha a imagem pelo editor do perfil.",
+    );
   let data: Buffer, format: string;
   try {
     const image = sharp(original, {
@@ -20,7 +28,10 @@ export async function prepareAvatar(original: Buffer) {
     format = info.format;
     data = await image
       .rotate()
-      .resize(192, 192, { fit: "cover", withoutEnlargement: true })
+      .resize(kind === "banner" ? 1600 : 384, kind === "banner" ? 500 : 384, {
+        fit: "cover",
+        withoutEnlargement: true,
+      })
       .webp({ quality: 80, effort: 4 })
       .toBuffer();
   } catch {
@@ -28,8 +39,11 @@ export async function prepareAvatar(original: Buffer) {
   }
   return { data, format };
 }
-export async function storeAvatar(original: Buffer) {
-  const { data, format } = await prepareAvatar(original);
+export async function storeAvatar(
+  original: Buffer,
+  kind: ProfileImageKind = "avatar",
+) {
+  const { data } = await prepareAvatar(original, kind);
   const hash = createHash("sha256").update(data).digest("hex");
   try {
     await Avatar.updateOne(
@@ -37,8 +51,7 @@ export async function storeAvatar(original: Buffer) {
       {
         $setOnInsert: {
           data,
-          original,
-          originalType: format,
+          kind,
           createdAt: new Date(),
         },
       },

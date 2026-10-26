@@ -4,6 +4,11 @@ import {
   describeEntryCost,
 } from "./entry-cost.js";
 import { createCoinToss } from "./coin-toss.js";
+import {
+  availableAttackCount,
+  dismissCardMenu,
+  createEndTurnConfirmation,
+} from "./battle-confirmations.js";
 import { setImageSource } from "./image-sources.js";
 import {
   automaticTargets,
@@ -51,6 +56,12 @@ import {
 } from "./field-overlays.js";
 let deckSelector;
 const materialChoice = createMaterialChoice();
+const endTurnConfirmation = createEndTurnConfirmation({
+  onConfirm: (expected) => {
+    if (myTurn() && !pending && endTurnConfirmation.matches(state, expected))
+      void command({ type: "endTurn" });
+  },
+});
 let choosingMaterials = false;
 const battleEvents = createBattleEvents(document.body, {
   getViewerId: () => user?.id,
@@ -1417,6 +1428,7 @@ function hud(id, player) {
   $(id).replaceChildren(identity, resources, actions);
 }
 function render() {
+  endTurnConfirmation.update(state);
   coinToss.update(state);
   document.body.classList.toggle("in-match", !!state && !!user);
   responsePanel.replaceChildren();
@@ -1746,14 +1758,7 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") resetSelection();
 });
 document.addEventListener("pointerdown", (event) => {
-  if (
-    selected &&
-    ["hand", "field"].includes(selected.type) &&
-    !event.target.closest(
-      "#card-menu, .board-slot, .battle-hand-card, .structure-action, .rider-action",
-    )
-  )
-    resetSelection();
+  if (dismissCardMenu(event.target, selected)) resetSelection();
 });
 window.addEventListener("resize", () => {
   if (state) renderActions();
@@ -1779,7 +1784,12 @@ $("enemy-deck-zone").onclick = () => {
     `Baralho do adversário: ${enemy.deckCount} cartas. As cartas e a ordem de compra são ocultas.`,
   );
 };
-$("end-turn").onclick = () => command({ type: "endTurn" });
+$("end-turn").onclick = () => {
+  if (!myTurn() || pending) return;
+  const count = availableAttackCount(state, user.id);
+  if (count) endTurnConfirmation.ask(state, count);
+  else void command({ type: "endTurn" });
+};
 $("mulligan").onclick = () => command({ type: "mulligan" });
 $("accept-bonus").onclick = () =>
   command({ type: "preparationBonus", accept: true });

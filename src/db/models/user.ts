@@ -7,6 +7,9 @@ export interface IUser extends Document {
   email: string;
   senha: string;
   avatarURL: string;
+  bannerURL?: string;
+  avatarFrame?:
+    "none" | "gold" | "silver" | "fire" | "water" | "earth" | "air" | "zarcos";
   ranking?: {
     partidas: number;
     vitorias: number;
@@ -38,6 +41,12 @@ const userSchema = new Schema<IUser>({
   email: { type: String, required: true, unique: true },
   senha: { type: String, required: true, select: false },
   avatarURL: { type: String, default: "/assets/avatar.png" },
+  bannerURL: { type: String, default: "" },
+  avatarFrame: {
+    type: String,
+    enum: ["none", "gold", "silver", "fire", "water", "earth", "air", "zarcos"],
+    default: "none",
+  },
   ranking: { type: Schema.Types.Mixed, select: false },
   nivel: { type: Number, default: 1 },
   vitorias: { type: Number, default: 0 },

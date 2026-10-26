@@ -2499,3 +2499,32 @@
     opacity: 0.65;
   }
 }
+
+.end-turn-confirmation {
+  width: min(92vw, 460px);
+  max-height: 85dvh;
+  overflow: auto;
+  border: 1px solid #b49c6b;
+  border-radius: 18px;
+  padding: 24px;
+  background: #162730;
+  color: #e5edf1;
+  box-shadow: 0 24px 90px #0009;
+}
+.end-turn-confirmation::backdrop {
+  background: #020b12b3;
+}
+.end-turn-confirmation h2 {
+  margin: 0 0 12px;
+  font-size: 1.3rem;
+}
+.end-turn-confirmation p {
+  line-height: 1.6;
+  color: #bcd2dd;
+}
+.end-turn-confirmation .result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
