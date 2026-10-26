@@ -16,6 +16,7 @@ import {
   projectMatchRankings,
 } from "../src/services/ranking-projections";
 import { storeAvatar, avatarBytes } from "../src/services/avatars";
+import Avatar from "../src/db/models/avatar";
 import sharp from "sharp";
 import { monthlyDeckRanking } from "../src/services/monthly-deck-ranking";
 test(
@@ -281,7 +282,16 @@ test(
         .toBuffer();
       const url = await storeAvatar(png);
       const bytes = await avatarBytes(url.split("/").pop()!.split(".")[0]);
-      assert.equal((await sharp(bytes!).metadata()).width, 192);
+      const metadata = await sharp(bytes!).metadata();
+      assert.equal(metadata.width, 384);
+      assert.equal(metadata.height, 384);
+      assert.equal(metadata.format, "webp");
+      const saved = await Avatar.findById(url.split("/").pop()!.split(".")[0])
+        .select("+original +originalType")
+        .lean();
+      assert.equal(saved!.original, undefined);
+      assert.equal(saved!.originalType, undefined);
+      assert.equal(saved!.kind, "avatar");
     } finally {
       // The name was checked and the database was empty before this test created it.
       if (safeToDrop) await mongoose.connection.db!.dropDatabase();
