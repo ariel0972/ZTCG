@@ -5,6 +5,8 @@ import { canonicalStatus } from "./status";
 import { reactionDescriptions } from "./reactions";
 
 export const effectIds = [
+  "deployFromZone",
+  "summonCircle",
   "fieldRules",
   "returnToHand",
   "equipmentGrant",
@@ -185,6 +187,51 @@ export function playableErrors(card: Card): string[] {
   ) => {
     for (const e of effects) {
       if (
+        e.id === "deployFromZone" &&
+        (!["Deck", "Cemiterio", "Reserva"].includes(target ?? "") ||
+          !e.valor ||
+          e.valor > 3 ||
+          !e.zonas?.length ||
+          !e.destino ||
+          !e.tiposCarta?.length ||
+          e.tiposCarta.some((t) => t !== e.destino))
+      )
+        errors.push(
+          "deployFromZone exige zona, quantidade 1–3, destino e tipos compatíveis.",
+        );
+      if (
+        e.id === "deployFromZone" &&
+        e.zonas &&
+        (new Set(e.zonas).size !== e.zonas.length ||
+          (target === "Reserva"
+            ? e.zonas.length !== 2
+            : e.zonas.some((zone) => zone !== target)))
+      )
+        errors.push(
+          "As zonas da busca devem corresponder ao alvo Deck, Cemiterio ou Reserva.",
+        );
+      if (
+        (e.zonas || e.excluirSubtipos || e.destino) &&
+        e.id !== "deployFromZone"
+      )
+        errors.push("Zonas, subtipos e destino exigem deployFromZone.");
+      if (
+        e.id === "summonCircle" &&
+        (target !== "CampoAliado" || e.valor === undefined)
+      )
+        errors.push("summonCircle exige CampoAliado e recompensa de mana.");
+      if (
+        e.selecaoCampo &&
+        (target !== "Global" || !["damage", "status", "heal"].includes(e.id))
+      )
+        errors.push(
+          "Seleção global por efeito exige Global e dano, cura ou status.",
+        );
+      if (e.duracaoInicial && e.id !== "status")
+        errors.push("Duração inicial exige status.");
+      if (e.ignoraProtecaoStatus && e.id !== "status")
+        errors.push("Dispensa de proteção de condição exige status.");
+      if (
         e.trocaAliada !== undefined &&
         (e.id !== "status" || e.status !== "Campo livre")
       )
@@ -291,7 +338,10 @@ export function playableErrors(card: Card): string[] {
         errors.push(
           "Ressurreição exige um único efeito para escolher um destino.",
         );
-      if (e.tiposCarta && e.id !== "shuffleGraveyard")
+      if (
+        e.tiposCarta &&
+        !["shuffleGraveyard", "deployFromZone"].includes(e.id)
+      )
         errors.push("tiposCarta exige shuffleGraveyard.");
       if (e.id === "shuffleGraveyard" && (!e.valor || e.valor > 3))
         errors.push("Embaralhar cemitério exige quantidade entre 1 e 3.");
@@ -458,7 +508,16 @@ export function playableErrors(card: Card): string[] {
         errors.push("Cura posterior ao dano só pode atingir aliados.");
       if (e.valorEstrutura !== undefined && e.id !== "damage")
         errors.push("valorEstrutura exige damage.");
-      if ((e.direcao || e.borda || e.estrutura) && e.id !== "displace")
+      if (
+        (e.direcao || e.borda || e.estrutura) &&
+        e.id !== "displace" &&
+        !(
+          e.id === "status" &&
+          e.estrutura === "manter" &&
+          !e.direcao &&
+          !e.borda
+        )
+      )
         errors.push("Direção, borda e estrutura exigem displace.");
       if (
         e.id === "displace" &&
@@ -522,7 +581,10 @@ export function playableErrors(card: Card): string[] {
         errors.push("fieldRules exige Global, duração e regras de campo.");
       if (e.id === "searchNamed" && !e.carta)
         errors.push("Busca por carta exige carta (numeroCatalogo).");
-      if (e.id !== "searchNamed" && (e.carta || e.seNaoUsada))
+      if (
+        !["searchNamed", "deployFromZone"].includes(e.id) &&
+        (e.carta || e.seNaoUsada)
+      )
         errors.push("carta/seNaoUsada exigem searchNamed.");
       if (
         e.unidade &&
@@ -580,6 +642,7 @@ export function playableErrors(card: Card): string[] {
       )
         errors.push(`Defina valor para ${e.id}.`);
       if (
+        !e.selecaoCampo &&
         ["damage", "heal", "status"].includes(e.id) &&
         ![
           "UnicoInimigo",
@@ -696,6 +759,8 @@ export function playableErrors(card: Card): string[] {
           "TodosAliados",
           "TodasTropasInimigas",
           "Cemiterio",
+          "Reserva",
+          "Deck",
         ].includes(h.alvo))
     )
       errors.push("Filtro de habilidade vazio ou alvo incompatível.");
@@ -825,6 +890,18 @@ export function playableErrors(card: Card): string[] {
           "Filtro por ataque atual exige desconto de habilidades, evitando dependência circular de ataque.",
         );
       for (const effect of h.efeitos) {
+        if (
+          effect.id === "reactionDamage" &&
+          (h.gatilho !== "onElementalReaction" || !h.reacao)
+        )
+          errors.push("Dano substituto exige filtro de reação.");
+        if (effect.id === "stackReduction" && h.gatilho !== "onSpellCast")
+          errors.push("Acúmulo de resistência exige lançamento de feitiço.");
+        if (
+          effect.id === "statusWard" &&
+          effect.excecoes.some((s) => !statusIds.includes(s))
+        )
+          errors.push("Exceção de proteção não implementada.");
         if (effect.id === "spellDamageTurn" && card.tipo !== "Mago")
           errors.push("Bônus temporário de feitiços exige Mago.");
         if (effect.id === "attackElement" && card.tipo === "Feitico")
@@ -843,6 +920,7 @@ export function playableErrors(card: Card): string[] {
         const allowed =
           h.gatilho === "continuous"
             ? [
+                "statusWard",
                 "attackAura",
                 "attackBonus",
                 "abilityDiscount",
@@ -863,6 +941,7 @@ export function playableErrors(card: Card): string[] {
               : (passiveIds as readonly string[]).filter(
                   (id) =>
                     ![
+                      "statusWard",
                       "attackAura",
                       "attackBonus",
                       "abilityDiscount",

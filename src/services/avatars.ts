@@ -5,7 +5,7 @@ import { AppError } from "../lib/errors";
 import { ReadCache } from "../lib/read-cache";
 const images = new ReadCache<Buffer | null>(60000, 100);
 export const profileImageUploadLimit = 2 * 1024 * 1024;
-export type ProfileImageKind = "avatar" | "banner";
+export type ProfileImageKind = "avatar" | "banner" | "card";
 export async function prepareAvatar(
   original: Buffer,
   kind: ProfileImageKind = "avatar",
@@ -26,13 +26,15 @@ export async function prepareAvatar(
     if (!info.format || !["png", "jpeg", "webp"].includes(info.format))
       throw Error();
     format = info.format;
+    const width = kind === "card" ? 1200 : kind === "banner" ? 1600 : 384;
+    const height = kind === "card" ? 1680 : kind === "banner" ? 500 : 384;
     data = await image
       .rotate()
-      .resize(kind === "banner" ? 1600 : 384, kind === "banner" ? 500 : 384, {
-        fit: "cover",
+      .resize(width, height, {
+        fit: kind === "card" ? "inside" : "cover",
         withoutEnlargement: true,
       })
-      .webp({ quality: 80, effort: 4 })
+      .webp({ quality: kind === "card" ? 90 : 80, effort: 4 })
       .toBuffer();
   } catch {
     throw new AppError(422, "Imagem inválida. Use PNG, JPG ou WebP.");
@@ -42,6 +44,7 @@ export async function prepareAvatar(
 export async function storeAvatar(
   original: Buffer,
   kind: ProfileImageKind = "avatar",
+  name?: string,
 ) {
   const { data } = await prepareAvatar(original, kind);
   const hash = createHash("sha256").update(data).digest("hex");
@@ -52,6 +55,7 @@ export async function storeAvatar(
         $setOnInsert: {
           data,
           kind,
+          ...(kind === "card" ? { name: name ?? "Imagem de carta" } : {}),
           createdAt: new Date(),
         },
       },

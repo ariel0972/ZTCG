@@ -43,6 +43,9 @@ export function materialOptions(
   for (const c of player.hand) add(c, "mao");
   for (const slot of state.slots.filter((s) => s.ownerId === ownerId))
     for (const c of slotCards(slot)) add(c, "campo", slot.id);
+  for (const slot of state.slots)
+    if (slot.ownerId === ownerId && slot.summonCircle)
+      add(slot.summonCircle.card, "campo", slot.id);
   for (const a of state.attachments ?? [])
     if (a.ownerId === ownerId) add(a.source, "campo");
   const active = new Set([

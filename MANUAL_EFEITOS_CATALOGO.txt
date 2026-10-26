@@ -1980,3 +1980,58 @@ REGRAS GENÉRICAS DE CAMPO E DEVOLUÇÃO — 25/10/2026
 por 2 ciclos sem mover). 035 Tornado custa 6/dano 6 em inimigos; com tropa de Ar em
 qualquer lado custa 8 e causa 6 por ciclo durante 2 ciclos sem dano inicial, ignorando
 resistência. 136 Campos Flamejantes custa 7, Fogo, fieldRules acima por 2 ciclos.
+
+BUSCA, ESTRUTURAS E INVOCAÇÃO REUTILIZÁVEIS — 26/10/2026
+- deployFromZone: use alvo Deck, Cemiterio ou Reserva (Deck + Cemiterio próprios).
+  Configure valor:1..3, zonas:["Deck","Cemiterio"], tiposCarta:["Tropa"] ou
+  ["Estrutura"], destino:"Tropa" ou "Estrutura". carta:"056" filtra por número;
+  excluirSubtipos:["Invocação"] exclui subtipos. São filtros combinados.
+  Exemplo de Chamar Tropa: alvo:"Deck", maxAlvos:2, efeito {id:"deployFromZone",
+  valor:2,zonas:["Deck"],tiposCarta:["Tropa"],excluirSubtipos:["Invocação"],
+  destino:"Tropa"}. Primeiro escolhe cartas, depois confirma os espaços oferecidos.
+  Não paga mana da carta encontrada, material ou mobilização, nem gera mana de entrada.
+  Tropas excedentes vão à mão; estrutura exige tropa sem estrutura. Baralho embaralha.
+  A fila pausa o turno por até 20 segundos para cada posicionamento; expiração cancela
+  aquela entrada, mantendo a carta na origem. Não é uma ressurreição ao usar cemitério.
+- summonCircle: alvo CampoAliado, valor:4 (mana recuperada ao consumir). Marca espaço
+  vazio sem Lama, permanece até usado e só permite mobilizar Invocação nesse espaço.
+  Dispensa mana E materiais; mantém o limite normal e bloqueio após iniciar ataques.
+  Qualquer entrada direta, movimento ou troca de lado que leve tropa ao espaço consome
+  a área e recupera mana para o lançador original. A carta física vai ao cemitério.
+  Enquanto ativo pode ser material de Feitico do campo, se outro custo permitir.
+- selecaoCampo:"TodasTropas" ou "TodasEstruturas" em damage/status/heal de uma ação
+  Global seleciona os dois lados, sem magos. Pode combinar filtroAlvo e perfurante.
+  Terremoto usa grupos separados para não causar dano duas vezes na mesma estrutura.
+- status com estrutura:"manter" bloqueia a condição se uma estrutura ativa proteger
+  a tropa; ignoraProtecaoStatus:true dispensa essa proteção e a proteção declarativa.
+  duracaoInicial:2 substitui apenas a duração inicial de uma condição elemental;
+  reaplicação mantém regras normais. Amplificar ainda aumenta duração e intensidade.
+- Passiva continuous/proprio com {id:"statusWard",excecoes:["Incapacitado",
+  "Atordoado","Abalo"]} bloqueia condições negativas da própria carta e da tropa
+  que ela protege se for estrutura. Abalo desativa proteção. Não bloqueia dano,
+  efeitos positivos, controle, devolução à mão ou deslocamentos.
+- Passiva onStructureDestroyed/proprio com {id:"status",alvo:"tropaVinculada",
+  status:"SemAtaque",duracao:1} aplica ao grupo de tropas protegido quando quebra.
+  A ação passiva status também aceita unidade:"turno" para terminar no turno atual.
+- stackReduction: ação de passiva onSpellCast, valor:1,maximo:5,
+  removerElemento:"Agua". filtroEvento.elemento define quais feitiços acumulam.
+  Não expira por ciclos; o elemento configurado remove os acúmulos antes do dano.
+- reactionDamage: em onElementalReaction, escopo:"qualquer", reacao:{nome:"Erosão",
+  quando:"provoca"}, efeitos:[{id:"reactionDamage",valor:1,duracao:2}]. Substitui
+  o efeito normal da reação por dano periódico no alvo e permite proteção por condições.
+  Sem essa configuração, Erosão continua descartando 2 cartas normalmente.
+- Mago de Terra: 20 PV/3 ATQ/recuperação 3, limites 2/2/3/3, redução máxima 5;
+  Gerar Torre custa 5, sem espera adicional além do uso normal por turno. Erosão
+  e Lama especiais só ativam quando ele provoca a reação. Lama dá +2 no ataque
+  do mago e nos feitiços aliados até encerrar o turno atual, sem acumular cópias.
+- Bola de Demolição custa 7 e Terremoto 6; somente magos de Terra podem lançá-los.
+  Toupeira 3 mana/9 PV/3 ATQ/recuperação 2; Escavação 3, frontal, Incapacitado 1 ciclo.
+  Torre custa 4/10 PV/0 ATQ. Chamar Tropa custa 7; Círculo custa 6.
+
+IMAGENS NO CATÁLOGO
+Abra Administração > Catálogo > Imagem da carta. Selecione PNG/JPG/WebP até 8 MB;
+a aplicação otimiza para WebP até 1200x1680 sem cortar bordas. O envio otimizado
+aceita até 2 MB e valida novamente no servidor. A URL hospedada é aplicada ao JSON
+em imgURL; valide e salve a carta. A galeria permite reutilizar artes já hospedadas
+e imagens das cartas existentes, com busca pelo nome. Apenas admins enviam/listam;
+a imagem pública por hash é usada no jogo e não depende do arquivo do computador.

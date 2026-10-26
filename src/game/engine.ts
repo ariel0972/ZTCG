@@ -1,3 +1,10 @@
+import { blocksStatus } from "./status-ward";
+import {
+  circleWaiver,
+  deploymentAllowed,
+  deploymentCards,
+  deploymentDestinations,
+} from "./deployment";
 import { entryCost, materialOptions } from "./entry-cost";
 import { modifiedSpell, currentSpellCost } from "./spell-modifiers";
 import { cancelledByField, normalElementDamage } from "./field-rules";
@@ -778,8 +785,48 @@ export class Game {
       this.fail("Não há ressurreição disponível para você.");
     if (!cardId || !destinationId || !choice.cards.includes(cardId))
       this.fail("Escolha uma tropa oferecida e um espaço para reviver.");
+    const card = deploymentCards(this.state, choice).find(
+      (c) => c.id === cardId,
+    );
+    const destination =
+      choice.deployment &&
+      deploymentDestinations(
+        this.state.slots,
+        user,
+        choice.deployment.destino,
+      ).find((s) => s.id === destinationId);
+    if (choice.deployment) {
+      if (!card || !destination)
+        this.fail("Escolha uma carta oferecida e um destino válido.");
+      const player = this.player(user);
+      player.deck = player.deck.filter((c) => c.id !== cardId);
+      player.graveyard = player.graveyard.filter((c) => c.id !== cardId);
+      this.resetCard(card);
+      if (choice.deployment.destino === "Estrutura")
+        destination.structure = card;
+      else {
+        destination.card = card;
+        this.adjustHealth(
+          card,
+          this.weapons(destination, card).reduce(
+            (n, w) => n + (w.bonusHp ?? 0),
+            0,
+          ),
+        );
+      }
+      this.event("summon", card, choice.source + ": entrou em campo.", {
+        slotId: destination.id,
+      });
+      this.trigger("onSummon", {
+        ownerId: user,
+        cardId,
+        card,
+        slotId: destination.id,
+        element: card.elemento,
+      });
+      this.shuffle(player.deck);
+    } else this.revive(user, cardId, destinationId, {}, choice.source);
     this.state.pendingRevives!.shift();
-    this.revive(user, cardId, destinationId, {}, choice.source);
   }
   private findSourceCard(id: string) {
     return (
@@ -1065,6 +1112,9 @@ export class Game {
         : source
           ? `Efeito de ${source.nome}`
           : "Dano");
+    target.statuses = target.statuses.filter(
+      (s) => !s.removerElemento || s.removerElemento !== element,
+    );
     let remaining = value;
     const protection = target.statuses.find(
       (s) =>
@@ -1418,7 +1468,10 @@ export class Game {
       for (const c of p.hand) before.set(c.id, { from: "hand", ownerId: p.id });
     }
     for (const slot of previous.slots)
-      for (const c of slotCards(slot))
+      for (const c of [
+        ...slotCards(slot),
+        ...(slot.summonCircle ? [slot.summonCircle.card] : []),
+      ])
         before.set(c.id, {
           from: "field",
           ownerId: slot.ownerId,
@@ -1456,6 +1509,19 @@ export class Game {
     }
   }
   private resolve() {
+    for (const slot of this.state.slots)
+      if (slot.summonCircle && slot.card?.tipo === "Tropa") {
+        const circle = slot.summonCircle;
+        delete slot.summonCircle;
+        this.player(circle.card.ownerId).graveyard.push(circle.card);
+        this.gainMana(this.player(circle.card.ownerId), circle.mana);
+        this.event(
+          "death",
+          circle.card,
+          "Círculo consumido pela entrada de uma tropa.",
+          { slotId: slot.id },
+        );
+      }
     let changed = true,
       guard = 0;
     while (changed && guard++ < 100) {
@@ -1559,10 +1625,14 @@ export class Game {
     if (guard >= 100) this.fail("Ciclo de efeitos excedeu o limite.");
     this.state.pendingRevives = this.state.pendingRevives?.filter(
       (choice) =>
-        reviveDestinations(this.state.slots, choice.ownerId).length &&
-        this.player(choice.ownerId).graveyard.some(
-          (c) => c.tipo === "Tropa" && choice.cards.includes(c.id),
-        ),
+        (choice.deployment
+          ? deploymentDestinations(
+              this.state.slots,
+              choice.ownerId,
+              choice.deployment.destino,
+            )
+          : reviveDestinations(this.state.slots, choice.ownerId)
+        ).length && deploymentCards(this.state, choice).length,
     );
     const dead = this.state.players.filter((p) => p.mage.hpAtual <= 0);
     if (dead.length && !this.deferMageDefeat)
@@ -1641,6 +1711,47 @@ export class Game {
     event: PassiveEvent,
   ): boolean {
     const owner = this.player(source.ownerId);
+    if (action.id === "stackReduction") {
+      const previous = source.statuses.find(
+        (s) =>
+          s.nome === "ReducaoDano" &&
+          s.permanente &&
+          s.removerElemento === action.removerElemento,
+      );
+      const status: Status = previous ?? {
+        nome: "ReducaoDano",
+        turnosRestantes: 1,
+        valor: 0,
+      };
+      if (!previous) source.statuses.push(status);
+      status.valor = Math.min(
+        action.maximo,
+        (status.valor ?? 0) + action.valor,
+      );
+      status.permanente = true;
+      status.removerElemento = action.removerElemento;
+      status.origin = source.nome;
+      return true;
+    }
+    if (action.id === "reactionDamage") {
+      if (
+        !event.card ||
+        !event.reaction ||
+        blocksStatus(event.card, event.reaction, this.state.slots)
+      )
+        return false;
+      const status = applyStatus(
+        event.card.statuses,
+        event.reaction,
+        action.duracao,
+        action.valor,
+        this.state.turn,
+      );
+      status.danoPeriodico = action.valor;
+      status.origin = source.nome + ": " + event.reaction;
+      status.originOwnerId = source.ownerId;
+      return true;
+    }
     if (action.id === "revive")
       return this.queueRevive(
         action.jogador === "aliado" ? owner.id : this.opponent(owner.id).id,
@@ -1779,6 +1890,28 @@ export class Game {
       return true;
     }
     if (!("alvo" in action)) return false; // Continuous effects are queried, never dispatched.
+    if (action.alvo === "tropaVinculada" && action.id === "status") {
+      const slot = this.state.slots.find((s) => s.id === event.slotId);
+      for (const target of [slot?.card, slot?.rider].filter(
+        (c): c is Instance => !!c && c.tipo === "Tropa" && c.hpAtual > 0,
+      ))
+        this.effects(
+          owner.id,
+          [
+            {
+              id: "status",
+              status: action.status,
+              duracao: action.duracao,
+              valor: action.valor,
+              unidade: action.unidade,
+            },
+          ],
+          [target.id],
+          undefined,
+          source,
+        );
+      return !!slot?.card;
+    }
     const id =
       action.alvo === "fonte"
         ? source.id
@@ -1829,9 +1962,12 @@ export class Game {
               status: action.status,
               duracao: action.duracao,
               valor: action.valor,
+              unidade: action.unidade,
             },
           ],
           [target.id],
+          undefined,
+          source,
         );
         return true;
     }
@@ -1889,19 +2025,22 @@ export class Game {
     }
     if (!ids.length) this.fail("Selecione pelo menos um alvo.");
     if (
+      type === "Reserva" ||
       type === "Deck" ||
       type === "DeckOponente" ||
       type === "Cemiterio" ||
       type === "Mao"
     ) {
       const zone =
-        type === "Mao"
-          ? me.hand
-          : type === "Deck"
-            ? me.deck
-            : type === "DeckOponente"
-              ? enemy.deck
-              : me.graveyard;
+        type === "Reserva"
+          ? [...me.deck, ...me.graveyard]
+          : type === "Mao"
+            ? me.hand
+            : type === "Deck"
+              ? me.deck
+              : type === "DeckOponente"
+                ? enemy.deck
+                : me.graveyard;
       if (ids.some((id) => !zone.some((c) => c.id === id)))
         this.fail("A carta não pertence à zona selecionada.");
       return ids;
@@ -2172,7 +2311,21 @@ export class Game {
         this.fail(
           "Efeito na própria carta exige uma habilidade de origem em campo.",
         );
-      const ids = (effect.alvo === "Proprio" ? [source!.id] : selection).filter(
+      const selectionIds = effect.selecaoCampo
+        ? this.state.slots
+            .flatMap(slotCards)
+            .filter(
+              (c) =>
+                c.tipo ===
+                  (effect.selecaoCampo === "TodasTropas"
+                    ? "Tropa"
+                    : "Estrutura") && c.hpAtual > 0,
+            )
+            .map((c) => c.id)
+        : selection;
+      const ids = (
+        effect.alvo === "Proprio" ? [source!.id] : selectionIds
+      ).filter(
         (id) =>
           !effect.filtroAlvo ||
           (matchesPassiveFilter(
@@ -2185,6 +2338,81 @@ export class Game {
             )),
       );
       switch (effect.id) {
+        case "deployFromZone": {
+          const zones = effect.zonas ?? ["Deck"];
+          const available = [
+            ...(zones.includes("Deck") ? player.deck : []),
+            ...(zones.includes("Cemiterio") ? player.graveyard : []),
+          ];
+          const cards = ids.map((id) => available.find((c) => c.id === id));
+          if (
+            !cards.length ||
+            cards.length > (effect.valor ?? 1) ||
+            cards.some((c) => !c || !deploymentAllowed(c, effect))
+          )
+            this.fail("Escolha cartas válidas das zonas e tipos configurados.");
+          const destinations = deploymentDestinations(
+            this.state.slots,
+            ownerId,
+            effect.destino,
+          );
+          if (effect.destino === "Estrutura" && !destinations.length)
+            this.fail(
+              "Não há tropa aliada sem estrutura para receber a carta.",
+            );
+          for (let i = 0; i < cards.length; i++) {
+            const card = cards[i]!;
+            if (i >= destinations.length) {
+              player.deck = player.deck.filter((c) => c.id !== card.id);
+              player.graveyard = player.graveyard.filter(
+                (c) => c.id !== card.id,
+              );
+              this.resetCard(card);
+              player.hand.push(card);
+              this.event(
+                "notice",
+                card,
+                (cause ?? source?.nome ?? "Busca") +
+                  ": foi para a mão por falta de espaço.",
+              );
+            } else
+              (this.state.pendingRevives ??= []).push({
+                id: randomUUID(),
+                ownerId,
+                cards: [card.id],
+                source: cause ?? source?.nome ?? "Entrada em campo",
+                deployment: { destino: effect.destino ?? "Tropa" },
+              });
+          }
+          this.shuffle(player.deck);
+          break;
+        }
+        case "summonCircle": {
+          const slot = this.state.slots.find(
+            (s) =>
+              s.id === ids[0] && s.ownerId === ownerId && s.kind === "Tropa",
+          );
+          if (
+            !source ||
+            !slot ||
+            slot.card ||
+            slot.rider ||
+            slot.summonCircle ||
+            slot.terrain
+          )
+            this.fail("Escolha um espaço aliado vazio, sem círculo ou Lama.");
+          const physical =
+            player.graveyard.find((c) => c.id === source.id) ?? source;
+          player.graveyard = player.graveyard.filter((c) => c.id !== source.id);
+          slot.summonCircle = { card: physical, mana: effect.valor ?? 4 };
+          this.event(
+            "notice",
+            source,
+            "Área de invocação: mobilização sem mana nem materiais.",
+            { slotId: slot.id },
+          );
+          break;
+        }
         case "fieldRules": {
           if (!source || !effect.regrasCampo)
             this.fail("Campo exige carta de origem e regras.");
@@ -2782,6 +3010,25 @@ export class Game {
             const card = this.findCard(id) ?? this.targetSlot(id)?.card;
             if (!card) this.fail("Status exige uma carta.");
             if (!this.impactAllowed(card.id)) continue;
+            if (
+              !effect.ignoraProtecaoStatus &&
+              blocksStatus(
+                card,
+                effect.status!,
+                this.state.slots,
+                effect.estrutura === "manter",
+              )
+            ) {
+              this.event(
+                "notice",
+                card,
+                "A estrutura bloqueou " + effect.status + ".",
+              );
+              continue;
+            }
+            const hadStatus = hasStatus(card.statuses, [
+              canonicalStatus(effect.status!),
+            ]);
             if (effect.inicio === "proximaRodada") {
               const round = this.state.round + 1;
               const turn = this.state.turn + 2;
@@ -2831,6 +3078,11 @@ export class Game {
               );
               applied.valor = Math.max(applied.valor ?? 0, effect.valor ?? 0);
             }
+            if (effect.duracaoInicial && !hadStatus)
+              applied.turnosRestantes = Math.max(
+                effect.duracaoInicial,
+                effect.duracao ?? 0,
+              );
             if (effect.trocaAliada) applied.trocaAliada = true;
             if (applied && effect.requerStatus)
               applied.requerStatus = effect.requerStatus;
@@ -2994,7 +3246,29 @@ export class Game {
         `${reaction} ativado.`,
         { slotId: slot.id, reaction, originOwnerId: ownerId },
       );
-      this.resolveReaction(reaction, ownerId, card, slot);
+      const replacement = this.state.slots.flatMap(slotCards).some(
+        (source) =>
+          source.hpAtual > 0 &&
+          source.habilidadesPassivas.map(normalizePassive).some(
+            (rule) =>
+              rule.gatilho === "onElementalReaction" &&
+              rule.efeitos.some((e) => e.id === "reactionDamage") &&
+              passiveMatches(
+                rule,
+                source,
+                {
+                  ownerId: slot.ownerId,
+                  originOwnerId: ownerId,
+                  cardId: card?.id,
+                  card: card ?? undefined,
+                  reaction,
+                  slotId: slot.id,
+                },
+                this.state.slots,
+              ),
+          ),
+      );
+      if (!replacement) this.resolveReaction(reaction, ownerId, card, slot);
       this.trigger("onElementalReaction", {
         ownerId: slot.ownerId,
         originOwnerId: ownerId,
@@ -3018,7 +3292,7 @@ export class Game {
     switch (reaction) {
       case "Vapor":
       case "Explosão":
-        if (!card) break;
+        if (!card || blocksStatus(card, reaction, this.state.slots)) break;
         card.statuses = card.statuses.filter((s) => s.nome !== reaction);
         card.statuses.push({
           nome: reaction,
@@ -3058,7 +3332,7 @@ export class Game {
             );
         break;
       case "Congelar":
-        if (card)
+        if (card && !blocksStatus(card, "Congelado", this.state.slots))
           applyStatus(
             card.statuses,
             "Congelado",
@@ -3076,7 +3350,7 @@ export class Game {
           card.hp = (card.hp ?? 0) + 1;
           card.hpAtual++;
           this.reportHealthGain(card, 1);
-        } else {
+        } else if (!blocksStatus(card, "Envenenado", this.state.slots)) {
           applyStatus(
             card.statuses,
             "Envenenado",
@@ -3098,8 +3372,9 @@ export class Game {
     card: Instance,
     ids: string[] | undefined,
     mana: number,
+    waive = false,
   ) {
-    const rule = entryCost(card);
+    const rule = waive ? undefined : entryCost(card);
     const chosen = ids ?? [];
     const options = materialOptions(this.state, user, card);
     if (
@@ -3154,6 +3429,9 @@ export class Game {
       } else if (material.tipo === "Feitico") {
         const slot = this.targetSlot(material.id);
         if (slot?.card?.id === material.id) slot.card = null;
+        for (const position of this.state.slots)
+          if (position.summonCircle?.card.id === material.id)
+            delete position.summonCircle;
         this.state.ongoingSpells = this.state.ongoingSpells?.filter(
           (s) => s.id !== material.id,
         );
@@ -3372,10 +3650,13 @@ export class Game {
           cmd.materiais,
           this.state.phase === "PREPARATION" && card.tipo === "Tropa"
             ? 0
-            : card.tipo === "Armamento" &&
-                this.equipmentGrant(user, this.ownSlot(cmd.slotId, user))
+            : circleWaiver(this.ownSlot(cmd.slotId, user), card)
               ? 0
-              : card.custoMana,
+              : card.tipo === "Armamento" &&
+                  this.equipmentGrant(user, this.ownSlot(cmd.slotId, user))
+                ? 0
+                : card.custoMana,
+          circleWaiver(this.ownSlot(cmd.slotId, user), card),
         )
       )
         return;
@@ -3385,6 +3666,11 @@ export class Game {
         const blocked = this.equipmentPlacementError(user, slot);
         if (blocked) this.fail(blocked);
       }
+      if (
+        slot.summonCircle &&
+        (card.tipo !== "Tropa" || card.subtipo !== "Invocação")
+      )
+        this.fail("Esta área permite mobilizar apenas tropas de Invocação.");
       if (card.tipo === "Tropa" && player.combatStarted)
         this.fail(
           "Não é possível mobilizar tropas após iniciar os ataques neste turno.",
@@ -3528,7 +3814,28 @@ export class Game {
     if (
       !this.specialSpell(user, card, ids, bonus, actionBonus, temporaryBonus)
     ) {
-      if (card.elemento) this.react(user, ids, card.elemento);
+      if (card.elemento) {
+        const automatic = card.efeitos
+          .filter((e) => e.selecaoCampo)
+          .flatMap((e) =>
+            this.state.slots
+              .flatMap(slotCards)
+              .filter(
+                (c) =>
+                  c.tipo ===
+                  (e.selecaoCampo === "TodasTropas" ? "Tropa" : "Estrutura"),
+              )
+              .map((c) => c.id),
+          );
+        const reactionTargets = ids.length
+          ? ids
+          : [
+              ...new Map(
+                automatic.map((id) => [this.targetSlot(id)?.id, id]),
+              ).values(),
+            ];
+        this.react(user, reactionTargets, card.elemento);
+      }
       this.effects(
         user,
         addActionDamage(card.efeitos, bonus + actionBonus).map((e) =>
@@ -3801,7 +4108,11 @@ export class Game {
       for (const id of targets) {
         const s = this.targetSlot(id),
           target = this.findCard(id) ?? s?.card;
-        if (target && this.impactAllowed(target.id)) {
+        if (
+          target &&
+          this.impactAllowed(target.id) &&
+          !blocksStatus(target, name, this.state.slots)
+        ) {
           const previous = target.statuses.find(
             (s) => canonicalStatus(s.nome) === canonicalStatus(name),
           );
@@ -4773,6 +5084,7 @@ export class Game {
           "CampoInimigo",
           "Deck",
           "DeckOponente",
+          "Reserva",
           "Mao",
           "Cemiterio",
         ].includes(ability.alvo ?? "")
@@ -5235,6 +5547,7 @@ export class Game {
           : !roundEnded || s.round > this.state.round,
       );
       for (const { status } of due) {
+        if (blocksStatus(card, status.nome, this.state.slots)) continue;
         const applied = applyStatus(
           card.statuses,
           status.nome,
@@ -5565,9 +5878,16 @@ export class Game {
           ? this.state.pendingRevives?.[0]
           : undefined,
       reviveDestinations: this.state.pendingRevives?.length
-        ? reviveDestinations(
-            this.state.slots,
-            this.state.pendingRevives[0].ownerId,
+        ? (this.state.pendingRevives[0].deployment
+            ? deploymentDestinations(
+                this.state.slots,
+                this.state.pendingRevives[0].ownerId,
+                this.state.pendingRevives[0].deployment.destino,
+              )
+            : reviveDestinations(
+                this.state.slots,
+                this.state.pendingRevives[0].ownerId,
+              )
           ).map((s) => s.id)
         : [],
       pendingSpell: this.state.pendingSpell,
@@ -5737,6 +6057,15 @@ export class Game {
                   )
                     ? { custoMana: 0, equipamentoGratuito: true }
                     : {}),
+                  circleTargets: this.state.slots
+                    .filter(
+                      (s) =>
+                        s.ownerId === p.id &&
+                        !s.card &&
+                        !s.terrain &&
+                        circleWaiver(s, c),
+                    )
+                    .map((s) => s.id),
                   custoEntrada: entryCost(c),
                   ...(entryCost(c)
                     ? {
@@ -5756,8 +6085,15 @@ export class Game {
                           slotMaterial: o.slotId,
                         })),
                         materialBlockedReason:
+                          !this.state.slots.some(
+                            (s) =>
+                              s.ownerId === p.id &&
+                              !s.card &&
+                              !s.terrain &&
+                              circleWaiver(s, c),
+                          ) &&
                           materialOptions(this.state, p.id, c).length <
-                          entryCost(c)!.quantidade
+                            entryCost(c)!.quantidade
                             ? "Não há materiais suficientes para pagar o custo de entrada."
                             : "",
                       }

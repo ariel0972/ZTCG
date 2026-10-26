@@ -23,6 +23,9 @@ export interface PassiveEvent {
   slotId?: string;
 }
 export const passiveActionIds = [
+  "stackReduction",
+  "statusWard",
+  "reactionDamage",
   "dodgeImpact",
   "attackLifesteal",
   "discardMana",
@@ -74,6 +77,26 @@ export function describePassiveActions(actions: PassiveAction[]) {
   return actions
     .map((a) => {
       switch (a.id) {
+        case "stackReduction":
+          return (
+            "Acumula redução de dano até " +
+            a.maximo +
+            "; " +
+            a.removerElemento +
+            " remove os acúmulos"
+          );
+        case "statusWard":
+          return (
+            "Bloqueia condições negativas, exceto " + a.excecoes.join(", ")
+          );
+        case "reactionDamage":
+          return (
+            "Substitui a reação por " +
+            a.valor +
+            " de dano por ciclo durante " +
+            a.duracao +
+            " rodadas"
+          );
         case "dodgeImpact":
           return a.esperaRodadas
             ? `Pode desviar de um golpe; aguarda ${a.esperaRodadas} rodada(s) completa(s) entre usos`

@@ -24,6 +24,7 @@ export const targets = [
   "Estrutura",
   "Deck",
   "DeckOponente",
+  "Reserva",
   "Cemiterio",
   "MultiplosInimigos",
   "CampoAliado",
@@ -84,6 +85,19 @@ export const effectSchema = z
     alvo: z.literal("Proprio").optional(),
     valor: number.optional(),
     descontoMana: number.optional(),
+    zonas: z
+      .array(z.enum(["Deck", "Cemiterio"]))
+      .min(1)
+      .max(2)
+      .optional(),
+    excluirSubtipos: z
+      .array(z.enum(["Animal", "Humano", "Monstro", "Planta", "Invocação"]))
+      .max(5)
+      .optional(),
+    destino: z.enum(["Tropa", "Estrutura"]).optional(),
+    selecaoCampo: z.enum(["TodasTropas", "TodasEstruturas"]).optional(),
+    ignoraProtecaoStatus: z.boolean().optional(),
+    duracaoInicial: number.min(1).optional(),
     concessao: z
       .object({
         bonusAtaque: number.optional(),
@@ -263,6 +277,7 @@ const passiveCardTargets = [
   "cartaEvento",
   "atacante",
   "alvoAtaque",
+  "tropaVinculada",
 ] as const;
 export const passiveFilterSchema = z
   .object({
@@ -284,6 +299,27 @@ export const passiveFilterSchema = z
 const cardAction = { alvo: z.enum(passiveCardTargets), valor: number };
 const playerAction = { jogador: z.enum(["aliado", "inimigo"]), valor: number };
 export const passiveActionSchema = z.discriminatedUnion("id", [
+  z
+    .object({
+      id: z.literal("stackReduction"),
+      valor: number.min(1),
+      maximo: number.min(1),
+      removerElemento: z.enum(elements),
+    })
+    .strict(),
+  z
+    .object({
+      id: z.literal("statusWard"),
+      excecoes: z.array(z.string().min(1).max(80)).max(30),
+    })
+    .strict(),
+  z
+    .object({
+      id: z.literal("reactionDamage"),
+      valor: number.min(1),
+      duracao: number.min(1),
+    })
+    .strict(),
   z
     .object({
       id: z.literal("dodgeImpact"),
@@ -350,6 +386,7 @@ export const passiveActionSchema = z.discriminatedUnion("id", [
       alvo: z.enum(passiveCardTargets),
       status: z.string().min(1).max(80),
       duracao: number.min(1),
+      unidade: z.enum(["turno", "rodada"]).optional(),
       valor: number.optional(),
     })
     .strict(),

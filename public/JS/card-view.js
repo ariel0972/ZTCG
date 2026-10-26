@@ -86,6 +86,16 @@ function effectDescription(effect) {
         " Dura " +
         effect.duracao +
         " rodada(s) para ambos os jogadores.",
+      deployFromZone:
+        "Escolha até " +
+        effect.valor +
+        " carta(s) de " +
+        (effect.zonas ?? ["Deck"]).join(" ou ") +
+        " para colocar em campo, sem mana ou mobilização; tropas excedentes vão à mão.",
+      summonCircle:
+        "Marca um espaço de Invocação sem mana ou materiais. Ao entrar uma tropa, consome o círculo e recupera " +
+        effect.valor +
+        " mana.",
       returnToHand:
         "Devolve a tropa à mão" +
         (effect.devolverVinculos
@@ -209,6 +219,23 @@ export function passiveDescription(h) {
       .map(
         (e) =>
           ({
+            stackReduction:
+              "acumula " +
+              e.valor +
+              " de redução de dano até " +
+              e.maximo +
+              "; " +
+              e.removerElemento +
+              " remove os acúmulos",
+            statusWard:
+              "bloqueia condições negativas, exceto " +
+              (e.excecoes ?? []).join(", "),
+            reactionDamage:
+              "substitui o efeito da reação por " +
+              e.valor +
+              " de dano a cada ciclo completo durante " +
+              e.duracao +
+              " rodadas",
             damage: `causa ${e.valor} de dano`,
             heal: `cura ${e.valor} de vida`,
             growAttack: `ganha +${e.valor} de ataque básico acumulável`,
@@ -262,7 +289,7 @@ export function passiveDescription(h) {
     const filters = h.filtroEvento
       ? Object.values(h.filtroEvento).join(", ")
       : "";
-    return `${trigger} ${scope}: ${effects}${filters ? " · Filtro: " + filters : ""}${conditions ? " · Condição: " + conditions : ""}.`;
+    return `${trigger} ${scope}: ${effects}${filters ? " · Filtro: " + filters : ""}${conditions ? " · Condição: " + conditions : ""}${h.reacao ? " · " + h.reacao.nome + " (" + h.reacao.quando + ")" : ""}.`;
   }
   if (h.efeito === "aplicarStatusAtacante")
     return `Ao receber ataque básico, aplica ${h.status} ao atacante, mesmo se não receber dano ou morrer.`;

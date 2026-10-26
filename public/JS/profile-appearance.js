@@ -13,6 +13,17 @@ export const profileSourceLimit = 8 * 1024 * 1024;
 export function imageCrop(width, height, kind) {
   if (!width || !height || width * height > 40000000)
     throw Error("Use uma imagem de até 40 megapixels.");
+  if (kind === "card") {
+    const scale = Math.min(1, 1200 / width, 1680 / height);
+    return {
+      sx: 0,
+      sy: 0,
+      sw: width,
+      sh: height,
+      width: Math.max(1, Math.round(width * scale)),
+      height: Math.max(1, Math.round(height * scale)),
+    };
+  }
   const maxWidth = kind === "banner" ? 1600 : 384,
     maxHeight = kind === "banner" ? 500 : 384,
     ratio = maxWidth / maxHeight;
@@ -94,7 +105,7 @@ export async function prepareProfileUpload(file, kind) {
           quality,
         ),
       );
-    let blob = await encode("image/webp", 0.82);
+    let blob = await encode("image/webp", kind === "card" ? 0.9 : 0.82);
     if (blob.type !== "image/webp") blob = await encode("image/jpeg", 0.82);
     if (blob.size > 2 * 1024 * 1024) blob = await encode("image/jpeg", 0.65);
     if (blob.size > 2 * 1024 * 1024)

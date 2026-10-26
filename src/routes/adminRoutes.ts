@@ -1,4 +1,6 @@
-import { Router } from "express";
+import express, { Router } from "express";
+import { rateLimit } from "../middlewares/rateLimit";
+import { cardImageLibrary, storeCardImage } from "../services/card-images";
 import { z } from "zod";
 import CardModel from "../db/models/Card";
 import { cardSchema } from "../types/card";
@@ -10,6 +12,36 @@ import {
 import { playableErrors } from "../game/capabilities";
 import { AppError } from "../lib/errors";
 const router = Router();
+router.get("/card-images", async (req, res) => {
+  const { page, q } = z
+    .object({
+      page: z.coerce.number().int().min(0).max(10000).default(0),
+      q: z.string().trim().max(80).default(""),
+    })
+    .parse(req.query);
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ success: true, ...(await cardImageLibrary(page, q)) });
+});
+router.post(
+  "/card-images",
+  rateLimit(20),
+  express.raw({
+    type: ["image/png", "image/jpeg", "image/webp"],
+    limit: "2mb",
+  }),
+  async (req, res) => {
+    if (!Buffer.isBuffer(req.body))
+      throw new AppError(422, "Envie uma imagem PNG, JPG ou WebP.");
+    const name = z
+      .string()
+      .trim()
+      .min(1)
+      .max(120)
+      .default("Imagem de carta")
+      .parse(req.query.nome);
+    res.json({ success: true, image: await storeCardImage(req.body, name) });
+  },
+);
 router.get("/cards", async (_req, res) => {
   res.json({ success: true, ...(await catalogWithDiagnostics(true)) });
 });

@@ -9,6 +9,9 @@ export interface Status extends EffectClock {
     bonus: number;
     descontoMana: number;
   };
+  permanente?: boolean;
+  removerElemento?: import("../types/card").Card["elemento"];
+  danoPeriodico?: number;
   sourceCardId?: string;
   originOwnerId?: string;
   origin?: string;
@@ -125,14 +128,21 @@ export function tickRound(
 ) {
   let damage = 0;
   for (const status of statuses) {
-    if (status.unidade === "turno" || status.turnosRestantes <= 0) continue;
+    if (
+      status.permanente ||
+      status.unidade === "turno" ||
+      status.turnosRestantes <= 0
+    )
+      continue;
     if (turn !== undefined && !effectRoundDue(status, turn)) continue;
     const name = canonicalStatus(status.nome);
-    const value = ["Sangrando", "Queimado", "Envenenado"].includes(name)
-      ? (status.valor ?? 1)
-      : ["Peste Negra", "Leptospirose"].includes(name)
-        ? 2
-        : 0;
+    const value =
+      status.danoPeriodico ??
+      (["Sangrando", "Queimado", "Envenenado"].includes(name)
+        ? (status.valor ?? 1)
+        : ["Peste Negra", "Leptospirose"].includes(name)
+          ? 2
+          : 0);
     damage += value;
     if (value) onDamage?.(status, value);
     status.turnosRestantes--;

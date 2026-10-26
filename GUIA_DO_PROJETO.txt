@@ -2203,3 +2203,33 @@ Menu de ações usa largura de 212px, prévia de 44px e espaçamentos menores,
 preservando avisos e o acesso às regras. Em dispositivos de toque, botões de ação
 mantêm altura mínima de 44px. Posição horizontal usa a largura real do menu para
 permanecer dentro da tela; menus longos continuam roláveis.
+
+Cartas de Terra e imagens nativas no catálogo — 26/10/2026:
+- src/game/deployment.ts — filtros e destinos reutilizáveis para entrada direta
+  de Tropa/Estrutura; escolhas usam a fila persistida, sem pagar mobilização.
+- src/game/status-ward.ts — proteção declarativa contra condições negativas,
+  com exceções; preserva controle e movimentação e pode ser ignorada por efeito.
+- src/game/engine.ts — busca em Deck/Cemiterio/Reserva, áreas de invocação,
+  resistência acumulável e substituição de reações. Entradas em Círculo por
+  outros efeitos também o consomem e devolvem mana ao lançador original.
+- scripts/update-earth-cards.ts — simulação/aplicação direcionada às cartas
+  018/033/055/042/056/071/093, backup antes de escrever e comparação de versão.
+  Preserva artes personalizadas e registros fora desses números de catálogo.
+- src/services/card-images.ts — biblioteca administrativa de artes existentes
+  e imagens hospedadas por hash; busca literal e paginação dos uploads.
+- public/JS/card-image-editor.js — envio, prévia e escolha de imagens na galeria;
+  altera imgURL do rascunho e exige validar/salvar normalmente. Uma troca de carta
+  durante o upload não aplica a imagem na carta errada.
+- src/services/avatars.ts e public/JS/profile-appearance.js — reutilizam a
+  otimização WebP para artes inteiras: até 8 MB na seleção, 2 MB no envio,
+  dimensão máxima 1200x1680, sem recorte nem EXIF. Avatar/banner mantêm formatos.
+- tests/earth-cards.test.ts — cartas publicadas, persistência, ciclos completos,
+  proteção de Torre, ressurreição em Círculo e entrada sem materiais/custos extras.
+- tests/earth-cards-ui.test.ts — filtros de busca, escolha de destino e área marcada.
+- tests/card-images.test.ts — permissões de admin, WebP, hash, imagem pública e
+  persistência da URL em carta; sem imagem binária nos JSONs da galeria.
+- tests/card-images-ui.test.ts — envio, reutilização, texto seguro e upload tardio.
+Validação desta etapa: suíte geral com 490 testes aprovados e 1 integração MongoDB
+reservada ao CI, seguida de 84 regressões de regras/interface após os ajustes finais.
+Compilação e auditoria estática sem erros. Navegador isolado confirmou Gerar Torre,
+Círculo com Golém sem materiais, envio real WebP e galeria desktop/mobile sem recorte.

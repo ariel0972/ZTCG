@@ -7,7 +7,13 @@ export const automaticTargets = [
 export const hasAutomaticTarget = (action) =>
   !action?.opcoes?.length &&
   (!!action?.alvoAutomatico || automaticTargets.includes(action?.alvo));
-export const zoneTargets = ["Deck", "DeckOponente", "Cemiterio", "Mao"];
+export const zoneTargets = [
+  "Deck",
+  "DeckOponente",
+  "Cemiterio",
+  "Mao",
+  "Reserva",
+];
 export function actionTarget(selection) {
   const action =
     selection?.type === "ability" ? selection.ability : selection?.card;
@@ -55,8 +61,8 @@ export function spellSlotTarget(action, slot, userId) {
     return (
       slot.kind === "Tropa" &&
       (type === "CampoAliado" ? own : !own) &&
-      (!action.efeitos?.some((e) => e.id === "trap") ||
-        (!slot.card && !slot.rider && !slot.terrain))
+      (!action.efeitos?.some((e) => ["trap", "summonCircle"].includes(e.id)) ||
+        (!slot.card && !slot.rider && !slot.terrain && !slot.summonCircle))
     );
   if (
     (["UnicoAliado", "TodosAliados"].includes(type) && !own) ||
@@ -146,6 +152,13 @@ export function slotTargetId(action, slot) {
       : slot.card?.id || slot.structure?.id;
 }
 export function zoneCardAllowed(action, card) {
+  const deploy = action.efeitos?.find((e) => e.id === "deployFromZone");
+  if (deploy)
+    return (
+      (deploy.tiposCarta ?? ["Tropa"]).includes(card.tipo) &&
+      !deploy.excluirSubtipos?.includes(card.subtipo) &&
+      (!deploy.carta || deploy.carta === card.numeroCatalogo)
+    );
   if (action.efeitos?.some((e) => e.id === "searchElemental"))
     return (
       card.tipo === "Feitico" &&

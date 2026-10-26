@@ -247,7 +247,15 @@ async function command(command) {
   if (pending || choosingMaterials || !state) return;
   if (["play", "respondSpell"].includes(command.type) && command.cardId) {
     const card = myPlayer().hand.find((c) => c.id === command.cardId);
-    if (card && entryCostRule(card) && !command.materiais) {
+    const circle = state.slots.find(
+      (s) => s.id === command.slotId,
+    )?.summonCircle;
+    if (
+      card &&
+      entryCostRule(card) &&
+      !command.materiais &&
+      !(circle && card.tipo === "Tropa" && card.subtipo === "Invocação")
+    ) {
       choosingMaterials = true;
       const materiais = await materialChoice.choose(card, state);
       choosingMaterials = false;
@@ -538,6 +546,7 @@ function handBlock(card) {
   }
   if (
     !(state.phase === "PREPARATION" && card.tipo === "Tropa") &&
+    !card.circleTargets?.length &&
     p.mana < card.custoMana
   )
     return "Mana insuficiente.";
@@ -572,17 +581,21 @@ function chooseZone(type) {
   const action = targetAction(),
     player = myPlayer();
   const cards =
-    type === "Deck"
-      ? player.deck
-      : type === "Mao"
-        ? player.hand
-        : player.graveyard;
+    type === "Reserva"
+      ? [...player.deck, ...player.graveyard]
+      : type === "Deck"
+        ? player.deck
+        : type === "Mao"
+          ? player.hand
+          : player.graveyard;
   zone(
-    type === "Deck"
-      ? "Escolha uma carta do seu baralho"
-      : type === "Mao"
-        ? "Escolha uma carta da sua mão"
-        : "Escolha uma carta do cemitério",
+    type === "Reserva"
+      ? "Escolha uma carta do baralho ou cemitério"
+      : type === "Deck"
+        ? "Escolha uma carta do seu baralho"
+        : type === "Mao"
+          ? "Escolha uma carta da sua mão"
+          : "Escolha uma carta do cemitério",
     cards.filter((c) => zoneCardAllowed(action, c)),
     (card) => {
       if ((action.maxAlvos ?? 1) > 1) {
@@ -605,9 +618,14 @@ function renderTargetZones() {
     [
       "deck-zone",
       "deck-zone-footer",
-      action?.alvo === "Deck" || has(["draw", "strongFlow", "searchNamed"]),
+      ["Deck", "Reserva"].includes(action?.alvo) ||
+        has(["draw", "strongFlow", "searchNamed"]),
     ],
-    ["graveyard", "graveyard-footer", action?.alvo === "Cemiterio"],
+    [
+      "graveyard",
+      "graveyard-footer",
+      ["Cemiterio", "Reserva"].includes(action?.alvo),
+    ],
     [
       "enemy-deck-zone",
       "enemy-deck-zone-footer",
@@ -1023,8 +1041,13 @@ function renderActions() {
     const ability = targetAction();
     if (zoneTargets.includes(ability.alvo))
       panel.append(
-        actionButton("Escolher cartas do cemitério", () =>
-          chooseZone(ability.alvo),
+        actionButton(
+          ability.alvo === "Reserva"
+            ? "Escolher do baralho ou cemitério"
+            : ability.alvo === "Deck"
+              ? "Escolher do baralho"
+              : "Escolher cartas do cemitério",
+          () => chooseZone(ability.alvo),
         ),
       );
     if (ability.id === "protecaoAquatica") {
@@ -1131,6 +1154,18 @@ function slotView(slot) {
         slot.kind === "Tropa" ? `Tropa · ${slot.column + 1}` : slot.kind,
       ),
     );
+  if (slot.summonCircle) {
+    button.classList.add("summon-circle-slot");
+    button.append(
+      node("span", "✦", "summon-circle-mark"),
+      node("span", "Invocação · sem mana ou materiais", "summon-circle-label"),
+    );
+    button.title =
+      slot.summonCircle.card.nome +
+      ": ao entrar uma tropa, recupera " +
+      slot.summonCircle.mana +
+      " mana";
+  }
   if (slot.terrain)
     button.append(
       node(
@@ -1764,12 +1799,12 @@ window.addEventListener("resize", () => {
   if (state) renderActions();
 });
 $("graveyard").onclick = () =>
-  isChoosingSpell() && targetAction().alvo === "Cemiterio"
-    ? chooseZone("Cemiterio")
+  isChoosingSpell() && ["Cemiterio", "Reserva"].includes(targetAction().alvo)
+    ? chooseZone(targetAction().alvo)
     : state && zone("Seu cemitério", myPlayer().graveyard);
 $("deck-zone").onclick = () =>
-  isChoosingSpell() && targetAction().alvo === "Deck"
-    ? chooseZone("Deck")
+  isChoosingSpell() && ["Deck", "Reserva"].includes(targetAction().alvo)
+    ? chooseZone(targetAction().alvo)
     : state && zone("Seu baralho (sem ordem de compra)", myPlayer().deck);
 $("enemy-graveyard").onclick = () =>
   state &&

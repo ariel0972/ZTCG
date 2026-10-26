@@ -79,6 +79,7 @@ export interface Slot {
   card: Instance | null;
   rider?: Instance | null;
   structure: Instance | null;
+  summonCircle?: { card: Instance; mana: number };
   terrain?: { nome: "Lama"; rodadasRestantes: number; nextTickTurn?: number };
   appliedElement?: string;
 }
@@ -182,6 +183,7 @@ export interface State {
     ownerId: string;
     cards: string[];
     source: string;
+    deployment?: { destino: "Tropa" | "Estrutura" };
   }[];
   pendingHandChoice?: { ownerId: string; opponentId: string; source: string };
   pendingAttack?: {

@@ -1,3 +1,4 @@
+import { createCardImageEditor } from "./card-image-editor.js";
 import { createEntryCostEditor } from "./entry-cost-editor.js";
 import { api, navbar, message, node } from "./auth.js";
 import { initializeAdminShell, setAdminAccess } from "./admin-shell.js";
@@ -10,6 +11,13 @@ const entryEditor = createEntryCostEditor(document, {
   },
   onError: (e) => message(e.message, true),
 });
+const imageEditor = createCardImageEditor(document, {
+  onChange: () => {
+    $("validation").textContent =
+      "Imagem atualizada no rascunho. Valide e salve a carta.";
+  },
+  onError: (e) => message(e.message, true),
+});
 let cards = [],
   version = 1,
   passiveTemplates = [];
@@ -18,6 +26,7 @@ function edit(card) {
   $("card-json").value = JSON.stringify(card, null, 2);
   $("validation").textContent = "";
   entryEditor.show(card);
+  imageEditor.show(card);
 }
 async function load() {
   const user = await navbar();

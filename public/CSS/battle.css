@@ -2545,3 +2545,19 @@
   gap: 10px;
   justify-content: flex-end;
 }
+
+.summon-circle-slot {
+  background: radial-gradient(ellipse, #f8d95b38, #172a3500 74%);
+  box-shadow: inset 0 0 18px #f8d95b55;
+}
+.summon-circle-mark {
+  color: #f8d95b;
+  font-size: 48px;
+  line-height: 1.2;
+  text-shadow: 0 0 18px #f8d95b;
+}
+.summon-circle-label {
+  color: #ffe99b;
+  font-size: 10px;
+  padding: 3px;
+}

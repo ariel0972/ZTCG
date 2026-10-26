@@ -232,10 +232,12 @@ export function cardFace(
   for (const status of card.statuses || []) {
     const tag = node(
       "span",
-      `${symbols[status.nome] || "✧"} ${status.turnosRestantes}`,
+      `${symbols[status.nome] || "✧"} ${status.permanente ? (status.valor ?? "∞") : status.turnosRestantes}`,
       "effect-token",
     );
-    tag.title = `${status.nome} · ${status.turnosRestantes} ${status.unidade === "turno" ? "turno(s)" : "rodada(s)"}`;
+    tag.title = status.permanente
+      ? `${status.nome} · ${status.valor ?? 0} de redução${status.removerElemento ? "; " + (labels[status.removerElemento] || status.removerElemento) + " remove os acúmulos" : "; permanente em campo"}`
+      : `${status.nome} · ${status.turnosRestantes} ${status.unidade === "turno" ? "turno(s)" : "rodada(s)"}`;
     const reaction =
       reactions[status.nome === "Congelado" ? "Congelar" : status.nome];
     if (reaction) tag.title += ` · ${reaction.description}`;
@@ -305,6 +307,11 @@ export function dropAction(source, slot, state, userId) {
       return spellSlotTarget(card, slot, userId) ? "play" : null;
     }
     if (!own) return null;
+    if (
+      slot.summonCircle &&
+      (card.tipo !== "Tropa" || card.subtipo !== "Invocação")
+    )
+      return null;
     if (card.tipo === "Estrutura")
       return slot.kind === "Tropa" &&
         slot.card?.tipo === "Tropa" &&

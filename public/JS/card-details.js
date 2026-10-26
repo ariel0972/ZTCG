@@ -265,7 +265,7 @@ export function renderCardDetails(host, card, { reactions = {} } = {}) {
       current.append(
         make(
           "p",
-          `${status.nome}${status.valor === undefined ? "" : ` · intensidade ${status.valor}`} · ${status.turnosRestantes} ${status.unidade === "turno" ? "turno(s)" : "rodada(s)"}`,
+          `${status.nome}${status.valor === undefined ? "" : ` · intensidade ${status.valor}`} · ${status.permanente ? "até receber " + (labels[status.removerElemento] || status.removerElemento || "o elemento configurado") : status.turnosRestantes + (status.unidade === "turno" ? " turno(s)" : " rodada(s)")}`,
         ),
       );
     }

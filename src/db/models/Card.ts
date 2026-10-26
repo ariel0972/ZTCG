@@ -33,6 +33,16 @@ const effect = new Schema(
     alvo: { type: String, enum: ["Proprio"] },
     valor: n,
     descontoMana: n,
+    zonas: { type: [String], enum: ["Deck", "Cemiterio"], default: undefined },
+    excluirSubtipos: {
+      type: [String],
+      enum: ["Animal", "Humano", "Monstro", "Planta", "Invocação"],
+      default: undefined,
+    },
+    destino: { type: String, enum: ["Tropa", "Estrutura"] },
+    selecaoCampo: { type: String, enum: ["TodasTropas", "TodasEstruturas"] },
+    ignoraProtecaoStatus: Boolean,
+    duracaoInicial: n,
     concessao: {
       type: new Schema(
         {
@@ -279,6 +289,10 @@ const passiveCondition = new Schema(
 );
 const passiveAction = new Schema(
   {
+    maximo: n,
+    removerElemento: { type: String, enum: elements },
+    excecoes: { type: [String], default: undefined },
+    unidade: { type: String, enum: ["turno", "rodada"] },
     id: { type: String, required: true },
     custoAtual: Boolean,
     alvo: String,

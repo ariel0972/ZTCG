@@ -403,23 +403,93 @@
     "numeroCatalogo": "033",
     "nome": "Bola de Demolição",
     "tipo": "Feitico",
-    "custoMana": 2,
-    "descricao": "",
+    "custoMana": 7,
+    "descricao": "Causa 6 de dano a todas as tropas inimigas, ou 3 contra Ar, aplicando fraquezas e resistências. Água não recebe dano e fica Atordoada e Envenenada (1 de dano por ciclo) por 2 rodadas. Estruturas absorvem o dano, mas não impedem estas condições.",
     "imgURL": "/assets/Cards/Bola de Demolição.png",
-    "publicado": false,
-    "versao": 1,
-    "alvo": "UnicoInimigo"
+    "publicado": true,
+    "versao": 2,
+    "alvo": "TodasTropasInimigas",
+    "elemento": "Terra",
+    "requerElementoMago": "Terra",
+    "efeitos": [
+      {
+        "id": "damage",
+        "valor": 6,
+        "filtroAlvo": {
+          "excetoElementos": ["Agua", "Ar"]
+        }
+      },
+      {
+        "id": "damage",
+        "valor": 3,
+        "filtroAlvo": {
+          "elemento": "Ar"
+        }
+      },
+      {
+        "id": "status",
+        "status": "Atordoado",
+        "duracao": 2,
+        "ignoraProtecaoStatus": true,
+        "filtroAlvo": {
+          "elemento": "Agua"
+        }
+      },
+      {
+        "id": "status",
+        "status": "Envenenado",
+        "duracao": 2,
+        "duracaoInicial": 2,
+        "ignoraProtecaoStatus": true,
+        "filtroAlvo": {
+          "elemento": "Agua"
+        }
+      }
+    ]
   },
   {
     "numeroCatalogo": "055",
-    "nome": "Teremoto",
+    "nome": "Terremoto",
     "tipo": "Feitico",
-    "custoMana": 2,
-    "descricao": "",
+    "custoMana": 6,
+    "descricao": "Atinge as tropas e estruturas dos dois jogadores, sem atingir magos. Tropas recebem 2 de dano diretamente e Atordoado por 2 rodadas. Terra não fica Atordoada; Água não recebe dano. Estruturas recebem 4 de dano e Abalo por 2 rodadas, sem absorver novamente o dano das tropas.",
     "imgURL": "/assets/Cards/Terremoto.png",
-    "publicado": false,
-    "versao": 1,
-    "alvo": "UnicoInimigo"
+    "publicado": true,
+    "versao": 2,
+    "alvo": "Global",
+    "elemento": "Terra",
+    "requerElementoMago": "Terra",
+    "efeitos": [
+      {
+        "id": "status",
+        "status": "Abalo",
+        "duracao": 2,
+        "selecaoCampo": "TodasEstruturas"
+      },
+      {
+        "id": "damage",
+        "valor": 2,
+        "perfurante": true,
+        "selecaoCampo": "TodasTropas",
+        "filtroAlvo": {
+          "excetoElementos": ["Agua"]
+        }
+      },
+      {
+        "id": "damage",
+        "valor": 4,
+        "selecaoCampo": "TodasEstruturas"
+      },
+      {
+        "id": "status",
+        "status": "Atordoado",
+        "duracao": 2,
+        "selecaoCampo": "TodasTropas",
+        "filtroAlvo": {
+          "excetoElementos": ["Terra"]
+        }
+      }
+    ]
   },
   {
     "numeroCatalogo": "084",
@@ -1073,14 +1143,21 @@
   },
   {
     "numeroCatalogo": "071",
-    "nome": "Circulo de Invocação",
+    "nome": "Círculo de Invocação",
     "tipo": "Feitico",
-    "custoMana": 2,
-    "descricao": "",
+    "custoMana": 6,
+    "descricao": "Marca um espaço aliado vazio até ser usado. Ali só é possível mobilizar tropas de Invocação, sem pagar mana ou materiais, mantendo o limite normal de mobilizações. Quando qualquer tropa entrar nesse espaço, inclusive por outro efeito, o Círculo vai ao cemitério e seu lançador recupera 4 de mana.",
     "imgURL": "/assets/Cards/Circulo de Invocação.png",
-    "publicado": false,
-    "versao": 1,
-    "alvo": "UnicoInimigo"
+    "publicado": true,
+    "versao": 2,
+    "alvo": "CampoAliado",
+    "elemento": "Neutro",
+    "efeitos": [
+      {
+        "id": "summonCircle",
+        "valor": 4
+      }
+    ]
   },
   {
     "numeroCatalogo": "073",
@@ -1148,12 +1225,24 @@
     "numeroCatalogo": "093",
     "nome": "Chamar Tropa",
     "tipo": "Feitico",
-    "custoMana": 2,
-    "descricao": "",
+    "custoMana": 7,
+    "descricao": "Escolha até 2 tropas do seu baralho que não sejam Invocação. Coloque-as em espaços aliados livres e sem Lama, sem pagar mana, materiais ou mobilização. As excedentes vão para a mão. Embaralhe o baralho em seguida.",
     "imgURL": "/assets/Cards/Chamar Tropa.png",
-    "publicado": false,
-    "versao": 1,
-    "alvo": "UnicoInimigo"
+    "publicado": true,
+    "versao": 2,
+    "alvo": "Deck",
+    "elemento": "Neutro",
+    "maxAlvos": 2,
+    "efeitos": [
+      {
+        "id": "deployFromZone",
+        "valor": 2,
+        "zonas": ["Deck"],
+        "tiposCarta": ["Tropa"],
+        "excluirSubtipos": ["Invocação"],
+        "destino": "Tropa"
+      }
+    ]
   },
   {
     "numeroCatalogo": "097",
@@ -1622,13 +1711,38 @@
     "numeroCatalogo": "056",
     "nome": "Torre",
     "tipo": "Estrutura",
-    "custoMana": 6,
-    "descricao": "",
+    "custoMana": 4,
+    "descricao": "Absorve normalmente o dano dirigido à tropa. Bloqueia condições negativas, exceto Incapacitado, Atordoado e Abalo; não impede deslocamento, devolução à mão ou troca de controle. Ao ser destruída, a tropa protegida fica sem atacar por 1 rodada completa.",
     "imgURL": "/assets/Cards/Torre.png",
-    "publicado": false,
-    "versao": 1,
-    "hp": 1,
-    "ataque": 2
+    "publicado": true,
+    "versao": 2,
+    "hp": 10,
+    "ataque": 0,
+    "elemento": "Neutro",
+    "habilidadesPassivas": [
+      {
+        "gatilho": "continuous",
+        "escopo": "proprio",
+        "efeitos": [
+          {
+            "id": "statusWard",
+            "excecoes": ["Incapacitado", "Atordoado", "Abalo"]
+          }
+        ]
+      },
+      {
+        "gatilho": "onStructureDestroyed",
+        "escopo": "proprio",
+        "efeitos": [
+          {
+            "id": "status",
+            "alvo": "tropaVinculada",
+            "status": "SemAtaque",
+            "duracao": 1
+          }
+        ]
+      }
+    ]
   },
   {
     "numeroCatalogo": "058",
@@ -2771,26 +2885,52 @@
   },
   {
     "numeroCatalogo": "042",
-    "nome": "Enxame de Ratos",
+    "nome": "Toupeira",
     "tipo": "Tropa",
     "custoMana": 3,
-    "descricao": "",
+    "descricao": "Ataca uma vez por rodada. Depois de receber um ataque, fica Escondida por 1 rodada completa; não evita o dano do ataque. Pode atacar no próximo turno. Escavação incapacita a tropa inimiga à frente por 1 rodada; uma estrutura ativa protege desse efeito.",
     "imgURL": "/assets/Cards/Toupeira.png",
     "publicado": true,
-    "versao": 1,
-    "hp": 12,
-    "ataque": 2,
-    "manaGerada": 3,
+    "versao": 2,
+    "hp": 9,
+    "ataque": 3,
+    "manaGerada": 2,
     "direcaoAtaque": "Frente",
     "habilidadesPassivas": [
       {
-        "gatilho": "onDeath",
-        "condicao": "aliadoMorre",
-        "efeito": "ganharVida",
-        "valor": 1
+        "gatilho": "onAttacked",
+        "escopo": "proprio",
+        "efeitos": [
+          {
+            "id": "status",
+            "alvo": "fonte",
+            "status": "Esconder",
+            "duracao": 1
+          }
+        ]
       }
     ],
-    "habilidadesAtivas": []
+    "habilidadesAtivas": [
+      {
+        "id": "escavacao",
+        "nome": "Escavação",
+        "custoMana": 3,
+        "alvo": "UnicoInimigo",
+        "alvoAutomatico": "Frontal",
+        "efeitos": [
+          {
+            "id": "status",
+            "status": "Incapacitado",
+            "duracao": 1,
+            "estrutura": "manter"
+          }
+        ]
+      }
+    ],
+    "subtipo": "Animal",
+    "elemento": "Terra",
+    "fraqueza": ["Ar"],
+    "resistencia": ["Agua"]
   },
   {
     "numeroCatalogo": "076",
@@ -3103,22 +3243,102 @@
   },
   {
     "numeroCatalogo": "018",
-    "nome": "Mago de terra",
+    "nome": "Mago de Terra",
     "tipo": "Mago",
     "custoMana": 0,
-    "descricao": "",
+    "descricao": "Seus feitiços de Terra acumulam 1 de redução no dano recebido, até 5. Água remove os acúmulos antes de causar dano. Ao provocar Erosão, substitui o descarte por 1 de dano por ciclo durante 2 rodadas; ao provocar Lama, recebe +2 no ataque e nos feitiços até o fim do turno.",
     "imgURL": "/assets/Cards/Mago de terra.png",
-    "publicado": false,
-    "versao": 1,
-    "hp": 18,
-    "ataque": 0,
-    "recuperacaoMana": 0,
+    "publicado": true,
+    "versao": 2,
+    "hp": 20,
+    "ataque": 3,
+    "recuperacaoMana": 3,
     "limites": [
       {
-        "tropasMobilizadas": 0,
-        "tropaAtacam": 0,
-        "feiticosUsados": 0,
-        "feiticosUnicos": 0
+        "tropasMobilizadas": 2,
+        "tropaAtacam": 2,
+        "feiticosUsados": 3,
+        "feiticosUnicos": 3
+      }
+    ],
+    "elemento": "Terra",
+    "fraqueza": ["Ar"],
+    "resistencia": ["Agua"],
+    "habilidadesPassivas": [
+      {
+        "gatilho": "onSpellCast",
+        "escopo": "aliado",
+        "filtroEvento": {
+          "elemento": "Terra"
+        },
+        "efeitos": [
+          {
+            "id": "stackReduction",
+            "valor": 1,
+            "maximo": 5,
+            "removerElemento": "Agua"
+          }
+        ]
+      },
+      {
+        "gatilho": "onElementalReaction",
+        "escopo": "qualquer",
+        "reacao": {
+          "nome": "Erosão",
+          "quando": "provoca"
+        },
+        "efeitos": [
+          {
+            "id": "reactionDamage",
+            "valor": 1,
+            "duracao": 2
+          }
+        ]
+      },
+      {
+        "gatilho": "onElementalReaction",
+        "escopo": "qualquer",
+        "reacao": {
+          "nome": "Lama",
+          "quando": "provoca"
+        },
+        "efeitos": [
+          {
+            "id": "status",
+            "alvo": "fonte",
+            "status": "BonusAtaque",
+            "valor": 2,
+            "duracao": 1,
+            "unidade": "turno"
+          },
+          {
+            "id": "spellDamageTurn",
+            "valor": 2
+          }
+        ]
+      }
+    ],
+    "habilidadesAtivas": [
+      {
+        "id": "gerarTorre",
+        "nome": "Gerar Torre",
+        "custoMana": 5,
+        "alvo": "Reserva",
+        "filtroAlvo": {
+          "numeroCatalogo": "056",
+          "tipo": "Estrutura"
+        },
+        "descricao": "Escolha uma Torre do seu baralho ou cemitério e depois uma tropa aliada sem estrutura. Não paga o custo da Torre nem mobilização.",
+        "efeitos": [
+          {
+            "id": "deployFromZone",
+            "valor": 1,
+            "zonas": ["Deck", "Cemiterio"],
+            "tiposCarta": ["Estrutura"],
+            "carta": "056",
+            "destino": "Estrutura"
+          }
+        ]
       }
     ]
   },

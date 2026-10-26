@@ -6,7 +6,8 @@ const schema = new Schema(
     // Legacy originals stay readable; new uploads keep only the optimized WebP.
     original: { type: Buffer, select: false },
     originalType: { type: String, select: false },
-    kind: { type: String, enum: ["avatar", "banner"] },
+    kind: { type: String, enum: ["avatar", "banner", "card"] },
+    name: { type: String, maxlength: 120 },
     createdAt: { type: Date, default: Date.now },
   },
   { versionKey: false },

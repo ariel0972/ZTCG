@@ -85,6 +85,32 @@
                 tropa. Campo livre permite mover a montaria com seu ocupante uma
                 vez por turno.
               </p>
+              <details class="card-image-editor" open>
+                <summary>Imagem da carta</summary>
+                <div class="card-image-controls">
+                  <img
+                    id="card-image-preview"
+                    alt="Prévia da imagem da carta"
+                  />
+                  <div>
+                    <label class="file-button"
+                      >Enviar imagem<input
+                        id="upload-card-image"
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                    /></label>
+                    <button id="choose-card-image" type="button" class="quiet">
+                      Escolher da galeria
+                    </button>
+                  </div>
+                </div>
+                <p class="hint">
+                  PNG, JPG ou WebP de até 8 MB. A arte é convertida em WebP sem
+                  recortar e fica hospedada no jogo para reutilização. Valide e
+                  salve a carta para aplicar.
+                </p>
+                <p id="card-image-status" class="hint" role="status"></p>
+              </details>
               <details class="entry-cost-editor">
                 <summary>Custo de entrada / invocação</summary>
                 <p class="hint">
@@ -247,6 +273,34 @@
         </main>
       </div>
     </div>
+    <dialog
+      id="card-image-gallery"
+      class="card-image-gallery"
+      aria-labelledby="card-image-gallery-title"
+    >
+      <div class="section-heading">
+        <h2 id="card-image-gallery-title">Galeria de imagens</h2>
+        <button
+          id="close-card-image-gallery"
+          type="button"
+          class="quiet"
+          autofocus
+        >
+          Fechar
+        </button>
+      </div>
+      <label
+        >Buscar por nome ou número<input
+          id="card-image-search"
+          type="search"
+          maxlength="80"
+      /></label>
+      <p id="card-gallery-status" class="hint" role="status"></p>
+      <div id="card-image-grid" class="card-image-grid"></div>
+      <button id="more-card-images" type="button" class="quiet" hidden>
+        Carregar mais imagens
+      </button>
+    </dialog>
     <p id="message" class="message" role="status" aria-live="polite" hidden></p>
   </body>
 </html>

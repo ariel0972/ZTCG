@@ -18,7 +18,13 @@ export function renderReviveChoice(
     n.textContent = text;
     return n;
   };
-  host.append(make("h2", choice.source + ": reviver uma tropa"));
+  host.append(
+    make(
+      "h2",
+      choice.source +
+        (choice.deployment ? ": colocar em campo" : ": reviver uma tropa"),
+    ),
+  );
   if (choice.ownerId !== viewerId) {
     host.append(make("p", "O oponente está escolhendo uma tropa e um espaço."));
     return;
@@ -26,7 +32,9 @@ export function renderReviveChoice(
   host.append(
     make(
       "p",
-      "Escolha uma tropa do seu cemitério e um espaço livre. Sem custo de mana ou mobilização. Resposta em 20 segundos; turno pausado.",
+      choice.deployment
+        ? "Escolha a carta oferecida e um espaço destacado. Entrada sem mana ou mobilização. Resposta em 20 segundos; turno pausado."
+        : "Escolha uma tropa do seu cemitério e um espaço livre. Sem custo de mana ou mobilização. Resposta em 20 segundos; turno pausado.",
     ),
   );
   const controls = make("div");
@@ -42,13 +50,15 @@ export function renderReviveChoice(
     controls.append(holder);
     return field;
   };
-  const cards =
-    state.players
-      .find((p) => p.id === viewerId)
-      ?.graveyard.filter((c) => choice.cards.includes(c.id)) || [];
+  const player = state.players.find((p) => p.id === viewerId);
+  const cards = (
+    choice.deployment
+      ? [...(player?.deck ?? []), ...(player?.graveyard ?? [])]
+      : (player?.graveyard ?? [])
+  ).filter((c) => choice.cards.includes(c.id));
   const card = select(
-    "Tropa do cemitério",
-    "Escolha uma tropa",
+    choice.deployment ? "Carta para colocar em campo" : "Tropa do cemitério",
+    "Escolha uma carta",
     cards.map((c) => [c.id, c.nome]),
   );
   const destination = select(
@@ -60,7 +70,11 @@ export function renderReviveChoice(
   );
   card.value = saved.cardId;
   destination.value = saved.destinationId;
-  const confirm = make("button", "Reviver tropa");
+  if (cards.length === 1) card.value = saved.cardId || cards[0].id;
+  const confirm = make(
+    "button",
+    choice.deployment ? "Colocar em campo" : "Reviver tropa",
+  );
   confirm.type = "button";
   const refresh = () => {
     saved.cardId = card.value;
