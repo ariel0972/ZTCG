@@ -118,6 +118,34 @@ const effect = new Schema(
       default: undefined,
     },
     perfurante: Boolean,
+    ignoraResistencia: Boolean,
+    devolverVinculos: Boolean,
+    regrasCampo: {
+      type: new Schema(
+        {
+          descontos: {
+            type: [
+              new Schema(
+                {
+                  elemento: { type: String, enum: elements, required: true },
+                  valor: { ...n, min: 1, required: true },
+                },
+                { _id: false, strict: "throw" },
+              ),
+            ],
+            default: undefined,
+          },
+          danoNormal: { type: [String], enum: elements, default: undefined },
+          anularFeiticos: {
+            type: [String],
+            enum: elements,
+            default: undefined,
+          },
+        },
+        { _id: false, strict: "throw" },
+      ),
+      default: undefined,
+    },
     reacoesElemento: {
       type: [
         new Schema(
@@ -162,6 +190,11 @@ const effect = new Schema(
         {
           tipo: { type: String, enum: cardTypes },
           elemento: { type: String, enum: elements },
+          excetoElementos: {
+            type: [String],
+            enum: elements,
+            default: undefined,
+          },
         },
         { _id: false, strict: "throw" },
       ),
@@ -369,6 +402,31 @@ const schema = new Schema<Card>(
     alvoAutomatico: { type: String, enum: ["UltimoAtacanteTropa"] },
     ignoraEsconder: Boolean,
     tiposAlvo: { type: [String], enum: cardTypes, default: undefined },
+    varianteCampo: {
+      type: new Schema(
+        {
+          filtro: {
+            type: new Schema(
+              {
+                tipo: { type: String, enum: cardTypes, required: true },
+                elemento: { type: String, enum: elements, required: true },
+              },
+              { _id: false, strict: "throw" },
+            ),
+            required: true,
+          },
+          escopo: {
+            type: String,
+            enum: ["qualquer", "aliado", "inimigo"],
+            required: true,
+          },
+          custoMana: { ...n, required: true },
+          efeitos: { type: [effect], required: true },
+        },
+        { _id: false, strict: "throw" },
+      ),
+      default: undefined,
+    },
     efeitos: [effect],
     opcoes: { type: [actionOption], default: undefined },
     habilidadesAtivas: [active],

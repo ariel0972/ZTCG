@@ -2,7 +2,13 @@ import { createCoinToss } from "./coin-toss.js";
 import { navbar, node, profilePath } from "./auth.js";
 import { gameTransport } from "./game-transport.js";
 import { createCardInspector } from "./card-inspection.js";
-import { cardFace, structureFace, renderSpellAura } from "./battle-ui.js";
+import {
+  cardFace,
+  structureFace,
+  renderSpellAura,
+  renderRuleFields,
+} from "./battle-ui.js";
+import { fieldRulesDescription } from "./card-view.js";
 import { createMatchChat } from "./match-chat.js";
 import { createBattleEvents } from "./battle-events.js";
 import { createFieldMenu, publicFieldNotice } from "./field-overlays.js";
@@ -144,6 +150,7 @@ function render(data) {
       : state.paused
         ? "Partida pausada · aguardando reconexão"
         : `Ao vivo · Azul: ${first.nome} · Vermelho: ${second.nome}`;
+  renderRuleFields(state);
   board(second, "enemy-front", "enemy-back", true);
   board(first, "my-front", "my-back");
   hud(second, "enemy-hud");
@@ -166,25 +173,27 @@ function render(data) {
       ),
   );
   $("watch-effects").replaceChildren(
-    ...(state.ongoingSpells || []).map((effect) => {
-      const owner =
-        state.players.find((p) => p.id === effect.ownerId)?.nome || "";
-      const b = node(
-        "button",
-        `${effect.card?.nome || "Feitiço ativo"} · ${owner} · ${effect.damage} de dano · ${effect.rounds} rodadas`,
-        "quiet",
-      );
-      b.type = "button";
-      if (effect.card)
-        b.onclick = () =>
-          inspector.inspect({
-            ...effect.card,
-            tipo: "Feitico",
-            descricao: `${effect.damage} de dano no fim da rodada. ${effect.rounds} rodadas restantes.`,
-            efeitos: [{ id: "damage", valor: effect.damage }],
-          });
-      return b;
-    }),
+    ...[...(state.ongoingSpells || []), ...(state.ruleFields || [])].map(
+      (effect) => {
+        const owner =
+          state.players.find((p) => p.id === effect.ownerId)?.nome || "";
+        const b = node(
+          "button",
+          `${effect.card?.nome || "Feitiço ativo"} · ${owner} · ${effect.rules ? "efeito global" : effect.damage + " de dano"} · ${effect.rounds} rodadas`,
+          "quiet",
+        );
+        b.type = "button";
+        if (effect.card)
+          b.onclick = () =>
+            inspector.inspect({
+              ...effect.card,
+              tipo: "Feitico",
+              descricao: `${effect.rules ? fieldRulesDescription(effect.rules) : effect.damage + " de dano no fim da rodada."} ${effect.rounds} rodadas restantes.`,
+              efeitos: [{ id: "damage", valor: effect.damage }],
+            });
+        return b;
+      },
+    ),
   );
   battleEvents.update(data);
 }

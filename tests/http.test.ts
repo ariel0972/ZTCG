@@ -42,7 +42,7 @@ test("API: cadastro, login, CRUD, revisões, privacidade e catálogo", async () 
   try {
     assert.equal((await request("/health")).status, 200);
     const catalog = await request("/cards");
-    assert.equal(catalog.data.cards.length, 130);
+    assert.equal(catalog.data.cards.length, 131);
     const schema = await request("/cards/schema");
     assert.ok(schema.data.efeitos.includes("heal"));
     const registration = await request("/auth/registrar", "POST", {

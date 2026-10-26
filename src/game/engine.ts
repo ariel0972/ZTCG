@@ -1,5 +1,6 @@
 import { entryCost, materialOptions } from "./entry-cost";
 import { modifiedSpell, currentSpellCost } from "./spell-modifiers";
+import { cancelledByField, normalElementDamage } from "./field-rules";
 import { createCoinToss, resolveCoinToss, type CoinFace } from "./coin-toss";
 import { effectRoundDue, nextEffectRound } from "./effect-clock";
 import { reviveDestinations, spellTurnBonusStatus } from "./resurrection";
@@ -1001,6 +1002,7 @@ export class Game {
     cause?: string,
     originOwnerId?: string,
     interception?: { cardId: string; valor: number; origin: string },
+    ignoreResistance = false,
   ): { target: Instance; amount: number; killed: boolean } | undefined {
     const slot = this.targetSlot(id);
     if (!slot) this.fail("Alvo não encontrado.");
@@ -1085,9 +1087,13 @@ export class Game {
       );
       return;
     }
-    const weakness = !!element && target.fraqueza.includes(element);
+    const normalDamage = normalElementDamage(element, this.state);
+    const weakness =
+      !normalDamage && !!element && target.fraqueza.includes(element);
     const blockers: string[] = [];
     const resistance =
+      !ignoreResistance &&
+      !normalDamage &&
       !!element &&
       target.resistencia.includes(element) &&
       !this.has(target, "Vapor");
@@ -1209,6 +1215,8 @@ export class Game {
         source,
         `Excedente de ${target.nome} (${origin})`,
         originOwnerId,
+        undefined,
+        ignoreResistance,
       );
     if (excess) {
       const mage = this.player(target.ownerId).mage;
@@ -2058,7 +2066,7 @@ export class Game {
           const recovered = this.gainMana(
             player,
             effect.custoAtual
-              ? currentSpellCost(card, player.mage)
+              ? currentSpellCost(card, player.mage, this.state)
               : effect.valor,
           );
           this.event(
@@ -2167,12 +2175,77 @@ export class Game {
       const ids = (effect.alvo === "Proprio" ? [source!.id] : selection).filter(
         (id) =>
           !effect.filtroAlvo ||
-          matchesPassiveFilter(
+          (matchesPassiveFilter(
             this.findCard(id) ?? this.targetSlot(id)?.card ?? undefined,
             effect.filtroAlvo,
-          ),
+          ) &&
+            !effect.filtroAlvo.excetoElementos?.includes(
+              (this.findCard(id) ?? this.targetSlot(id)?.card)?.elemento ??
+                "Neutro",
+            )),
       );
       switch (effect.id) {
+        case "fieldRules": {
+          if (!source || !effect.regrasCampo)
+            this.fail("Campo exige carta de origem e regras.");
+          this.state.ruleFields = (this.state.ruleFields ?? []).filter(
+            (f) => f.card.numeroCatalogo !== source.numeroCatalogo,
+          );
+          this.state.ruleFields.push({
+            id: source.id,
+            ownerId,
+            rounds: effect.duracao!,
+            nextTickTurn: nextEffectRound(this.state.turn),
+            rules: structuredClone(effect.regrasCampo),
+            card: {
+              id: source.id,
+              ownerId,
+              numeroCatalogo: source.numeroCatalogo,
+              nome: source.nome,
+              imgURL: source.imgURL,
+            },
+          });
+          break;
+        }
+        case "returnToHand": {
+          const returned = new Set<string>();
+          for (const id of ids) {
+            if (returned.has(id)) continue;
+            const slot = this.targetSlot(id);
+            const target = this.findCard(id) ?? slot?.card;
+            if (!slot || !target || target.tipo !== "Tropa")
+              this.fail("Devolução exige tropa em campo.");
+            if (!this.impactAllowed(target.id)) continue;
+            const group = [
+              slot.card,
+              slot.rider,
+              ...(effect.devolverVinculos ? [slot.structure] : []),
+            ].filter((c): c is Instance => !!c);
+            const weapons = effect.devolverVinculos ? this.weapons(slot) : [];
+            for (const weapon of weapons) {
+              const position = this.targetSlot(weapon.id)!;
+              for (const receiver of this.weaponBeneficiaries(position)) {
+                const c = receiver.rider ?? receiver.card;
+                if (c && !group.includes(c)) c.hpAtual -= weapon.bonusHp ?? 0;
+              }
+              position.card = null;
+            }
+            slot.card = null;
+            slot.rider = null;
+            if (effect.devolverVinculos) slot.structure = null;
+            for (const c of [...group, ...weapons]) {
+              returned.add(c.id);
+              this.resetCard(c);
+              this.player(c.ownerId).hand.push(c);
+              this.event(
+                "notice",
+                c,
+                (cause ?? "Efeito") + ": voltou para a mão.",
+              );
+            }
+          }
+          break;
+        }
         case "fieldModifier":
           for (const id of ids) {
             const target = this.findCard(id);
@@ -2467,6 +2540,7 @@ export class Game {
             id: source.id,
             ownerId,
             kind: "periodicDamage",
+            ignoreResistance: effect.ignoraResistencia,
             target: source.alvo as "TodosInimigos",
             rounds: effect.duracao!,
             damage: effect.valor!,
@@ -2644,6 +2718,9 @@ export class Game {
               effect.elemento ?? element,
               source,
               cause,
+              ownerId,
+              undefined,
+              effect.ignoraResistencia,
             );
             if (
               outcome &&
@@ -3083,6 +3160,9 @@ export class Game {
         this.state.fieldEffects = this.state.fieldEffects?.filter(
           (s) => s.card.id !== material.id,
         );
+        this.state.ruleFields = this.state.ruleFields?.filter(
+          (s) => s.id !== material.id,
+        );
         for (const a of [...(this.state.attachments ?? [])])
           if (a.source.id === material.id) this.removeAttachment(a);
         for (const slot of this.state.slots)
@@ -3128,7 +3208,10 @@ export class Game {
     if (!physical) this.fail("Carta não está na sua mão.");
     if (physical.tipo === "Feitico" && this.state.phase === "PREPARATION")
       this.fail("Feitiços são bloqueados durante a preparação.");
-    const card = chooseAction(modifiedSpell(physical, player.mage), cmd.mode);
+    const card = chooseAction(
+      modifiedSpell(physical, player.mage, this.state),
+      cmd.mode,
+    );
     if (
       cmd.destinationId &&
       !card.efeitos.some((e) =>
@@ -3229,6 +3312,15 @@ export class Game {
         element: card.elemento,
         cardId: card.id,
       });
+      if (cancelledByField(card, ids, this.state)) {
+        this.log(
+          card.nome +
+            " foi anulado pelo efeito de campo. Mana e uso foram consumidos.",
+        );
+        this.event("notice", card, "Feitiço anulado pelo campo.");
+        this.zarcosPlayed(user, card);
+        return;
+      }
       this.reactFields(card.elemento);
       if (
         this.state.phase === "BATTLE" &&
@@ -3382,7 +3474,7 @@ export class Game {
       (!card.requerElementoMago ||
         card.requerElementoMago === player.mage.elemento) &&
       !hasStatus(player.mage.statuses, ["Cego"]) &&
-      player.mana >= card.custoMana &&
+      player.mana >= currentSpellCost(card, player.mage, this.state) &&
       (!entryCost(card) ||
         materialOptions(this.state, player.id, card).length >=
           entryCost(card)!.quantidade) &&
@@ -3429,6 +3521,10 @@ export class Game {
     actionBonus = 0,
     temporaryBonus = 0,
   ) {
+    if (cancelledByField(card, ids, this.state)) {
+      this.log(card.nome + " foi anulado pelo efeito de campo.");
+      return;
+    }
     if (
       !this.specialSpell(user, card, ids, bonus, actionBonus, temporaryBonus)
     ) {
@@ -3453,29 +3549,6 @@ export class Game {
     const player = this.player(user);
     player.roundSpells ??= [];
     player.roundSpells.push(card.numeroCatalogo);
-    if (
-      !player.comboTriggered &&
-      player.roundSpells.includes("001") &&
-      player.roundSpells.includes("004")
-    ) {
-      if (this.state.phase === "PREPARATION")
-        this.fail("Combinação de dano bloqueada na preparação.");
-      player.comboTriggered = true;
-      for (const id of this.enemyTargets(user, true))
-        this.damage(
-          id,
-          6,
-          undefined,
-          false,
-          "Fogo",
-          undefined,
-          "Combinação Bola de Fogo + Furacão",
-          user,
-        );
-      this.log(
-        "Bola de Fogo + Furacão: 6 de dano adicionais em todos os inimigos.",
-      );
-    }
     this.zarcosPlayed(user, card);
   }
   private enemyTargets(user: string, mage = false) {
@@ -4020,6 +4093,8 @@ export class Game {
                 undefined,
                 `${name} (${this.player(spell.ownerId).nome}, fim do ciclo)`,
                 spell.ownerId,
+                undefined,
+                spell.ignoreResistance,
               );
           },
           { ownerId: spell.ownerId },
@@ -4073,7 +4148,15 @@ export class Game {
       this.fail(
         "Este feitiço de Água com Reação não está disponível para responder.",
       );
-    if (!this.payEntryCost(user, card, materiais, card.custoMana)) return;
+    if (
+      !this.payEntryCost(
+        user,
+        card,
+        materiais,
+        currentSpellCost(card, player.mage, this.state),
+      )
+    )
+      return;
     player.hand.splice(player.hand.indexOf(card), 1);
     player[card.destinoAposUso === "banido" ? "banished" : "graveyard"].push(
       card,
@@ -5029,6 +5112,9 @@ export class Game {
     this.trigger("onTurnEnd", { ownerId: this.state.current });
     const roundEnded = this.state.turn % 2 === 0;
     this.tickOngoingSpells();
+    for (const field of this.state.ruleFields ?? [])
+      if (effectRoundDue(field, this.state.turn)) field.rounds--;
+    this.state.ruleFields = this.state.ruleFields?.filter((f) => f.rounds > 0);
     for (const field of this.state.fieldEffects ?? [])
       if (effectRoundDue(field, this.state.turn)) field.rounds--;
     this.state.fieldEffects = this.state.fieldEffects?.filter(
@@ -5468,6 +5554,7 @@ export class Game {
       reactions: reactionDescriptions,
       ongoingSpells: this.state.ongoingSpells,
       fieldEffects: this.state.fieldEffects,
+      ruleFields: this.state.ruleFields,
       pendingImpact: this.state.pendingImpact?.request,
       pendingHandChoice: this.state.pendingHandChoice,
       pendingRevive:
@@ -5628,12 +5715,16 @@ export class Game {
         (this.player(user).revealHandUntilTurn !== undefined
           ? this.state.turn < this.player(user).revealHandUntilTurn!
           : this.player(user).revealHandRound === this.state.round)
-          ? { revealedHand: p.hand.map((c) => modifiedSpell(c, p.mage)) }
+          ? {
+              revealedHand: p.hand.map((c) =>
+                modifiedSpell(c, p.mage, this.state),
+              ),
+            }
           : {}),
         ...(p.id === user
           ? {
               hand: p.hand.map((c) => {
-                const effective = modifiedSpell(c, p.mage);
+                const effective = modifiedSpell(c, p.mage, this.state);
                 const reason = this.spellBlockReason(effective, p.id);
                 return {
                   ...effective,

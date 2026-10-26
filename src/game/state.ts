@@ -156,6 +156,17 @@ export interface State {
     removerAoUsarElemento?: Card["elemento"];
     watchThroughTurn: number;
   }[];
+  ruleFields?: {
+    id: string;
+    ownerId: string;
+    rounds: number;
+    nextTickTurn?: number;
+    rules: NonNullable<Effect["regrasCampo"]>;
+    card: Pick<
+      Instance,
+      "id" | "ownerId" | "numeroCatalogo" | "nome" | "imgURL"
+    >;
+  }[];
   fieldEffects?: AttackField[];
   pendingImpact?: {
     base: State;
@@ -186,6 +197,7 @@ export interface State {
     id: string;
     ownerId: string;
     kind: "tornado" | "arrowRain" | "sandstorm" | "periodicDamage";
+    ignoreResistance?: boolean;
     target?: "TodosInimigos" | "TodasTropasInimigas";
     nextTickTurn?: number;
     rounds: number;

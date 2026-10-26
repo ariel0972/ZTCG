@@ -74,6 +74,16 @@ export function structureFace(card) {
   face.append(info);
   return face;
 }
+export function renderRuleFields(state, doc = document) {
+  const active = (state.ruleFields ?? []).filter((f) => f.rounds > 0);
+  const fire = active.some((f) =>
+    f.rules.descontos?.some((r) => r.elemento === "Fogo"),
+  );
+  for (const arena of doc.querySelectorAll(".battle-arena")) {
+    arena.classList.toggle("flaming-field", fire);
+    arena.dataset.ruleFields = String(active.length);
+  }
+}
 // Derive side visuals from reusable spell modifiers, including stacked copies.
 export function renderSpellAura(player, front, back) {
   const boosts = (player.mage.statuses ?? []).filter(

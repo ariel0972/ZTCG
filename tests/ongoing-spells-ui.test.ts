@@ -146,3 +146,69 @@ test("Barreira aparece entre as tropas e detalha dano após ataque, reações e 
     dom.window.close();
   }
 });
+
+test("campo global mostra regras, contador e aura, removendo-os ao expirar", async () => {
+  const dom = new JSDOM(
+    '<div class="battle-arena"><div class="arena-divider"></div><div id="me"></div><div id="enemy"></div></div>',
+  );
+  const previous = Object.getOwnPropertyDescriptor(globalThis, "document");
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: dom.window.document,
+  });
+  try {
+    const path = "../public/JS/ongoing-spells.js";
+    const { createOngoingSpells } = await import(path);
+    const doc = dom.window.document;
+    const ui = createOngoingSpells(
+      doc.getElementById("me"),
+      doc.getElementById("enemy"),
+    );
+    const state: any = {
+      players: [
+        { id: "me", nome: "Eu" },
+        { id: "enemy", nome: "Outro" },
+      ],
+      ruleFields: [
+        {
+          id: "field",
+          ownerId: "me",
+          rounds: 2,
+          rules: {
+            descontos: [{ elemento: "Fogo", valor: 2 }],
+            danoNormal: ["Agua"],
+            anularFeiticos: ["Ar"],
+          },
+          card: {
+            nome: "Campos Flamejantes",
+            imgURL: "/assets/Cards/Campos Flamejantes.svg",
+          },
+        },
+      ],
+    };
+    ui.update(state, "me");
+    assert.ok(doc.querySelector(".flaming-field"));
+    const button = doc.querySelector(
+      ".arena-divider button",
+    ) as HTMLButtonElement;
+    assert.match(button.textContent!, /Campos Flamejantes/);
+    assert.doesNotMatch(button.getAttribute("aria-label")!, /undefined/);
+    const dialog = doc.querySelector("dialog") as any;
+    dialog.showModal = () => {
+      dialog.open = true;
+    };
+    button.click();
+    assert.match(dialog.textContent, /2 mana a menos/);
+    assert.match(dialog.textContent, /fraquezas e resistências/);
+    assert.match(dialog.textContent, /anulados/);
+    state.ruleFields = [];
+    ui.update(state, "me");
+    assert.equal(doc.querySelector(".flaming-field"), null);
+    assert.equal(doc.querySelector(".arena-divider button"), null);
+    assert.match(dialog.textContent, /terminou/);
+  } finally {
+    dom.window.close();
+    if (previous) Object.defineProperty(globalThis, "document", previous);
+    else Reflect.deleteProperty(globalThis, "document");
+  }
+});

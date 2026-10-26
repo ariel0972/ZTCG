@@ -1,5 +1,7 @@
 import { setImageSource } from "./image-sources.js";
 import { node } from "./auth.js";
+import { fieldRulesDescription } from "./card-view.js";
+import { renderRuleFields } from "./battle-ui.js";
 const legacyCards = {
   tornado: { nome: "Furacão", imgURL: "/assets/Cards/Furacão.png" },
   arrowRain: {
@@ -45,19 +47,25 @@ export function createOngoingSpells(ownHost, enemyHost) {
       node("p", `Ativado por ${effect.ownerName}`),
       node(
         "strong",
-        effect.field
-          ? `${effect.damage} de dano após cada ataque no campo de ${effect.affectedName}`
-          : `${effect.damage} de dano no fim de cada rodada`,
+        effect.rules
+          ? fieldRulesDescription(effect.rules)
+          : effect.field
+            ? `${effect.damage} de dano após cada ataque no campo de ${effect.affectedName}`
+            : `${effect.damage} de dano no fim de cada rodada`,
         "ongoing-spell-damage",
       ),
       node("p", `${effect.rounds} rodada(s) restante(s)`),
       node(
         "small",
-        "Dano base do efeito. Fraquezas, resistências e proteções são aplicadas a cada alvo.",
+        effect.rules
+          ? "Efeito global; vale para os dois jogadores. Uma nova cópia renova a duração sem acumular descontos."
+          : effect.ignoreResistance
+            ? "Ignora resistência. Fraquezas, escudos e estruturas continuam funcionando."
+            : "Dano base do efeito. Fraquezas, resistências e proteções são aplicadas a cada alvo.",
         "muted",
       ),
     );
-    if (effect.field)
+    if (effect.field && !effect.rules)
       details.append(
         node(
           "p",
@@ -77,6 +85,7 @@ export function createOngoingSpells(ownHost, enemyHost) {
   }
   return {
     update(state, viewerId) {
+      renderRuleFields(state, doc);
       active = new Map();
       ownHost.replaceChildren();
       enemyHost.replaceChildren();
@@ -89,6 +98,7 @@ export function createOngoingSpells(ownHost, enemyHost) {
       for (const spell of [
         ...(state.ongoingSpells || []),
         ...(state.fieldEffects || []).map((f) => ({ ...f, field: true })),
+        ...(state.ruleFields || []).map((f) => ({ ...f, field: true })),
       ]) {
         if (spell.rounds <= 0) continue;
         const card = spell.card ||
@@ -117,7 +127,7 @@ export function createOngoingSpells(ownHost, enemyHost) {
         button.dataset.side = mine ? "me" : "enemy";
         button.setAttribute(
           "aria-label",
-          `${card.nome}, ${mine ? "seu efeito" : "efeito do oponente"}: ${spell.damage} de dano, ${spell.rounds} rodada(s) restante(s). Ver detalhes.`,
+          `${card.nome}, ${mine ? "seu efeito" : "efeito do oponente"}: ${spell.rules ? "efeito global" : spell.damage + " de dano"}, ${spell.rounds} rodada(s) restante(s). Ver detalhes.`,
         );
         setImageSource(art, card.imgURL || "/assets/card-backs/common.png");
         art.alt = "";

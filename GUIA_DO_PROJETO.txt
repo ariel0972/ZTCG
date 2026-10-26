@@ -613,8 +613,7 @@ Magos publicados de Fogo/Água:
 
 Feitiços implementados:
 - 001 Bola de Fogo: custo 4, dano 3 em todas as tropas inimigas, inclusive
-  flanqueadas. Com Furacão na rodada, em qualquer ordem, soma dano 6 em tropas e
-  mago inimigos, uma combinação por jogador por rodada.
+  flanqueadas. Não possui mais combinação automática com Furacão.
 - 002 Jato da água: custo 3, dano 4 em inimigo no próprio turno. Fora do turno,
   cancela um comum de Fogo dirigido a tropa/mago, inclusive vários alvos, sem
   causar dano nem aplicar elemento. Não cancela assinaturas nem feitiço só para
@@ -623,8 +622,8 @@ Feitiços implementados:
   cadeia de respostas. Pendência e tempo restante do turno sobrevivem a reinício.
 - 003 Ataque Pedregoso: custo 5, cinco pedras de dano 1 distribuídas por tropas
   vivas da esquerda à direita; pedras restantes vão ao mago se não houver tropas.
-- 004 Furacão: custo 6, devolve tropa à mão e destrói sua estrutura; dano 3 no
-  mago ao fim de duas rodadas.
+- 004 Furacão: custo 6, devolve tropa e vínculos à mão; Fogo recebe 2 de dano
+  sem mover e Terra fica Atordoada por 2 ciclos sem mover. Não causa dano no mago.
 - 005 Chuva de Flechas: custo 2, dano 3 em todos os inimigos ao fim de duas
   rodadas; uma chuva em campo considerando os dois jogadores. Fogo aumenta para
   5, Água congela tropas, Ar aplica Sangrando, Terra aplica Cego.
@@ -1445,7 +1444,7 @@ ATUALIZAÇÃO — FEITIÇOS ATIVOS E HABILIDADES (13/10/2026)
 - tests/field-abilities.test.ts — Rodopio, Elevar Moral, Ajudante e Em Guarda, consumo de ataque, filtros, estrutura, montaria e duração.
 - tests/ongoing-spells-ui.test.ts — Separação por jogador, contadores, atualização/término do modal e compatibilidade com arte antiga.
 - scripts/update-field-abilities.ts — Atualiza habilidades de 075/111 e descrição de 005 no banco, com backup, versão otimista e preservação de atributos/passivas.
-Chuva de Flechas, Furacão e Furacão de Areia permitem um efeito ativo de cada
+Chuva de Flechas, Tornado de Fogo periódico e Furacão de Areia permitem um efeito ativo de cada
 tipo por jogador. O efeito do adversário não bloqueia seu uso. Duplicatas
 próprias ficam bloqueadas até expirar. Cego, mana e demais restrições permanecem.
 Todos os efeitos ativos são processados antes de decidir vitória por morte do
@@ -1873,7 +1872,9 @@ Fogo, Água, efeitos de campo e consequências de dano — 16/10/2026:
 - Pele de Luokis: custo 7, +5 PV/+3 ATQ; attackElement converte os ataques dos
   beneficiados em Água. A habilidade gratuita congela uma tropa por 2 rodadas,
   uma vez por rodada. Sem unidade explícita, Congelado mantém padrão de 2 turnos.
-- Tornado de Fogo: custo 6, dano 4 nas tropas inimigas; segue a janela geral de
+- Tornado de Fogo: custo 6, dano 6 em tropas e mago inimigos; com tropa de Ar
+  em qualquer lado, custo 8 e dano 6 por 2 ciclos sem dano inicial, ignorando
+  resistência. Segue a janela geral de
   cancelamento. Reação em feitiço de Água permite cancelar um feitiço comum de
   Fogo, pagando custo e limite da carta usada, sem executar seus outros efeitos.
 - Furacão de Areia: Cego e dano por uma única rodada. Mantém o roubo do Mago de Ar.
@@ -2150,3 +2151,18 @@ Invocações/cartas com custo de entrada são bloqueadas na preparação; mão s
 reembaralhar. Reviver e entradas diretas por efeitos não pagam custo nem mana de entrada.
 O catálogo mostra formulário próprio, descrição gerada e JSON; o schema público inclui
 a regra padrão. As opções da mão são enviadas somente ao dono, com metadados mínimos.
+
+FURACÃO, TORNADO E CAMPOS FLAMEJANTES — 25/10/2026
+- src/game/field-rules.ts — Seleciona variante por presença de cartas, desconto global, dano elemental normal e anulação por alvo; sem IDs de cartas.
+- scripts/update-field-spells.ts — Migra somente regras de 004/035 e cria 136 após conferência de identidade, backup e controle de versão; preserva artes e demais ajustes administrativos.
+- tests/field-spells.test.ts — Verifica vínculos, exceções elementais, custos condicionais, ciclos, defesas, anulação, renovação, material e persistência.
+- public/assets/Cards/Campos Flamejantes.svg — Arte vetorial local da nova carta de campo 136.
+varianteCampo é resolvida ao anunciar o feitiço, antes do custo e da reação de Água.
+A condição considera elemento original e tropas vivas nos dois lados, incluindo ocupantes.
+Campos globais ficam em ruleFields, duram ciclos completos e uma cópia da mesma carta
+substitui a anterior mesmo de outro jogador. Fonte física permanece no cemitério e pode
+ser material enquanto ativa; consumi-la remove imediatamente o efeito.
+O campo tem indicação central, contador e animação de fogo nos dois lados, inclusive
+para espectadores; movimento reduzido mantém indicação estática. Desconto não afeta
+habilidades, soma a outros descontos de cartas e nunca deixa custo negativo.
+Furacão 004 não possui mais dano periódico no mago nem combinação com Bola de Fogo.

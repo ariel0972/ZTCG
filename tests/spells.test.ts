@@ -370,21 +370,19 @@ test("escudo bloqueia três golpes completos e quebra no terceiro", () => {
   cast(g, "002", [s.id], "p2");
   assert.equal(s.card!.hpAtual, 26);
 });
-test("Furacão devolve tropa, dano dura duas rodadas e sobrevive serialização", () => {
-  let g = make(),
-    s = troop(g);
-  const id = s.card!.id,
+test("Furacão devolve tropa sem dano periódico ao mago e sobrevive serialização", () => {
+  let g = make();
+  const s = troop(g),
+    id = s.card!.id,
     hp = g.player("p2").mage.hpAtual;
   cast(g, "004", [s.id]);
-  assert.equal(s.card, null);
+  assert.equal(g.state.slots.find((slot) => slot.id === s.id)!.card, null);
   assert.ok(g.player("p2").hand.some((c) => c.id === id));
-  assert.equal(g.player("p2").mage.hpAtual, hp);
   g = Game.restore(JSON.parse(JSON.stringify(g.exportState())));
   endRound(g);
-  assert.equal(g.player("p2").mage.hpAtual, hp - 3);
   endRound(g);
-  assert.equal(g.player("p2").mage.hpAtual, hp - 6);
-  assert.equal(g.state.ongoingSpells?.length, 0);
+  assert.equal(g.player("p2").mage.hpAtual, hp);
+  assert.equal(g.state.ongoingSpells?.length ?? 0, 0);
 });
 test("Chuva de Flechas não causa dano inicial, impede duplicata e aplica dano no fim", () => {
   const g = make(),
@@ -451,7 +449,7 @@ test("Meteoros escolhe tropas; só Golém próprio habilita todos e nunca mago",
   enemy.card!.numeroCatalogo = "025";
   assert.throws(() => cast(g2, "010"), /alvo|Alvo/);
 });
-test("Bola de Fogo + Furacão mantém efeitos e soma seis, em ambas as ordens", () => {
+test("Bola de Fogo + Furacão não concede mais o dano da combinação antiga", () => {
   for (const reverse of [false, true]) {
     const g = make(),
       a = troop(g),
@@ -464,9 +462,9 @@ test("Bola de Fogo + Furacão mantém efeitos e soma seis, em ambas as ordens", 
       cast(g, "001");
       cast(g, "004", [a.id]);
     }
-    assert.equal(b.card!.hpAtual, 21);
-    assert.equal(g.player("p2").mage.hpAtual, hp - 6);
-    assert.equal(g.state.ongoingSpells?.length, 1);
+    assert.equal(g.state.slots.find((s) => s.id === b.id)!.card!.hpAtual, 27);
+    assert.equal(g.player("p2").mage.hpAtual, hp);
+    assert.equal(g.state.ongoingSpells?.length ?? 0, 0);
   }
 });
 test("Lágrima/Fluxo ativam somente com outro Zarcos posterior, uma vez por cópia", () => {
@@ -510,7 +508,7 @@ test("feitiços de rodada coexistem por jogador, bloqueiam só duplicata própri
   );
   endRound(restored);
   assert.equal(restored.state.ongoingSpells?.length, 0);
-  for (const id of ["004", "009"]) {
+  for (const id of ["009"]) {
     const game = make();
     const a = troop(game);
     cast(game, id, id === "004" ? [a.id] : []);

@@ -54,9 +54,43 @@ export function abilityDescription(ability) {
     "Efeito ainda não definido no catálogo."
   );
 }
+export function fieldRulesDescription(rules = {}) {
+  return [
+    ...(rules.descontos ?? []).map(
+      (r) =>
+        "Cartas de " +
+        (labels[r.elemento] || r.elemento) +
+        " custam " +
+        r.valor +
+        " mana a menos (mínimo 0).",
+    ),
+    rules.danoNormal?.length
+      ? "Dano de " +
+        rules.danoNormal.map((e) => labels[e] || e).join(", ") +
+        " ignora fraquezas e resistências; escudos e estruturas são mantidos."
+      : "",
+    rules.anularFeiticos?.length
+      ? "Feitiços de " +
+        rules.anularFeiticos.map((e) => labels[e] || e).join(", ") +
+        " contra tropas ou magos são anulados, consumindo mana e uso."
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
 function effectDescription(effect) {
   const description =
     {
+      fieldRules:
+        fieldRulesDescription(effect.regrasCampo) +
+        " Dura " +
+        effect.duracao +
+        " rodada(s) para ambos os jogadores.",
+      returnToHand:
+        "Devolve a tropa à mão" +
+        (effect.devolverVinculos
+          ? ", incluindo montaria, ocupante, estrutura e armamentos vinculados."
+          : ", incluindo montaria e ocupante."),
       spellBoost: `Fortalece feitiços dos elementos indicados em +${effect.valor}, reduz seu custo em ${effect.descontoMana}, por ${effect.duracao} rodada(s).`,
       stealMana: `Rouba ${Math.round((effect.fracao ?? 0) * 100)}% da mana adversária, arredondada para baixo${effect.valor ? ", mais " + effect.valor : ""}.`,
       returnOnElement: `Volta do cemitério à mão ao usar outra carta de ${effect.elemento}, uma vez nesse ciclo.`,
@@ -110,6 +144,9 @@ function effectDescription(effect) {
     }[effect.id] || "Efeito ainda não definido no catálogo.";
   const extra = [
     effect.perfurante ? "Ignora estruturas." : "",
+    effect.ignoraResistencia
+      ? "Ignora resistência; fraquezas e proteções são mantidas."
+      : "",
     effect.curaPosterior
       ? `Cura ${effect.curaPosterior.multiplicador} vezes o dano efetivo após ${effect.curaPosterior.rodadas} rodada(s).`
       : "",

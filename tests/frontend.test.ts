@@ -68,7 +68,7 @@ test("interface real em DOM: catálogo, filtros, limites, detalhes, salvamento e
     await until(
       () =>
         dom!.window.document.querySelectorAll("#card-list .card-tile")
-          .length === 130,
+          .length === 131,
     );
     const doc = dom.window.document;
     assert.equal(doc.getElementById("deck-count")!.textContent, "40 / 40");
@@ -187,7 +187,7 @@ test("interface real em DOM: catálogo, filtros, limites, detalhes, salvamento e
     await until(
       () =>
         dom!.window.document.querySelectorAll("#catalog-select option")
-          .length === 130,
+          .length === 131,
     );
     const adminDoc = dom.window.document;
     (adminDoc.getElementById("new-type") as HTMLSelectElement).value =

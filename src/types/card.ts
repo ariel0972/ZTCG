@@ -143,6 +143,23 @@ export const effectSchema = z
       .strict()
       .optional(),
     perfurante: z.boolean().optional(),
+    ignoraResistencia: z.boolean().optional(),
+    devolverVinculos: z.boolean().optional(),
+    regrasCampo: z
+      .object({
+        descontos: z
+          .array(
+            z
+              .object({ elemento: z.enum(elements), valor: number.min(1) })
+              .strict(),
+          )
+          .max(6)
+          .optional(),
+        danoNormal: z.array(z.enum(elements)).max(6).optional(),
+        anularFeiticos: z.array(z.enum(elements)).max(6).optional(),
+      })
+      .strict()
+      .optional(),
     reacoesElemento: z
       .array(
         z
@@ -183,6 +200,7 @@ export const effectSchema = z
       .object({
         tipo: z.enum(cardTypes).optional(),
         elemento: z.enum(elements).optional(),
+        excetoElementos: z.array(z.enum(elements)).min(1).max(6).optional(),
       })
       .strict()
       .refine(
@@ -530,6 +548,17 @@ export const cardSchema = z
     alvoAutomatico: z.enum(["UltimoAtacanteTropa"]).optional(),
     ignoraEsconder: z.boolean().optional(),
     tiposAlvo: z.array(z.enum(cardTypes)).min(1).max(5).optional(),
+    varianteCampo: z
+      .object({
+        filtro: z
+          .object({ tipo: z.enum(cardTypes), elemento: z.enum(elements) })
+          .strict(),
+        escopo: z.enum(["qualquer", "aliado", "inimigo"]),
+        custoMana: number,
+        efeitos: z.array(effectSchema).min(1).max(12),
+      })
+      .strict()
+      .optional(),
     efeitos: z.array(effectSchema).max(12).default([]),
     opcoes: z.array(actionOptionSchema).min(2).max(5).optional(),
     habilidadesAtivas: z.array(activeSchema).max(12).default([]),

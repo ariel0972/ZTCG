@@ -1,6 +1,7 @@
 import type { Card, Effect } from "../types/card";
 import { canonicalStatus } from "./status";
-import type { Instance } from "./state";
+import type { Instance, State } from "./state";
+import { fieldVariant, fieldDiscount } from "./field-rules";
 export function spellModifier(card: Card, mage: Instance) {
   const buffs = mage.statuses.filter(
     (s) =>
@@ -12,10 +13,14 @@ export function spellModifier(card: Card, mage: Instance) {
     discount: buffs.reduce((n, s) => n + (s.spellBoost?.descontoMana ?? 0), 0),
   };
 }
-export function currentSpellCost(card: Card, mage: Instance) {
-  return card.tipo === "Feitico"
-    ? Math.max(0, card.custoMana - spellModifier(card, mage).discount)
-    : card.custoMana;
+export function currentSpellCost(card: Card, mage: Instance, state?: State) {
+  const selected = fieldVariant(card, state, mage.ownerId);
+  return Math.max(
+    0,
+    selected.custoMana -
+      fieldDiscount(card, state) -
+      (card.tipo === "Feitico" ? spellModifier(card, mage).discount : 0),
+  );
 }
 const values = new Set([
   "damage",
@@ -60,11 +65,17 @@ const defaultDuration: Record<string, number> = {
   tornado: 2,
   revealStealHand: 1,
 };
-export function modifiedSpell<T extends Card>(card: T, mage: Instance): T {
-  if (card.tipo !== "Feitico") return card;
+export function modifiedSpell<T extends Card>(
+  original: T,
+  mage: Instance,
+  state?: State,
+): T {
+  const card = fieldVariant(original, state, mage.ownerId);
+  if (card.tipo !== "Feitico")
+    return { ...card, custoMana: currentSpellCost(card, mage, state) };
   const { bonus } = spellModifier(card, mage);
   const copy = structuredClone(card);
-  copy.custoMana = currentSpellCost(card, mage);
+  copy.custoMana = currentSpellCost(card, mage, state);
   if (!bonus) return copy;
   Object.assign(copy, { appliedSpellBonus: bonus });
   const modifyEffects = (effects: Effect[]) =>

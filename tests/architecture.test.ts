@@ -8,7 +8,7 @@ import rawCatalog from "../src/data/catalog.json";
 test("arquitetura: imports, assets com caixa exata, catálogo e guia de cada arquivo", async () => {
   const report = await auditProject();
   assert.deepEqual(report.errors, []);
-  assert.equal(report.cards, 130);
+  assert.equal(report.cards, 131);
 });
 test("referências antigas do Médico seguem o número atual sem confundir Palhaço", () => {
   assert.equal(cardReference({ id: 98, name: "Médico da Peste" }), "107");
@@ -20,7 +20,7 @@ test("referências antigas do Médico seguem o número atual sem confundir Palha
   );
   const doctor = rawCatalog.find((c) => c.numeroCatalogo === "107")!;
   const alias = { ...doctor, numeroCatalogo: "900098", versao: 9 };
-  assert.equal(mergeCatalog([alias]).cards.length, 130);
+  assert.equal(mergeCatalog([alias]).cards.length, 131);
   for (const records of [
     [alias, doctor],
     [doctor, alias],

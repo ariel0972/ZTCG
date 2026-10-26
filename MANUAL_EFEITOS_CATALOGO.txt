@@ -403,8 +403,9 @@ zarcosTear / Global: recupera 3 mana; ao usar OUTRA carta Zarcos depois, naquela
 strongFlow / Global: compra 3; ao usar OUTRA carta Zarcos depois, naquela
   rodada, compra 1 adicional uma vez por cópia.
 As condições de Fluxo Forte/Lágrima expiram no fim da rodada, não são retroativas.
-Bola de Fogo 001 + Furacão 004 na mesma rodada, qualquer ordem: +6 de dano
-  adicionais a todos os inimigos, mantendo efeitos anteriores, uma vez por rodada.
+Bola de Fogo 001 e Furacão 004 não possuem mais combinação automática de dano.
+Furacão 004 usa returnToHand/damage/status; tornado acima permanece como efeito
+legado para definições antigas e não corresponde às regras atuais de 004.
 Jato da água 002 cancela feitiço Fogo direcionado a tropa/mago, inclusive
   múltiplos alvos, fora do turno. Nunca cancela assinatura. Janela 20 segundos
   pausa turno; custa 3 e respeita limite comum. A resposta só cancela, sem dano.
@@ -1952,3 +1953,30 @@ Cartas com custo de entrada não entram na preparação. Ressurreições e entra
 por efeitos são isentas; o efeito que as coloca em campo mantém seu próprio custo.
 Para retirar custoEntrada de uma carta comum, remova a propriedade. Em Invocação isso
 restaura o custo padrão obrigatório, sem tornar a entrada gratuita.
+
+REGRAS GENÉRICAS DE CAMPO E DEVOLUÇÃO — 25/10/2026
+- returnToHand: devolve tropas selecionadas com montaria e ocupante. devolverVinculos:true
+  inclui estrutura e armas da coluna; não é morte/sacrifício. Ao sair, limpa efeitos
+  temporários. Pode compor habilidades e feitiços com alvo UnicoAliado/UnicoInimigo/
+  TodasTropasInimigas. filtroAlvo aceita tipo, elemento e excetoElementos:[...].
+- damage e periodicDamage aceitam ignoraResistencia:true, mantendo fraqueza, escudos,
+  reduções e absorção por estruturas. O sinal persiste no efeito periódico.
+- varianteCampo da carta Feitico troca custo e efeitos ao anunciar, se houver carta
+  viva em campo com filtro:{tipo:"Tropa",elemento:"Ar"}, escopo:"qualquer" (ou
+  "aliado"/"inimigo"), custoMana:8, efeitos:[...]. Não reavalia após o pagamento ou
+  durante a reação. O custo exibido na mão usa a mesma regra. Use efeitos genéricos.
+- fieldRules: alvo Global, duracao positiva, regrasCampo:{descontos:[{elemento:"Fogo",
+  valor:2}],danoNormal:["Agua"],anularFeiticos:["Ar"]}. Vale para ambos os jogadores.
+  As três listas são opcionais, com pelo menos uma regra. Desconto vale para todas
+  as cartas do elemento (não habilidades), até mínimo zero. danoNormal ignora apenas
+  fraqueza/resistência daquele dano, mantendo escudos e estruturas. anularFeiticos
+  cancela feitiço lançado com tropa/mago como alvo (inclusive em área), depois de pagar
+  mana e limite; compra e manipulação de zonas sem esses alvos permanecem permitidas.
+  Novas cópias do mesmo número renovam sem acumular, mesmo com outro lançador. Efeitos
+  de outras cartas podem coexistir. Duração usa dois encerramentos por ciclo, sem
+  depender de quem começou a partida. Feitiços de Ar já ativos não são retroativamente
+  apagados. ruleFields persistem e podem ser material quando permitidos pelo custo.
+004 Furacão custa 6: devolução com vínculos, exceto Fogo (2 de dano) e Terra (Atordoado
+por 2 ciclos sem mover). 035 Tornado custa 6/dano 6 em inimigos; com tropa de Ar em
+qualquer lado custa 8 e causa 6 por ciclo durante 2 ciclos sem dano inicial, ignorando
+resistência. 136 Campos Flamejantes custa 7, Fogo, fieldRules acima por 2 ciclos.

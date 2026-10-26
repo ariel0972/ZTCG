@@ -46,6 +46,9 @@ export function materialOptions(
   for (const a of state.attachments ?? [])
     if (a.ownerId === ownerId) add(a.source, "campo");
   const active = new Set([
+    ...(state.ruleFields ?? [])
+      .filter((f) => f.ownerId === ownerId && f.rounds > 0)
+      .map((f) => f.id),
     ...(state.ongoingSpells ?? [])
       .filter((s) => s.ownerId === ownerId && s.rounds > 0)
       .map((s) => s.id),

@@ -159,18 +159,34 @@
     "nome": "Tornado de Fogo",
     "tipo": "Feitico",
     "custoMana": 6,
-    "descricao": "Causa 4 de dano a todas as tropas inimigas. Segue a regra geral de cancelamento por feitiços de Água com Reação.",
+    "descricao": "Causa 6 de dano a todas as tropas e ao mago inimigos. Se houver uma tropa de Ar em qualquer lado ao lançar, custa 8 de mana e, em vez de dano imediato, causa 6 de dano ao fim de cada ciclo completo durante 2 rodadas, ignorando resistência. Fraquezas, escudos e estruturas continuam funcionando.",
     "imgURL": "/assets/Cards/Tornado de fogo.png",
     "publicado": true,
     "versao": 1,
-    "alvo": "TodasTropasInimigas",
+    "alvo": "TodosInimigos",
     "elemento": "Fogo",
     "efeitos": [
       {
         "id": "damage",
-        "valor": 4
+        "valor": 6
       }
-    ]
+    ],
+    "varianteCampo": {
+      "filtro": {
+        "tipo": "Tropa",
+        "elemento": "Ar"
+      },
+      "escopo": "qualquer",
+      "custoMana": 8,
+      "efeitos": [
+        {
+          "id": "periodicDamage",
+          "valor": 6,
+          "duracao": 2,
+          "ignoraResistencia": true
+        }
+      ]
+    }
   },
   {
     "numeroCatalogo": "085",
@@ -432,7 +448,7 @@
     "nome": "Furacão",
     "tipo": "Feitico",
     "custoMana": 6,
-    "descricao": "Devolve uma tropa inimiga à mão e destrói sua estrutura. Causa 3 de dano ao mago inimigo no fim de cada rodada, durante 2 rodadas. Com Bola de Fogo na mesma rodada, causa 6 de dano adicionais a todos os inimigos, uma vez por rodada.",
+    "descricao": "Escolha uma tropa inimiga. Devolva-a à mão com montaria, ocupante, estrutura e armamentos vinculados. Se for de Fogo, permanece em campo e recebe 2 de dano; estruturas absorvem normalmente. Se for de Terra, permanece em campo e fica Atordoada por 2 rodadas completas.",
     "imgURL": "/assets/Cards/Furacão.png",
     "publicado": true,
     "versao": 2,
@@ -440,11 +456,34 @@
     "elemento": "Ar",
     "efeitos": [
       {
-        "id": "tornado",
-        "valor": 3
+        "id": "returnToHand",
+        "devolverVinculos": true,
+        "filtroAlvo": {
+          "tipo": "Tropa",
+          "excetoElementos": ["Fogo", "Terra"]
+        }
+      },
+      {
+        "id": "damage",
+        "valor": 2,
+        "filtroAlvo": {
+          "tipo": "Tropa",
+          "elemento": "Fogo"
+        }
+      },
+      {
+        "id": "status",
+        "status": "Atordoado",
+        "duracao": 2,
+        "unidade": "rodada",
+        "filtroAlvo": {
+          "tipo": "Tropa",
+          "elemento": "Terra"
+        }
       }
     ],
-    "maxAlvos": 1
+    "maxAlvos": 1,
+    "tiposAlvo": ["Tropa"]
   },
   {
     "numeroCatalogo": "009",
@@ -3216,5 +3255,34 @@
     ],
     "fraqueza": ["Zarcos"],
     "resistencia": ["Neutro"]
+  },
+  {
+    "numeroCatalogo": "136",
+    "nome": "Campos Flamejantes",
+    "tipo": "Feitico",
+    "custoMana": 7,
+    "descricao": "Durante 2 rodadas completas, para ambos os jogadores: todas as cartas de Fogo custam 2 mana a menos (mínimo 0); dano de Água ignora fraquezas e resistências, mantendo escudos e estruturas; feitiços de Ar que atinjam tropas ou magos são anulados após pagar mana e consumir o uso. Uma nova cópia renova o campo, sem acumular o desconto.",
+    "imgURL": "/assets/Cards/Campos Flamejantes.svg",
+    "publicado": true,
+    "versao": 1,
+    "alvo": "Global",
+    "elemento": "Fogo",
+    "efeitos": [
+      {
+        "id": "fieldRules",
+        "duracao": 2,
+        "regrasCampo": {
+          "descontos": [
+            {
+              "elemento": "Fogo",
+              "valor": 2
+            }
+          ],
+          "danoNormal": ["Agua"],
+          "anularFeiticos": ["Ar"]
+        }
+      }
+    ],
+    "maxAlvos": 1
   }
 ]

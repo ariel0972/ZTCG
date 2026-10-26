@@ -5,6 +5,8 @@ import { canonicalStatus } from "./status";
 import { reactionDescriptions } from "./reactions";
 
 export const effectIds = [
+  "fieldRules",
+  "returnToHand",
   "equipmentGrant",
   "trap",
   "sacrifice",
@@ -487,8 +489,37 @@ export function playableErrors(card: Card): string[] {
         errors.push(
           "displace não recebe valor, status, duração ou elemento próprio.",
         );
-      if (e.filtroAlvo && !["damage", "heal", "status"].includes(e.id))
-        errors.push("Filtro por efeito exige damage, heal ou status.");
+      if (
+        e.filtroAlvo &&
+        !["damage", "heal", "status", "returnToHand"].includes(e.id)
+      )
+        errors.push(
+          "Filtro por efeito exige damage, heal, status ou returnToHand.",
+        );
+      if (
+        e.ignoraResistencia !== undefined &&
+        !["damage", "periodicDamage"].includes(e.id)
+      )
+        errors.push("Ignorar resistência exige damage ou periodicDamage.");
+      if (e.devolverVinculos !== undefined && e.id !== "returnToHand")
+        errors.push("devolverVinculos exige returnToHand.");
+      if (
+        e.id === "returnToHand" &&
+        !["UnicoInimigo", "UnicoAliado", "TodasTropasInimigas"].includes(
+          target ?? "",
+        )
+      )
+        errors.push("Devolver à mão exige alvo de tropa em campo.");
+      if (e.regrasCampo && e.id !== "fieldRules")
+        errors.push("regrasCampo exige fieldRules.");
+      if (
+        e.id === "fieldRules" &&
+        (target !== "Global" ||
+          !e.duracao ||
+          !e.regrasCampo ||
+          !Object.values(e.regrasCampo).some((v) => v?.length))
+      )
+        errors.push("fieldRules exige Global, duração e regras de campo.");
       if (e.id === "searchNamed" && !e.carta)
         errors.push("Busca por carta exige carta (numeroCatalogo).");
       if (e.id !== "searchNamed" && (e.carta || e.seNaoUsada))
@@ -526,6 +557,8 @@ export function playableErrors(card: Card): string[] {
         errors.push("Status/duração inválidos.");
       if (
         ![
+          "fieldRules",
+          "returnToHand",
           "equipmentGrant",
           "sacrifice",
           "resetAttacks",
@@ -594,6 +627,17 @@ export function playableErrors(card: Card): string[] {
   if (card.efeitos.filter((e) => e.id === "displace").length > 1)
     errors.push("Use um único deslocamento por feitiço.");
   checkEffects(card.efeitos, card.alvo);
+  if (card.varianteCampo) {
+    if (
+      card.tipo !== "Feitico" ||
+      card.opcoes ||
+      card.varianteCampo.efeitos.some((e) => specialTargets[e.id])
+    )
+      errors.push(
+        "Variante de campo exige feitiço sem opções e efeitos genéricos.",
+      );
+    checkEffects(card.varianteCampo.efeitos, card.alvo);
+  }
   const checkOptions = (options: Card["opcoes"], ability = false) => {
     if (!options) return;
     if (new Set(options.map((o) => o.id)).size !== options.length)
