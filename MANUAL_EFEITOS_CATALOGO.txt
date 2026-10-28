@@ -2035,3 +2035,16 @@ aceita até 2 MB e valida novamente no servidor. A URL hospedada é aplicada ao 
 em imgURL; valide e salve a carta. A galeria permite reutilizar artes já hospedadas
 e imagens das cartas existentes, com busca pelo nome. Apenas admins enviam/listam;
 a imagem pública por hash é usada no jogo e não depende do arquivo do computador.
+
+TUTORIAL E TREINO CONTRA IA — 28/10/2026
+/tutorial ensina as ações com o mesmo motor das partidas. É apresentado uma vez
+por conta após login/cadastro, inclusive para contas existentes. Pode ser pulado;
+finalizar ou pular salva a decisão e libera partidas. É possível retomar ou refazer
+pelo menu Tutorial. A demonstração usa cartas locais estáveis, sem XP ou histórico.
+No lobby Jogar, selecione Contra IA para uma partida livre com seu próprio baralho.
+A IA paga custos e respeita limites, abertura, alcance, estados, reações e ciclos
+normais. Essas partidas dão XP normal e aparecem identificadas no histórico, mas
+não contam para rankings de jogadores, taxas competitivas ou ranking de baralhos.
+As restrições normais de desistência continuam valendo. O modo tutorial é separado
+para não conceder XP por repetir exemplos guiados. O catálogo continua editável;
+nenhuma carta ou regra de efeito foi alterada para facilitar vitórias contra IA.

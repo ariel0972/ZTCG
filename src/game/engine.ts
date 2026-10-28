@@ -369,7 +369,10 @@ export class Game {
       processed: [...this.processed],
     });
   }
-  static restore(saved: ReturnType<Game["exportState"]>) {
+  static restore(
+    saved: ReturnType<Game["exportState"]>,
+    random: () => number = Math.random,
+  ) {
     if (saved.format !== 1)
       throw new AppError(503, "Versão de partida incompatível.", "GAME_FORMAT");
     const game = Object.create(Game.prototype) as Game;
@@ -388,7 +391,7 @@ export class Game {
       if (mage && mage.id === player.mage.id) player.mage = mage;
     }
     game.processed = new Map(saved.processed);
-    game.rng = Math.random;
+    game.rng = random;
     return game;
   }
   drawByDisconnection() {

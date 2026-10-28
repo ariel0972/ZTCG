@@ -2,10 +2,12 @@ import { Schema, model } from "mongoose";
 const schema = new Schema(
   {
     matchId: { type: String, unique: true, required: true },
+    mode: { type: String, enum: ["ai", "pvp"], default: undefined },
     players: [
       {
         userId: { type: Schema.Types.ObjectId, ref: "UserTCG" },
         nome: String,
+        isAI: Boolean,
         deckId: String,
       },
     ],

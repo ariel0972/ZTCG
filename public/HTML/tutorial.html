@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Aprenda a jogar · Zacornia</title>
+    <link rel="icon" href="/assets/icons/favicon.svg" />
+    <link rel="stylesheet" href="/CSS/app.css" />
+    <link rel="stylesheet" href="/CSS/battle.css" />
+    <link rel="stylesheet" href="/CSS/tutorial.css" />
+    <script type="module" src="/JS/tutorial.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">ZACORNIA <small>TRADING CARD GAME</small></a>
+      <nav aria-label="Principal">
+        <a href="/tutorial">Tutorial</a><a href="/HTML/index.html">Jogar</a
+        ><a href="/regras">Regras</a>
+      </nav>
+      <div id="account" class="account"></div>
+    </header>
+    <main id="tutorial-root" class="tutorial-shell" aria-busy="true">
+      <div class="tutorial-heading">
+        <div>
+          <p class="eyebrow">SUA PRIMEIRA PARTIDA</p>
+          <h1>Aprenda jogando</h1>
+          <p>Um treino curto para conhecer seu campo e suas cartas.</p>
+        </div>
+        <button id="skip-tutorial" class="quiet">Pular tutorial</button>
+      </div>
+      <p id="tutorial-loading" role="status">Preparando seu treino…</p>
+      <section id="tutorial-content" class="tutorial-layout" hidden>
+        <aside class="tutorial-lesson surface" aria-labelledby="lesson-title">
+          <p id="tutorial-progress-label" class="eyebrow"></p>
+          <progress
+            id="tutorial-progress"
+            aria-label="Progresso do tutorial"
+          ></progress>
+          <h2 id="lesson-title" tabindex="-1"></h2>
+          <p id="lesson-body"></p>
+          <p id="lesson-hint" class="tutorial-hint"></p>
+          <p id="tutorial-instruction" role="status"></p>
+          <div id="lesson-controls" class="tutorial-controls"></div>
+          <p class="tutorial-save">Progresso salvo na conta · sem cronômetro</p>
+        </aside>
+        <div class="tutorial-play-area">
+          <section
+            id="tutorial-board"
+            class="tutorial-board surface"
+            aria-label="Campo de treino"
+          >
+            <div id="tutorial-turn" class="tutorial-turn" role="status"></div>
+            <div id="tutorial-enemy" class="tutorial-side"></div>
+            <div class="tutorial-divider">
+              <span>Treino guiado · sem XP ou histórico</span>
+            </div>
+            <div id="tutorial-player" class="tutorial-side"></div>
+            <div class="tutorial-hand-heading">
+              <h2>Sua mão</h2>
+              <span id="tutorial-mana"></span>
+            </div>
+            <div id="tutorial-hand" class="tutorial-hand"></div>
+            <div
+              id="tutorial-action"
+              class="tutorial-action"
+              aria-live="polite"
+            ></div>
+            <div id="tutorial-turn-controls" class="tutorial-controls"></div>
+          </section>
+          <section
+            id="tutorial-complete"
+            class="tutorial-complete surface"
+            hidden
+          >
+            <span class="tutorial-victory" aria-hidden="true">✦</span>
+            <h2 id="tutorial-complete-title"></h2>
+            <p id="tutorial-complete-body"></p>
+            <div class="tutorial-controls">
+              <a class="button primary" href="/">Montar meu baralho</a
+              ><a class="button" href="/HTML/index.html"
+                >Jogar contra IA ou jogadores</a
+              ><button id="restart-tutorial" class="quiet">
+                Refazer tutorial
+              </button>
+            </div>
+          </section>
+        </div>
+      </section>
+      <details class="tutorial-reference surface">
+        <summary>Colinha rápida: turnos, cartas e efeitos</summary>
+        <div class="tutorial-reference-grid">
+          <section>
+            <h2>Seu turno</h2>
+            <p>
+              Compre 1 carta e recupere mana. Mobilize antes de atacar; depois
+              use suas ações e passe a vez. A mana chega no máximo a 20.
+            </p>
+            <p>
+              No turno 1, só mobilização. No turno 2, ataques e ações sem dano
+              de habilidade ou feitiço. Armamentos e estruturas só a partir do
+              turno 3.
+            </p>
+          </section>
+          <section>
+            <h2>Cada carta tem um papel</h2>
+            <p>
+              <strong>Mago:</strong> sua vida e seus limites.
+              <strong>Tropa:</strong> ocupa a frente e combate.
+              <strong>Feitiço:</strong> executa um efeito.
+              <strong>Armamento:</strong> concede bônus; normalmente 1 por
+              turno. <strong>Estrutura:</strong> protege uma tropa e absorve
+              dano.
+            </p>
+            <p>
+              Invocações também exigem os materiais descritos na carta. Confira
+              sempre o custo e o alvo.
+            </p>
+          </section>
+          <section>
+            <h2>Efeitos e habilidades</h2>
+            <p>
+              Uma rodada de efeito inclui o encerramento de dois turnos: o seu e
+              o do adversário. Efeitos periódicos causam dano a cada ciclo
+              completo.
+            </p>
+            <p>
+              Passivas são automáticas. Habilidades ativas precisam ser usadas.
+              Abra a carta para conferir duração, alcance, fraqueza, resistência
+              e restrições de status.
+            </p>
+          </section>
+          <section>
+            <h2>Zonas e vitória</h2>
+            <p>
+              A mão guarda suas opções; o baralho fornece novas cartas; o
+              cemitério recebe cartas usadas e derrotadas. Algumas cartas são
+              banidas e não podem voltar.
+            </p>
+            <p>
+              Elimine as tropas para expor o mago inimigo. Zere a vida dele para
+              vencer. A IA dá XP normal e aparece no histórico, fora do ranking.
+            </p>
+          </section>
+        </div>
+      </details>
+    </main>
+    <dialog
+      id="tutorial-card-dialog"
+      class="tutorial-card-dialog"
+      aria-labelledby="tutorial-card-title"
+    >
+      <h2 id="tutorial-card-title"></h2>
+      <div id="tutorial-card-content"></div>
+      <button id="tutorial-card-close" class="primary">Fechar carta</button>
+    </dialog>
+    <p id="message" class="message" role="status" aria-live="polite" hidden></p>
+  </body>
+</html>

@@ -1,3 +1,4 @@
+import { assertTutorialComplete } from "../services/tutorial-access";
 import { Router } from "express";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
@@ -139,6 +140,8 @@ export function friendRoutes(game: DurableGame) {
       }))
     )
       throw new AppError(403, "Vocês precisam aceitar a amizade primeiro.");
+    await assertTutorialComplete(req.userId!);
+    await assertTutorialComplete(userId);
     await ownedDeck(deckId, req.userId!, true);
     const invite = await Invitation.create({
       invitationId: randomUUID(),
@@ -174,6 +177,8 @@ export function friendRoutes(game: DurableGame) {
       }))
     )
       throw new AppError(403, "Amizade não está mais ativa.");
+    await assertTutorialComplete(invite.from);
+    await assertTutorialComplete(invite.to);
     if (invite.status === "pending") {
       const reserved = await Invitation.findOneAndUpdate(
         { invitationId, status: "pending" },

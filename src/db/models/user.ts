@@ -8,6 +8,7 @@ export interface IUser extends Document {
   senha: string;
   avatarURL: string;
   bannerURL?: string;
+  tutorialCompletedAt?: Date;
   avatarFrame?:
     "none" | "gold" | "silver" | "fire" | "water" | "earth" | "air" | "zarcos";
   ranking?: {
@@ -42,6 +43,7 @@ const userSchema = new Schema<IUser>({
   senha: { type: String, required: true, select: false },
   avatarURL: { type: String, default: "/assets/avatar.png" },
   bannerURL: { type: String, default: "" },
+  tutorialCompletedAt: { type: Date, default: undefined },
   avatarFrame: {
     type: String,
     enum: ["none", "gold", "silver", "fire", "water", "earth", "air", "zarcos"],

@@ -2561,3 +2561,10 @@
   font-size: 10px;
   padding: 3px;
 }
+
+.lobby-mode-label {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 20px;
+  max-width: 470px;
+}

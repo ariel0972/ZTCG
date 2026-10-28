@@ -1,3 +1,4 @@
+import tutorialRoutes from "./routes/tutorialRoutes";
 import { profileRoutes } from "./routes/profileRoutes";
 import { avatarRoutes } from "./routes/avatarRoutes";
 import { rankingRoutes } from "./routes/rankingRoutes";
@@ -87,6 +88,9 @@ export function createApp(
       experience: experienceRules(),
     });
   });
+  app.get("/tutorial", (_req, res) =>
+    res.sendFile(path.join(__dirname, "..", "public/HTML/tutorial.html")),
+  );
   app.get(["/ranking", "/regras"], (req, res) => {
     res.sendFile(
       path.join(
@@ -129,6 +133,7 @@ export function createApp(
   });
   app.use("/avatars", avatarRoutes);
   app.use("/auth", userRoutes);
+  app.use("/tutorial", tutorialRoutes);
   app.use("/rankings", rankingRoutes);
   app.use("/game", gameRoutes(game, social));
   app.use("/rooms", matchSocialRoutes(social));

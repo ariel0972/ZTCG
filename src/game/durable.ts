@@ -1,3 +1,4 @@
+import { aiEntry, aiNeedsAction, chooseAiCommand, AI_DELAY_MS } from "./ai";
 import { createHash, randomUUID } from "node:crypto";
 import { Game } from "./engine";
 import { phaseDuration } from "./coin-toss";
@@ -118,6 +119,46 @@ export class DurableGame {
       return result;
     });
   }
+  async startAi(user: string, nome: string, deckId: string, requestId: string) {
+    const { deck, catalog } = await this.load(deckId, user, true);
+    const entry: Waiting = {
+      id: user,
+      nome,
+      deckId,
+      deck,
+      catalog: catalog.filter(
+        (c) =>
+          c.numeroCatalogo === deck.mago ||
+          deck.cartas.includes(c.numeroCatalogo),
+      ),
+      catalogHash: "ai",
+      joinedAt: this.now(),
+    };
+    await this.store.touch(user, this.now());
+    return this.retry(async () => {
+      const { revision, data } = await this.store.lobby(),
+        key = user + ":" + requestId;
+      if (data.receipts[key]) return data.receipts[key].result;
+      const active = data.active[user]
+        ? await this.store.room(data.active[user])
+        : null;
+      if (active?.game.state.status === "ACTIVE")
+        return { queued: false, active: true };
+      if (data.waiting.some((e) => e.id === user))
+        throw new AppError(
+          409,
+          "Cancele a busca de oponente antes de jogar contra IA.",
+        );
+      this.prune(data);
+      const room = this.makeRoom([entry, aiEntry(catalog, this.now())]);
+      await this.store.insertRoom(room);
+      data.active[user] = room.id;
+      data.generations[user] = (data.generations[user] ?? 0) + 1;
+      const result = { queued: false, matchId: room.id, mode: "ai" };
+      data.receipts[key] = { at: this.now(), result };
+      return (await this.store.saveLobby(revision, data)) ? result : undefined;
+    });
+  }
   private makeRoom(entries: Waiting[]): DurableRoom {
     // Presence grace belongs to this match, including rematches after a long wait.
     entries = entries.map((entry) => ({ ...entry, joinedAt: this.now() }));
@@ -129,6 +170,9 @@ export class DurableGame {
     const game = new Game(randomUUID(), entries as [Waiting, Waiting], catalog);
     return {
       id: game.id,
+      ...(entries.some((e) => e.bot)
+        ? { mode: "ai" as const, aiNextAt: this.now() + AI_DELAY_MS }
+        : {}),
       revision: 0,
       game: game.exportState(),
       entries,
@@ -222,7 +266,7 @@ export class DurableGame {
       throw new AppError(403, "Acesso negado.");
     if (
       room.game.state.status === "ACTIVE" &&
-      !room.entries.every((e) => data.active[e.id] === id)
+      !room.entries.every((e) => e.bot || data.active[e.id] === id)
     )
       throw new AppError(409, "Partida não confirmada.", "UNCLAIMED_ROOM");
     return room;
@@ -247,7 +291,7 @@ export class DurableGame {
       (await this.store.presence(room.entries.map((e) => e.id)));
     this.contexts.delete(room);
     const absent = room.entries.filter(
-      (e) => now - Math.max(seen[e.id] ?? 0, e.joinedAt) > LEASE_MS,
+      (e) => !e.bot && now - Math.max(seen[e.id] ?? 0, e.joinedAt) > LEASE_MS,
     );
     const expired = absent.filter(
       (e) =>
@@ -310,6 +354,65 @@ export class DurableGame {
           room.responseDeadline = now + 20000;
         }
       }
+    }
+    const bot = room.entries.find((e) => e.bot);
+    if (
+      bot &&
+      !absent.length &&
+      now >= (room.aiNextAt ?? 0) &&
+      aiNeedsAction(game, bot.id)
+    ) {
+      const previousTurn = game.state.turn,
+        previousPhase = game.state.phase,
+        previousCoin = game.state.coinToss?.result,
+        response = game.responseKey();
+      if (room.aiTurn !== previousTurn) {
+        room.aiTurn = previousTurn;
+        room.aiActions = 0;
+      }
+      const command =
+        room.aiActions! >= 20 && game.state.phase === "BATTLE" && !response
+          ? { type: "endTurn" }
+          : chooseAiCommand(game, bot.id);
+      if (command) {
+        try {
+          game.execute(bot.id, {
+            ...command,
+            actionId: randomUUID(),
+            version: game.state.version,
+          });
+          room.aiActions = (room.aiActions ?? 0) + 1;
+        } catch {
+          if (game.state.pendingSpell) game.resolvePendingSpell();
+          else if (game.state.pendingAttack) game.resolvePendingAttack();
+          else if (game.responseKey()) game.resolvePendingChoice();
+          else if (
+            game.state.phase === "BATTLE" &&
+            game.state.current === bot.id
+          )
+            game.execute(bot.id, {
+              type: "endTurn",
+              actionId: randomUUID(),
+              version: game.state.version,
+            });
+        }
+        if (
+          game.state.turn !== previousTurn ||
+          game.state.phase !== previousPhase ||
+          game.state.coinToss?.result !== previousCoin
+        )
+          room.deadline = now + phaseDuration(game.state);
+        if (game.responseKey() && response !== game.responseKey()) {
+          if (!response)
+            room.remainingTurnMs = Math.max(0, room.deadline - now);
+          room.responseDeadline = now + 20000;
+        } else if (response && !game.responseKey()) {
+          room.deadline = now + (room.remainingTurnMs ?? TURN_MS);
+          delete room.responseDeadline;
+          delete room.remainingTurnMs;
+        }
+      }
+      room.aiNextAt = now + AI_DELAY_MS;
     }
     room.lastAdvancedAt = now;
     return game;
@@ -390,6 +493,9 @@ export class DurableGame {
   ) {
     return {
       ...game.snapshot(user),
+      mode: room.mode ?? "pvp",
+      aiNextAt: room.aiNextAt,
+      aiThinking: room.entries.some((e) => e.bot && aiNeedsAction(game, e.id)),
       revision: room.revision,
       deadline: room.deadline,
       responseDeadline: room.responseDeadline,
@@ -406,6 +512,7 @@ export class DurableGame {
       success: true,
       match: {
         ...Game.restore(room.game).spectatorSnapshot(),
+        mode: room.mode ?? "pvp",
         revision: room.revision,
         deadline: room.deadline,
         responseDeadline: room.responseDeadline,
@@ -526,6 +633,10 @@ export class DurableGame {
         room.rematchVotes = [];
       } else if (!room.rematchVotes.includes(user))
         room.rematchVotes.push(user);
+      if (!refuse && room.mode === "ai")
+        for (const entry of room.entries.filter((e) => e.bot))
+          if (!room.rematchVotes.includes(entry.id))
+            room.rematchVotes.push(entry.id);
       return (await this.store.saveRoom(room.revision, room))
         ? room
         : undefined;
@@ -536,8 +647,11 @@ export class DurableGame {
       const latest = await this.store.room(id);
       if (!latest || latest.rematchClosed || latest.rematchVotes.length < 2)
         throw new AppError(409, "Revanche cancelada.");
-      const claims = old.entries.map((e) => data.active[e.id]);
-      if (claims.every((c) => c !== id) && claims[0] === claims[1]) return true;
+      const claims = old.entries
+        .filter((e) => !e.bot)
+        .map((e) => data.active[e.id]);
+      if (claims.every((c) => c !== id) && claims.every((c) => c === claims[0]))
+        return true;
       if (
         claims.some((c) => c !== id) ||
         old.entries.some((e) => data.waiting.some((w) => w.id === e.id))
@@ -548,7 +662,8 @@ export class DurableGame {
         );
       const room = this.makeRoom(old.entries);
       await this.store.insertRoom(room);
-      for (const e of old.entries) data.active[e.id] = room.id;
+      for (const e of old.entries.filter((e) => !e.bot))
+        data.active[e.id] = room.id;
       return (await this.store.saveLobby(revision, data)) ? true : undefined;
     });
     return { waiting: false };

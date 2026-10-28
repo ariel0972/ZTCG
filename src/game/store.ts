@@ -5,6 +5,7 @@ import type { Game } from "./engine";
 import type { Card } from "../types/card";
 import type { DeckDefinition } from "./state";
 export interface Waiting {
+  bot?: boolean;
   id: string;
   nome: string;
   deckId: string;
@@ -20,6 +21,10 @@ export interface Lobby {
   receipts: Record<string, { at: number; result: Record<string, unknown> }>;
 }
 export interface DurableRoom {
+  mode?: "ai";
+  aiNextAt?: number;
+  aiTurn?: number;
+  aiActions?: number;
   id: string;
   invitationId?: string;
   revision: number;

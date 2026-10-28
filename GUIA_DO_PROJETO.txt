@@ -2233,3 +2233,64 @@ Validação desta etapa: suíte geral com 490 testes aprovados e 1 integração 
 reservada ao CI, seguida de 84 regressões de regras/interface após os ajustes finais.
 Compilação e auditoria estática sem erros. Navegador isolado confirmou Gerar Torre,
 Círculo com Golém sem materiais, envio real WebP e galeria desktop/mobile sem recorte.
+
+Tutorial de primeira partida e modo contra IA — 28/10/2026:
+- src/game/tutorial.ts — curso curto com cartas reais, escolhas de espaço e alvo,
+  mana, preparação, moeda guiada, abertura, habilidade, ataques, Sangramento,
+  ciclo completo e cemitério. Usa Game; não cria resultado, XP ou sala competitiva.
+- src/db/models/tutorial.ts — uma sessão de treino por conta; versão/CAS para
+  progresso, retomada entre dispositivos, idempotência, conclusão e pulo.
+  O estado de treino é removido ao terminar ou pular, mantendo apenas o marcador.
+- src/services/tutorial.ts — persistência, reinício e reparo do marcador de conclusão.
+- src/services/tutorial-access.ts — entrada em novas partidas exige tratar o tutorial
+  uma vez; finalizar OU pular libera a conta. Partidas já ativas podem continuar.
+- src/routes/tutorialRoutes.ts — endpoints autenticados /tutorial/state, /action,
+  /restart; corpo estrito, limite de frequência e sem cache de dados da conta.
+- public/HTML/tutorial.html, public/CSS/tutorial.css e public/JS/tutorial.js — treino
+  responsivo, com colinha, mão, campo e ações destacadas, sem cronômetro.
+- public/JS/tutorial-controller.js — ações reais por etapa, seleção de destinos,
+  cartas legíveis, moeda animada, pulo, retomada e feedback de gravação.
+- public/JS/tutorial-access.js — decisão reutilizável de entrada após autenticação;
+  navbar evita interromper combate ativo. Cadastro agora já abre a sessão e entra
+  no tutorial; login direciona à primeira experiência enquanto não for tratada.
+- src/db/models/user.ts — tutorialCompletedAt opcional; ausência exige o tutorial
+  também para contas atuais, sem migração em massa. Progresso fica fora da conta.
+- src/game/ai.ts — IA iniciante, baralho válido de 40 cartas e decisões por ações
+  legais do motor, com avaliação limitada a 90 candidatos e sem olhar mão inimiga.
+  Ações são espaçadas em 900 ms; preparação, moeda e respostas respeitam o motor.
+- src/game/store.ts e src/game/durable.ts — salas mode:ai usam CAS, reconexão,
+  tempos, passagem de turno, respostas e revanche da infraestrutura existente.
+  Bot não é uma conta, não entra na fila e não exige heartbeat próprio.
+- src/routes/gameRoutes.ts — evento ai:start; stream avança um passo da IA quando
+  chega aiNextAt, preserva escolhas humanas e dispensa consultas sociais da IA.
+- public/JS/game.js e public/HTML/index.html — seleção Contra jogadores/Contra IA
+  no lobby, usando o baralho do usuário e a mesma tela de batalha.
+- src/db/models/match.ts — mode e players.isAI identificam treinos livres.
+  Histórico e XP seguem regras normais (inclusive desistências). Resultados de IA
+  sempre têm ranked:false; não alteram vitórias/taxas competitivas nem ranking
+  mensal de baralhos. XP e partidas jogadas continuam no perfil, sem conta de bot.
+- src/services/result-policy.ts, src/services/experience.ts e
+  src/services/result-settlement.ts — separação do ranking sem perder XP, sequência
+  e duração; projeções e reprocessamentos de histórico preservam mode:ai.
+- public/JS/profile.js e src/routes/profileRoutes.ts — histórico identifica Contra
+  IA/sem ranking, mostra XP e não cria link para perfil inexistente do bot.
+- tests/tutorial.test.ts e tests/support/tutorial.ts — roteiro inteiro, ambas as
+  faces da moeda, três posições, custos, alcance, dois turnos por efeito e pulo.
+- tests/tutorial-http.test.ts — cadastro/login, conclusão, retomada, isolamento por
+  conta, CAS, idempotência, pulo e ausência de XP/histórico no tutorial.
+- tests/tutorial-ui.test.ts — percurso real pela mão, campo, menus, efeitos e mago;
+  refazer/pular e direcionamento após login.
+- tests/ai.test.ts — baralho, movimentos legais, sala durável, reconexão, XP,
+  exclusão de rankings, revanche, desistência e combate inteiro entre IAs.
+- tests/preview.ts — PREVIEW_TUTORIAL=1 deixa só a conta fictícia p1 sem conclusão,
+  para verificar a entrada obrigatória com a aplicação real e banco simulado.
+
+- public/CSS/tutorial.css — layout do campo e guia de treino em desktop/celular,
+  destaques, leitura de cartas, moeda e respeito à preferência de movimento reduzido.
+- public/HTML/tutorial.html — página acessível com progresso, campo de treino,
+  mão, cemitério, leitura de carta, pulo e referência rápida das regras.
+- public/JS/tutorial.js — autenticação e carregamento inicial do treino por conta.
+- tests/support/tutorial.ts — gera ações do roteiro para regressões de coluna,
+  alcance, moeda e conclusão usando apenas os destinos oferecidos pelo servidor.
+- tests/tutorial.test.ts — valida o curso inteiro no motor e a saída por pulo,
+  sem avanço em ações inválidas e sem interromper o ciclo completo dos efeitos.

@@ -1653,6 +1653,8 @@ function render() {
         : state.phase === "COIN_TOSS"
           ? "Cara ou coroa · Escolhendo quem começa"
           : `Rodada ${state.round} · Turno ${state.turn} · ${state.current === user.id ? "Sua vez" : "Vez do oponente"}`;
+  if (state.mode === "ai")
+    $("match-title").textContent = "IA · " + $("match-title").textContent;
   $("end-turn").textContent =
     state.phase === "PREPARATION" ? "Confirmar preparação" : "Passar turno";
   $("end-turn").disabled = !myTurn() || pending;
@@ -1867,18 +1869,26 @@ function updateLobby() {
   $("join").disabled = !connected || queued || !ready;
   $("cancel").hidden = !queued;
   $("lobby-deck").disabled = queued;
+  $("lobby-mode").disabled = queued;
+  $("join").textContent =
+    $("lobby-mode").value === "ai" ? "Jogar contra IA" : "Procurar oponente";
   deckSelector?.sync();
   $("lobby-validation").textContent = queued
     ? "Buscando outro duelista… Você pode cancelar a qualquer momento."
     : ready
-      ? "Baralho selecionado. Pronto para procurar um oponente."
+      ? $("lobby-mode").value === "ai"
+        ? "IA iniciante: usa cartas e regras reais. Dá XP e aparece no histórico, sem influenciar rankings."
+        : "Baralho selecionado. Pronto para procurar um oponente."
       : "Escolha um baralho com 40 cartas publicadas e um mago publicado.";
 }
 $("lobby-deck").onchange = updateLobby;
+$("lobby-mode").onchange = updateLobby;
 $("join").onclick = async () => {
   $("join").disabled = true;
   try {
-    await send("queue:join", { deckId: $("lobby-deck").value });
+    await send($("lobby-mode").value === "ai" ? "ai:start" : "queue:join", {
+      deckId: $("lobby-deck").value,
+    });
   } catch (e) {
     message(e.message, true);
   } finally {
@@ -1909,6 +1919,12 @@ setInterval(() => {
 }, 500);
 let matchChat, chatLoading;
 async function ensureChat(data) {
+  $("match-social").hidden = data.mode === "ai";
+  if (data.mode === "ai") {
+    $("match-watchers").textContent =
+      "Contra IA · XP e histórico · fora do ranking";
+    return;
+  }
   if (!matchChat) {
     chatLoading ||= import("./match-chat.js").then(({ createMatchChat }) => {
       matchChat = createMatchChat({

@@ -37,6 +37,14 @@
           >
         </div>
         <div class="lobby-setup surface">
+          <label class="lobby-mode-label"
+            >Modo de partida<select id="lobby-mode">
+              <option value="pvp">Contra jogadores</option>
+              <option value="ai">
+                Contra IA · XP e histórico, sem ranking
+              </option>
+            </select></label
+          >
           <select
             id="lobby-deck"
             aria-label="Baralho para jogar"
@@ -49,13 +57,16 @@
             ><a href="/">Editar baralhos</a>
           </div>
           <p id="connection" role="status" class="muted">Conectando…</p>
+          <a href="/tutorial">Aprender a jogar ou refazer o tutorial →</a>
           <details class="lobby-rules">
             <summary>Como funciona a partida?</summary>
             <p class="hint">
               Preparação simultânea com cinco cartas e 5 de mana inicial. A mana
-              do campo é recuperada após a preparação. Ataques, habilidades e
-              feitiços de dano ficam bloqueados também no primeiro turno de cada
-              jogador. Tempo de preparação e turno: 2 minutos. Três turnos
+              do campo é recuperada após a preparação. Não há feitiços na
+              preparação. No turno 1, só mobilização; no turno 2, o segundo
+              jogador pode atacar e usar ações sem dano de habilidade ou
+              feitiço. Armamentos e estruturas ficam bloqueados nesses dois
+              turnos. Tempo de preparação e turno: 2 minutos. Três turnos
               consecutivos sem ação causam derrota por inatividade. Em caso de
               desconexão, você tem 90 segundos para retornar.
             </p>

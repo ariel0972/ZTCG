@@ -1,3 +1,4 @@
+import { assertTutorialComplete } from "../services/tutorial-access";
 import { Router } from "express";
 import { z } from "zod";
 import { DurableGame } from "../game/durable";
@@ -77,7 +78,8 @@ export function gameRoutes(game: DurableGame, social: MatchSocial) {
         const due =
           match?.status === "ACTIVE" &&
           !match.paused &&
-          Date.now() >= (match.responseDeadline ?? match.deadline);
+          (Date.now() >= (match.responseDeadline ?? match.deadline) ||
+            (match.aiThinking && Date.now() >= (match.aiNextAt ?? 0)));
         const fullReadInterval = match?.status === "ACTIVE" ? 10000 : 5000;
         if (changed || due || Date.now() - lastRead >= fullReadInterval) {
           const previous = JSON.stringify([
@@ -121,6 +123,7 @@ export function gameRoutes(game: DurableGame, social: MatchSocial) {
         if (
           !closed &&
           snapshot.match &&
+          snapshot.match.mode !== "ai" &&
           !socialPending &&
           Date.now() - socialAt >= 3000
         ) {
@@ -193,6 +196,7 @@ export function gameRoutes(game: DurableGame, social: MatchSocial) {
       .object({
         event: z.enum([
           "queue:join",
+          "ai:start",
           "queue:cancel",
           "match:resume",
           "match:command",
@@ -207,13 +211,18 @@ export function gameRoutes(game: DurableGame, social: MatchSocial) {
       .parse(req.body);
     let result: unknown = {};
     const user = req.userId!;
-    if (event === "queue:join") {
+    if (["queue:join", "match:rematch", "ai:start"].includes(event))
+      await assertTutorialComplete(user);
+    if (event === "queue:join" || event === "ai:start") {
       const { deckId } = z
         .object({ deckId: z.string().regex(/^[a-f\d]{24}$/i) })
         .strict()
         .parse(data);
       const account = await User.findById(user);
-      result = await game.join(user, account!.nome, deckId, requestId);
+      result =
+        event === "ai:start"
+          ? await game.startAi(user, account!.nome, deckId, requestId)
+          : await game.join(user, account!.nome, deckId, requestId);
     } else if (event === "queue:cancel")
       result = await game.cancel(user, requestId);
     else if (event === "match:command") {

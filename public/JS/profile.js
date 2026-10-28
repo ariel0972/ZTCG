@@ -245,13 +245,13 @@ function renderHistory(matches, append = false) {
       detail = node("div", "", "match-detail");
     row.dataset.result = draw ? "draw" : win ? "win" : "loss";
     const opponent = match.players.find((p) => p.id !== profileId),
-      link = node("a", opponent?.nome || "Oponente");
-    if (opponent) link.href = profilePath(opponent.id);
+      link = node(opponent?.isAI ? "span" : "a", opponent?.nome || "Oponente");
+    if (opponent && !opponent.isAI) link.href = profilePath(opponent.id);
     detail.append(
       link,
       node(
         "small",
-        `${match.turns} turnos · ${match.reason || "Partida concluída"}`,
+        `${match.mode === "ai" ? "Contra IA · sem ranking · " : ""}${match.turns} turnos · ${match.reason || "Partida concluída"}`,
       ),
     );
     const date = node(

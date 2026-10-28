@@ -59,7 +59,7 @@ export function experienceProgress(total: number) {
 }
 
 export const EXPERIENCE_FIELDS =
-  "matchId winner reason turns finishedAt createdAt rulesVersion surrenderedBy surrenderStreak deletedAt resultReady";
+  "matchId winner reason turns finishedAt createdAt rulesVersion surrenderedBy surrenderStreak deletedAt resultReady mode";
 export type ExperienceMatch = ResultPolicyMatch & {
   surrenderedBy?: string | null;
   matchId: string;

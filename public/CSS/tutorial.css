@@ -1,0 +1,431 @@
+.tutorial-shell {
+  max-width: 1240px;
+  margin: 30px auto;
+  padding: 0 22px 45px;
+}
+.tutorial-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.tutorial-heading h1 {
+  margin: 6px 0;
+  font-size: clamp(26px, 3vw, 36px);
+}
+.tutorial-heading p {
+  margin: 4px 0;
+  color: #a8c0ca;
+}
+.tutorial-layout {
+  display: grid;
+  grid-template-columns: minmax(250px, 320px) minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+.tutorial-layout > * {
+  min-width: 0;
+}
+.tutorial-lesson {
+  padding: 24px;
+  position: sticky;
+  top: 18px;
+}
+.tutorial-lesson h2 {
+  font-size: 25px;
+  line-height: 1.2;
+  margin: 20px 0 14px;
+}
+.tutorial-lesson p {
+  line-height: 1.6;
+}
+.tutorial-lesson progress {
+  width: 100%;
+  height: 5px;
+  accent-color: #d8b76b;
+}
+.tutorial-hint {
+  color: #adc4ce;
+  font-size: 13px;
+  border-left: 2px solid #d8b76b;
+  padding-left: 12px;
+}
+.tutorial-save {
+  font-size: 11px;
+  color: #8ca7b3;
+}
+.tutorial-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 18px 0 8px;
+}
+.tutorial-controls button,
+.tutorial-controls a {
+  min-height: 42px;
+}
+.tutorial-board {
+  padding: 18px;
+  background: radial-gradient(ellipse at 50% 45%, #254552, #12232d 76%);
+}
+.tutorial-turn {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #f0d495;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+.tutorial-side {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr) 106px;
+  align-items: center;
+  gap: 14px;
+  min-height: 148px;
+}
+.tutorial-slots {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+.tutorial-slot {
+  padding: 0;
+  border-radius: 10px;
+  border: 1px dashed #66818b66;
+  background: #10212a66;
+  width: 110px;
+  min-height: 142px;
+  position: relative;
+  color: #aac3ce;
+  flex: 0 1 110px;
+}
+.tutorial-slot .live-card {
+  width: 100%;
+  height: 144px;
+  min-width: 0;
+}
+.tutorial-mage {
+  padding: 0;
+  border: 0;
+  background: none;
+  min-height: 142px;
+  width: 100px;
+  position: relative;
+}
+.tutorial-mage .live-card {
+  width: 100%;
+  height: 140px;
+}
+.tutorial-mage-label {
+  display: block;
+  font-size: 11px;
+  text-align: center;
+  margin: 5px;
+}
+.tutorial-pile {
+  display: grid;
+  gap: 7px;
+  font-size: 11px;
+  color: #aac3ce;
+  text-align: center;
+}
+.tutorial-pile button {
+  min-height: 42px;
+  font-size: 11px;
+}
+.tutorial-divider {
+  text-align: center;
+  color: #8daeb9;
+  font-size: 10px;
+  border-top: 1px solid #55737b;
+  margin: 22px 0;
+  position: relative;
+}
+.tutorial-divider span {
+  background: #19303c;
+  position: relative;
+  top: -8px;
+  padding: 0 10px;
+}
+.tutorial-hand-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  margin: 18px 0 10px;
+}
+.tutorial-hand-heading h2 {
+  font-size: 15px;
+  margin: 0;
+}
+.tutorial-hand-heading span {
+  color: #7ed1f1;
+  font-weight: 700;
+}
+.tutorial-hand {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 5px 5px 12px;
+  scroll-snap-type: x proximity;
+}
+.tutorial-hand button {
+  padding: 0;
+  border: 0;
+  flex: 0 0 110px;
+  background: none;
+  border-radius: 10px;
+  scroll-snap-align: center;
+}
+.tutorial-hand .live-card {
+  width: 110px;
+  height: 145px;
+}
+.tutorial-action {
+  border-top: 1px solid #55737b;
+  margin-top: 9px;
+  padding-top: 8px;
+  font-size: 13px;
+}
+.tutorial-action:empty {
+  display: none;
+}
+.tutorial-action p {
+  margin: 5px 0;
+  color: #bcd2d9;
+}
+.tutorial-action button {
+  margin: 5px 8px 0 0;
+  min-height: 42px;
+}
+.tutorial-highlight {
+  outline: 2px solid #f3cd76 !important;
+  outline-offset: 4px;
+  box-shadow: 0 0 20px #f2c15d38 !important;
+  animation: tutorial-glow 1.6s ease-in-out infinite;
+}
+.tutorial-selected {
+  outline: 2px solid #83d9ef !important;
+  outline-offset: 3px;
+}
+.tutorial-complete {
+  padding: 30px;
+  text-align: center;
+}
+.tutorial-complete .tutorial-controls {
+  justify-content: center;
+}
+.tutorial-victory {
+  font-size: 64px;
+  color: #d8b76b;
+}
+.tutorial-reference {
+  margin-top: 24px;
+  padding: 20px;
+}
+.tutorial-reference summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.tutorial-reference-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 26px;
+}
+.tutorial-reference h2 {
+  font-size: 16px;
+  color: #e5c982;
+}
+.tutorial-reference p {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #aec4cd;
+}
+.tutorial-card-dialog {
+  max-width: 390px;
+  width: calc(100% - 32px);
+  max-height: 90dvh;
+  overflow: auto;
+  background: #142631;
+  color: #eef5f8;
+  border: 1px solid #d8b76b;
+  border-radius: 15px;
+  padding: 22px;
+}
+.tutorial-card-dialog::backdrop {
+  background: #000b;
+}
+.tutorial-card-dialog img {
+  display: block;
+  max-height: 260px;
+  max-width: 100%;
+  margin: 0 auto 15px;
+  object-fit: contain;
+}
+.tutorial-card-dialog pre {
+  white-space: pre-wrap;
+  font-family: inherit;
+  line-height: 1.6;
+  font-size: 13px;
+}
+.tutorial-coin {
+  font-size: 21px;
+  border-radius: 50%;
+  width: 90px;
+  height: 90px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #ffe6a0, #aa7929);
+  color: #35280d;
+  box-shadow: inset 0 0 0 5px #e9c378;
+  margin: 12px auto;
+}
+.tutorial-coin.is-flipping {
+  animation: tutorial-flip 0.8s ease-out;
+}
+.tutorial-coin-choices {
+  font-size: 12px;
+  text-align: center;
+  color: #aac3ce;
+}
+.tutorial-error {
+  color: #ffb7a8;
+}
+.tutorial-loading {
+  padding: 25px;
+}
+.tutorial-shell[aria-busy="true"] button {
+  cursor: wait;
+}
+.lobby-mode-label {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 20px;
+  max-width: 470px;
+}
+@keyframes tutorial-glow {
+  50% {
+    box-shadow: 0 0 26px #f2c15d60;
+  }
+}
+@keyframes tutorial-flip {
+  from {
+    transform: rotateY(0);
+  }
+  to {
+    transform: rotateY(1080deg);
+  }
+}
+@media (max-width: 1000px) {
+  .tutorial-layout {
+    grid-template-columns: 1fr;
+  }
+  .tutorial-lesson {
+    position: static;
+  }
+  .tutorial-lesson h2 {
+    margin: 12px 0;
+  }
+  .tutorial-side {
+    grid-template-columns: 90px minmax(0, 1fr) 85px;
+    gap: 10px;
+  }
+  .tutorial-shell {
+    max-width: 860px;
+  }
+  .tutorial-controls {
+    margin-top: 10px;
+  }
+  .tutorial-lesson {
+    padding: 20px;
+  }
+  .tutorial-lesson p {
+    margin: 8px 0;
+  }
+}
+@media (max-width: 600px) {
+  .tutorial-shell {
+    padding: 0 12px 30px;
+    margin-top: 20px;
+  }
+  .tutorial-heading {
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .tutorial-heading p:not(.eyebrow) {
+    font-size: 13px;
+  }
+  .tutorial-heading button {
+    min-width: 104px;
+  }
+  .tutorial-layout {
+    gap: 12px;
+  }
+  .tutorial-board {
+    padding: 14px 10px;
+  }
+  .tutorial-side {
+    grid-template-columns: 1fr 74px;
+    gap: 12px;
+  }
+  .tutorial-slots {
+    grid-column: 1/-1;
+    grid-row: 2;
+    gap: 12px;
+  }
+  .tutorial-mage {
+    width: 88px;
+    min-height: 125px;
+    justify-self: center;
+  }
+  .tutorial-mage .live-card {
+    height: 125px;
+  }
+  .tutorial-pile {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .tutorial-slot {
+    width: 92px;
+    flex-basis: 92px;
+    min-height: 129px;
+  }
+  .tutorial-slot .live-card {
+    height: 129px;
+  }
+  .tutorial-divider {
+    margin: 22px 0 12px;
+  }
+  .tutorial-turn {
+    font-size: 12px;
+  }
+  .tutorial-hand {
+    gap: 10px;
+  }
+  .tutorial-reference-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .tutorial-lesson h2 {
+    font-size: 23px;
+  }
+  .tutorial-lesson p {
+    font-size: 14px;
+  }
+  .tutorial-hint {
+    font-size: 12px !important;
+  }
+  .tutorial-save {
+    font-size: 10px !important;
+  }
+  .tutorial-complete {
+    padding: 22px 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tutorial-highlight,
+  .tutorial-coin.is-flipping {
+    animation: none;
+  }
+}

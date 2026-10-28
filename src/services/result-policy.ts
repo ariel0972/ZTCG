@@ -6,6 +6,7 @@ export const DURATION_XP_BANDS = [
   { min: 30, max: null, multiplier: 1.7 },
 ] as const;
 export type ResultPolicyMatch = {
+  mode?: string | null;
   rulesVersion?: number | null;
   reason?: string | null;
   turns?: number | null;
@@ -37,7 +38,7 @@ export function resultEligibility(m: ResultPolicyMatch) {
   if (m.rulesVersion !== RESULT_RULES_VERSION)
     return {
       historyVisible: true,
-      ranked: true,
+      ranked: m.mode !== "ai",
       countGame: true,
       awardXp: true,
     };
@@ -55,5 +56,10 @@ export function resultEligibility(m: ResultPolicyMatch) {
       countGame: true,
       awardXp: true,
     };
-  return { historyVisible: true, ranked: true, countGame: true, awardXp: true };
+  return {
+    historyVisible: true,
+    ranked: m.mode !== "ai",
+    countGame: true,
+    awardXp: true,
+  };
 }

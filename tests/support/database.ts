@@ -2,6 +2,7 @@
 import { mock } from "node:test";
 import { Types } from "mongoose";
 import User from "../../src/db/models/user";
+import Tutorial from "../../src/db/models/tutorial";
 import Deck from "../../src/db/models/decks";
 import CardModel from "../../src/db/models/Card";
 import Match from "../../src/db/models/match";
@@ -146,6 +147,7 @@ export async function fakeDatabase() {
     [User, users],
     [Deck, decks],
     [Avatar, []],
+    [Tutorial, []],
     [Lore, lores],
     [AdminControl, adminControls],
     [AdminAudit, adminAudits],
@@ -154,6 +156,7 @@ export async function fakeDatabase() {
     ...Object.values(socialModels).map((model) => [model, []] as [any, any[]]),
   ] as [any, any[]][]) {
     if (
+      model === Tutorial ||
       model === Avatar ||
       model === AdminControl ||
       model === AdminAudit ||
@@ -368,6 +371,7 @@ export async function fakeDatabase() {
     users.push({
       _id: id,
       nome: `Duelista ${i}`,
+      tutorialCompletedAt: new Date("2026-01-01T00:00:00Z"),
       nomeKey: playerNameKey(`Duelista ${i}`),
       email: `p${i}@test.local`,
       senha,

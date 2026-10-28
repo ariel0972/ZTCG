@@ -1,3 +1,4 @@
+import { landingPage, loginDestination } from "./tutorial-access.js";
 import { api, rememberSession, navbar, message } from "./auth.js";
 void navbar();
 const form = document.getElementById("auth-form");
@@ -14,7 +15,10 @@ form.addEventListener("submit", async (e) => {
     );
     if (form.dataset.mode === "login") {
       rememberSession(result, form.elements.lembrar.checked);
-      location.href = "/";
+      location.href = await loginDestination(result.user, api);
+    } else if (result.token && result.user) {
+      rememberSession(result, false);
+      location.href = landingPage(result.user);
     } else {
       message(result.content);
       form.reset();

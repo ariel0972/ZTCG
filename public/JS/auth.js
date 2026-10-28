@@ -1,3 +1,4 @@
+import { needsTutorialRedirect, tutorialPath } from "./tutorial-access.js";
 import { createSiteNavigation } from "./site-navigation.js";
 import { createSocialNotifications } from "./social-notifications.js";
 export function token() {
@@ -83,6 +84,7 @@ async function fetchApi(path, options, renewed) {
       const error = new Error(data.content + (details ? "\n" + details : ""));
       error.status = response.status;
       error.code = data.code;
+      if (data.code === "TUTORIAL_REQUIRED") location.assign(tutorialPath);
       throw error;
     }
     return data;
@@ -156,6 +158,15 @@ export async function navbar() {
   }
   try {
     const { user } = await api("/auth/me");
+    if (needsTutorialRedirect(user, location.pathname)) {
+      const activeBattle =
+        location.pathname === "/HTML/index.html" &&
+        (await api("/game/state")).match?.status === "ACTIVE";
+      if (!activeBattle) {
+        location.replace(tutorialPath);
+        return null;
+      }
+    }
     const link = node("a", user.nome);
     link.href = profilePath(user.id);
     for (const entry of document.querySelectorAll(
@@ -172,7 +183,8 @@ export async function navbar() {
     button.onclick = logout;
     host.append(button);
     socialNotifications?.close();
-    socialNotifications = createSocialNotifications({ user, api });
+    if (!user.tutorialRequired)
+      socialNotifications = createSocialNotifications({ user, api });
     navigator.serviceWorker?.addEventListener("message", (event) => {
       if (
         event.data?.type === "social:open-invites" &&

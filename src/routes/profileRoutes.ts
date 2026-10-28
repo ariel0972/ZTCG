@@ -72,7 +72,12 @@ profileRoutes.get("/:id", async (req: AuthRequest, res) => {
     }),
     matches: matches.map((m) => ({
       matchId: m.matchId,
-      players: m.players.map((p) => ({ id: String(p.userId), nome: p.nome })),
+      mode: m.mode ?? "pvp",
+      players: m.players.map((p) => ({
+        id: String(p.userId),
+        nome: p.nome,
+        ...(p.isAI ? {isAI:true} : {}),
+      })),
       winner: m.winner,
       turns: m.turns,
       finishedAt: m.finishedAt,

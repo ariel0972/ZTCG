@@ -46,6 +46,7 @@ export function createSiteNavigation(header) {
     ["/HTML/friends.html", "Amigos", "friends", "♧"],
     ["/ranking", "Ranking", "ranking", "♔"],
     ["/regras", "Regras", "rules", "≡"],
+    ["/tutorial", "Tutorial", "tutorial", "✦"],
     ["/lore", "Lore", "lore", "✧"],
     ["/HTML/index.html", "Jogar", "play", "▷"],
   ];

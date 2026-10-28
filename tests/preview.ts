@@ -11,6 +11,8 @@ import { randomUUID } from "node:crypto";
 import { MatchSocial } from "../src/game/social";
 process.env.SECRET = "preview-only-012345678901234567890123456789";
 void fakeDatabase().then(async (db) => {
+  if (process.env.PREVIEW_TUTORIAL === "1")
+    delete db.users[0].tutorialCompletedAt;
   if (process.env.PREVIEW_DECK_SELECTOR === "1") {
     const owner = "1".repeat(24),
       base = db.decks.find((d) => d.userId === owner);

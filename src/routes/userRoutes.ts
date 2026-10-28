@@ -1,3 +1,4 @@
+import { tutorialRequired } from "../services/tutorial-access";
 import express, { Router } from "express";
 import { storeAvatar, storeLegacyAvatar } from "../services/avatars";
 import { z } from "zod";
@@ -137,6 +138,8 @@ export async function publicUser(user: any) {
     vitorias: stats.vitorias,
     partidas: stats.partidas,
     admin: user.admin,
+    tutorialRequired: tutorialRequired(user),
+    tutorialCompletedAt: user.tutorialCompletedAt ?? null,
   };
 }
 router.post("/registrar", rateLimit(10), async (req, res) => {
@@ -150,7 +153,7 @@ router.post("/registrar", rateLimit(10), async (req, res) => {
       "Este nome de jogador já está em uso.",
       "NAME_TAKEN",
     );
-  await User.create({
+  const user = await User.create({
     nome: input.nome,
     nomeKey,
     email: input.email,
@@ -160,7 +163,9 @@ router.post("/registrar", rateLimit(10), async (req, res) => {
   // Cadastro não depende de uma segunda gravação para ficar consistente.
   res.status(201).json({
     success: true,
-    content: "Conta criada. Entre para montar seu deck.",
+    token: issueSession(user, res),
+    user: await publicUser(user),
+    content: "Conta criada. Vamos aprender a jogar!",
   });
 });
 router.post("/logar", rateLimit(20), async (req, res) => {

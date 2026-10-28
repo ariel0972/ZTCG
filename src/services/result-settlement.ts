@@ -14,9 +14,14 @@ import type { DurableRoom } from "../game/store";
 export type AffectedRankings = Map<string, Set<string>>;
 export function addAffected(
   affected: AffectedRankings,
-  players: { userId?: unknown; deckId?: string | null }[],
+  players: {
+    userId?: unknown;
+    deckId?: string | null;
+    isAI?: boolean | null;
+  }[],
 ) {
   for (const p of players) {
+    if (p.isAI) continue;
     const id = String(p.userId);
     if (!/^[a-f\d]{24}$/i.test(id)) continue;
     const decks = affected.get(id) ?? new Set<string>();
@@ -90,10 +95,12 @@ export async function recordMatchResult(room: DurableRoom) {
       {
         $setOnInsert: {
           matchId: room.id,
+          ...(room.mode ? { mode: room.mode } : {}),
           players: room.entries.map((e) => ({
             userId: e.id,
             nome: e.nome,
             deckId: e.deckId,
+            ...(e.bot ? { isAI: true } : {}),
           })),
           winner: state.winner,
           reason: state.reason,
@@ -116,11 +123,13 @@ export async function recordMatchResult(room: DurableRoom) {
       { upsert: true, writeConcern: { w: "majority", wtimeout: 5000 } },
     );
     const affected = await reconcileResultPolicies(
-      room.entries.map((e) => e.id),
+      room.entries.filter((e) => !e.bot).map((e) => e.id),
     );
     addAffected(
       affected,
-      room.entries.map((e) => ({ userId: e.id, deckId: e.deckId })),
+      room.entries
+        .filter((e) => !e.bot)
+        .map((e) => ({ userId: e.id, deckId: e.deckId })),
     );
     await refreshAffectedRankings(affected);
   });
