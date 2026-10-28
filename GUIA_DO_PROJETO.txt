@@ -2257,7 +2257,7 @@ Tutorial de primeira partida e modo contra IA — 28/10/2026:
   também para contas atuais, sem migração em massa. Progresso fica fora da conta.
 - src/game/ai.ts — IA iniciante, baralho válido de 40 cartas e decisões por ações
   legais do motor, com avaliação limitada a 90 candidatos e sem olhar mão inimiga.
-  Ações são espaçadas em 900 ms; preparação, moeda e respostas respeitam o motor.
+  Ações são espaçadas em 2,5 segundos; preparação, moeda e respostas respeitam o motor.
 - src/game/store.ts e src/game/durable.ts — salas mode:ai usam CAS, reconexão,
   tempos, passagem de turno, respostas e revanche da infraestrutura existente.
   Bot não é uma conta, não entra na fila e não exige heartbeat próprio.
@@ -2294,3 +2294,18 @@ Tutorial de primeira partida e modo contra IA — 28/10/2026:
   alcance, moeda e conclusão usando apenas os destinos oferecidos pelo servidor.
 - tests/tutorial.test.ts — valida o curso inteiro no motor e a saída por pulo,
   sem avanço em ações inválidas e sem interromper o ciclo completo dos efeitos.
+
+Ajustes de leitura do tutorial e ritmo da IA — 28/10/2026:
+- public/CSS/tutorial.css e public/HTML/tutorial.html — conclusão em painel único,
+  próximos passos como cartões de ação com espaçamento, resumo do treino e versões
+  desktop/celular; progresso em dourado e identificação dos dois lados do campo.
+- public/JS/tutorial-controller.js — conclusão oculta a etapa lateral redundante,
+  leva o foco ao título visível e não mostra aprendizado concluído quando pulado.
+- src/game/ai.ts e src/game/durable.ts — pausa persistida de 2,5 segundos entre ações,
+  também após ação humana, resolução de resposta ou mudança automática de turno/moeda.
+  Leituras sucessivas e outro coordenador não antecipam a jogada nem acumulam ações.
+- public/JS/entry-cost.js e public/CSS/battle.css — miniaturas limitadas na escolha
+  de materiais, rolagem somente na grade e rodapé visível para confirmar/cancelar.
+  Identifica descarte da mão/sacrifício do campo e marca os materiais selecionados.
+- tests/ai.test.ts e tests/tutorial-ui.test.ts — intervalos por relógio simulado,
+  começo de turno da IA, timeout, conclusão/pulo/refazer e foco acessível.

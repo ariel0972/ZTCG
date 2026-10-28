@@ -50,9 +50,15 @@
             aria-label="Campo de treino"
           >
             <div id="tutorial-turn" class="tutorial-turn" role="status"></div>
+            <div class="tutorial-side-heading">
+              <span>Adversário</span><small>Guia de Zacornia</small>
+            </div>
             <div id="tutorial-enemy" class="tutorial-side"></div>
             <div class="tutorial-divider">
               <span>Treino guiado · sem XP ou histórico</span>
+            </div>
+            <div class="tutorial-side-heading">
+              <span>Seu campo</span><small>Proteja seu mago</small>
             </div>
             <div id="tutorial-player" class="tutorial-side"></div>
             <div class="tutorial-hand-heading">
@@ -72,15 +78,60 @@
             class="tutorial-complete surface"
             hidden
           >
-            <span class="tutorial-victory" aria-hidden="true">✦</span>
-            <h2 id="tutorial-complete-title"></h2>
-            <p id="tutorial-complete-body"></p>
-            <div class="tutorial-controls">
-              <a class="button primary" href="/">Montar meu baralho</a
-              ><a class="button" href="/HTML/index.html"
-                >Jogar contra IA ou jogadores</a
-              ><button id="restart-tutorial" class="quiet">
-                Refazer tutorial
+            <div class="tutorial-complete-hero">
+              <span class="tutorial-victory" aria-hidden="true">✦</span>
+              <div>
+                <p class="eyebrow" id="tutorial-complete-label">
+                  TREINO CONCLUÍDO
+                </p>
+                <h2 id="tutorial-complete-title" tabindex="-1"></h2>
+                <p id="tutorial-complete-body"></p>
+              </div>
+            </div>
+            <ul
+              id="tutorial-recap"
+              class="tutorial-recap"
+              aria-label="O que você praticou"
+            >
+              <li><span aria-hidden="true">✓</span> Turnos e mana</li>
+              <li><span aria-hidden="true">✓</span> Cartas e habilidades</li>
+              <li><span aria-hidden="true">✓</span> Efeitos e combate</li>
+            </ul>
+            <div class="tutorial-next-heading">
+              <h3>Seu próximo passo</h3>
+              <span>A aventura continua fora do treino</span>
+            </div>
+            <div class="tutorial-next-actions">
+              <a
+                class="tutorial-next-card tutorial-next-card--primary"
+                href="/"
+              >
+                <span class="tutorial-next-icon" aria-hidden="true">▱</span>
+                <span
+                  ><strong>Montar meu baralho</strong
+                  ><small>Escolha seu mago e suas 40 cartas.</small></span
+                >
+                <span class="tutorial-next-arrow" aria-hidden="true">→</span>
+              </a>
+              <a class="tutorial-next-card" href="/HTML/index.html">
+                <span class="tutorial-next-icon" aria-hidden="true">⚔</span>
+                <span
+                  ><strong>Jogar uma partida</strong
+                  ><small>Pratique com a IA ou desafie alguém.</small></span
+                >
+                <span class="tutorial-next-arrow" aria-hidden="true">→</span>
+              </a>
+              <button
+                id="restart-tutorial"
+                class="tutorial-next-card"
+                type="button"
+              >
+                <span class="tutorial-next-icon" aria-hidden="true">↻</span>
+                <span
+                  ><strong>Refazer tutorial</strong
+                  ><small>Reveja as etapas no seu ritmo.</small></span
+                >
+                <span class="tutorial-next-arrow" aria-hidden="true">→</span>
               </button>
             </div>
           </section>

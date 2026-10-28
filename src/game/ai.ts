@@ -5,7 +5,7 @@ import { AppError } from "../lib/errors";
 import { Game } from "./engine";
 import { entryCost } from "./entry-cost";
 import { slotCards } from "./state";
-export const AI_DELAY_MS = 900;
+export const AI_DELAY_MS = 2500;
 export function aiEntry(catalog: Card[], now: number): Waiting {
   const mage =
     catalog.find((c) => c.numeroCatalogo === "016" && c.publicado) ??

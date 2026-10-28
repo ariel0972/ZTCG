@@ -24,8 +24,11 @@ export function createTutorialController(
       node?.scrollIntoView?.({ block: "center", behavior: "smooth" });
   }
   function focusLesson() {
-    $("lesson-title").focus({ preventScroll: true });
-    reveal($("lesson-title"));
+    const heading = $(
+      data.completed ? "tutorial-complete-title" : "lesson-title",
+    );
+    heading.focus({ preventScroll: true });
+    reveal(heading);
   }
   function button(text, run, className = "primary") {
     const b = make("button", text, className);
@@ -340,7 +343,13 @@ export function createTutorialController(
     $("skip-tutorial").hidden = data.completed;
     $("tutorial-board").hidden = data.completed;
     $("tutorial-complete").hidden = !data.completed;
+    $("tutorial-content").classList.toggle("is-complete", data.completed);
+    doc.querySelector(".tutorial-lesson").hidden = data.completed;
     if (data.completed) {
+      $("tutorial-recap").hidden = data.skipped;
+      $("tutorial-complete-label").textContent = data.skipped
+        ? "CONTINUE SUA JORNADA"
+        : "TREINO CONCLUÍDO";
       $("tutorial-complete-title").textContent = data.skipped
         ? "Tudo pronto para começar"
         : "Primeira vitória!";

@@ -273,7 +273,8 @@ export class DurableGame {
   }
   private async advance(room: DurableRoom, recovery = false) {
     const now = this.now(),
-      game = Game.restore(room.game);
+      game = Game.restore(room.game),
+      initialVersion = game.state.version;
     if (game.state.status !== "ACTIVE") return game;
     // A long platform outage grants reconnection time instead of deciding a loss.
     if (
@@ -356,6 +357,9 @@ export class DurableGame {
       }
     }
     const bot = room.entries.find((e) => e.bot);
+    // Allow the client to present timeout/coin/response changes before the bot acts.
+    if (bot && game.state.version !== initialVersion)
+      room.aiNextAt = now + AI_DELAY_MS;
     if (
       bot &&
       !absent.length &&
@@ -434,7 +438,8 @@ export class DurableGame {
       const turn = game.state.turn,
         phase = game.state.phase,
         coinResult = game.state.coinToss?.result,
-        responding = game.responseKey();
+        responding = game.responseKey(),
+        commandVersion = game.state.version;
       let response: unknown, error: unknown;
       try {
         response = game.execute(user, command);
@@ -458,6 +463,8 @@ export class DurableGame {
         delete room.responseDeadline;
         delete room.remainingTurnMs;
       }
+      if (room.mode === "ai" && game.state.version !== commandVersion)
+        room.aiNextAt = this.now() + AI_DELAY_MS;
       this.finalize(room, game);
       timing.applyMs += performance.now() - stage;
       stage = performance.now();

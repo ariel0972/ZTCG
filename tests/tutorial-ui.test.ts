@@ -108,11 +108,22 @@ test("jogador conclui tutorial por cartas e alvos reais, pode pular e refazer se
     await click(".tutorial-mage.tutorial-highlight");
     assert.equal(controller.snapshot.completed, true);
     assert.equal(doc.getElementById("tutorial-complete")!.hidden, false);
+    assert.equal(
+      doc.querySelector<HTMLElement>(".tutorial-lesson")!.hidden,
+      true,
+    );
+    assert.equal(doc.activeElement?.id, "tutorial-complete-title");
+    assert.equal(doc.getElementById("tutorial-recap")!.hidden, false);
     assert.deepEqual(errors, []);
     await click("#restart-tutorial");
     assert.equal(controller.snapshot.step, 0);
+    assert.equal(
+      doc.querySelector<HTMLElement>(".tutorial-lesson")!.hidden,
+      false,
+    );
     await click("#skip-tutorial");
     assert.equal(controller.snapshot.skipped, true);
+    assert.equal(doc.getElementById("tutorial-recap")!.hidden, true);
     assert.match(
       doc.getElementById("tutorial-complete-title")!.textContent!,
       /começar/,

@@ -61,6 +61,10 @@ export function createMaterialChoice(host = document.body) {
         picked = new Set();
       return new Promise((resolve) => {
         active = { resolve, matchId: state.id, version: state.version };
+        dialog.classList.toggle(
+          "material-choice--few",
+          (card.materiaisEntrada?.length ?? 0) <= 2,
+        );
         const title = node("h2", "Materiais para " + card.nome),
           help = node("p", describeEntryCost(card));
         const count = node("p", "", "material-count"),
@@ -86,6 +90,10 @@ export function createMaterialChoice(host = document.body) {
               update();
             });
           button.setAttribute("aria-pressed", "false");
+          wrapper.dataset.origin = material.origemMaterial;
+          const check = node("span", "✓", "material-check");
+          check.setAttribute("aria-hidden", "true");
+          button.append(check);
           wrapper.append(
             button,
             node(
@@ -99,9 +107,11 @@ export function createMaterialChoice(host = document.body) {
         }
         confirm.onclick = () => finish([...picked]);
         cancel.onclick = () => finish(null);
-        const actions = node("div", "", "toolbar");
+        const heading = node("div", "", "material-heading"),
+          actions = node("div", "", "material-actions");
+        heading.append(title, help, count);
         actions.append(cancel, confirm);
-        dialog.replaceChildren(title, help, count, list, actions);
+        dialog.replaceChildren(heading, list, actions);
         update();
         dialog.showModal();
       });

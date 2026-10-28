@@ -53,8 +53,10 @@ test("IA mobiliza pelas regras reais, não se passa por conta e persiste entre c
     .player(bot.id)
     .deck.filter((c) => c.id !== normal.id);
   room.game = g.exportState();
-  now += AI_DELAY_MS + 1;
+  now += AI_DELAY_MS - 1;
   await store.touch(uid, now);
+  assert.equal((await service().state(uid)).match?.version, g.state.version);
+  now += 1;
   const state = await service().state(uid);
   assert.equal(state.match?.mode, "ai");
   assert.ok(
@@ -70,6 +72,11 @@ test("IA mobiliza pelas regras reais, não se passa por conta e persiste entre c
   const recovered = await service().state(uid);
   assert.equal(recovered.match?.id, room.id);
   assert.ok(recovered.match?.slots.some((s) => s.card?.id === normal.id));
+  const version = recovered.match!.version;
+  now += AI_DELAY_MS - 1;
+  assert.equal((await service().state(uid)).match?.version, version);
+  now += 1;
+  assert.equal((await service().state(uid)).match?.version, version + 1);
 });
 test("IA respeita dono da reação e só escolhe comandos válidos sem alterar a simulação original", () => {
   const bot = aiEntry(catalog, 0),
@@ -268,4 +275,60 @@ test("IA usa habilidade quando útil e anuncia feitiço sem conhecer reação oc
   });
   assert.ok(g.state.pendingSpell);
   assert.equal(aiNeedsAction(g, bot.id), false);
+});
+
+test("IA aguarda uma pausa inteira depois de passar o turno ou expirar o relógio humano", async () => {
+  let now = 1000000;
+  const store = new MemoryDurableStore(),
+    entry = aiEntry(catalog, now),
+    service = () =>
+      new DurableGame(
+        store,
+        () => now,
+        async () => ({ deck: entry.deck, catalog }) as any,
+        async () => {},
+      ),
+    uid = "1".repeat(24);
+  const created = await service().startAi(
+    uid,
+    "Aprendiz",
+    "deck",
+    randomUUID(),
+  );
+  const room = store.rooms.get(created.matchId as string)!,
+    bot = room.entries.find((e) => e.bot)!;
+  const g = Game.restore(room.game);
+  g.state.phase = "BATTLE";
+  g.state.turn = 3;
+  g.state.current = uid;
+  for (const p of g.state.players) {
+    p.mana = 20;
+    p.preparation.ready = true;
+  }
+  room.game = g.exportState();
+  room.aiNextAt = now - 100000;
+  room.deadline = now + 120000;
+  const passed = await service().command(room.id, uid, {
+    type: "endTurn",
+    version: g.state.version,
+    actionId: randomUUID(),
+  });
+  const version = passed.state.match.version;
+  assert.equal(passed.state.match.current, bot.id);
+  assert.equal(passed.state.match.aiNextAt, now + AI_DELAY_MS);
+  assert.equal((await service().state(uid)).match?.version, version);
+  now += AI_DELAY_MS - 1;
+  assert.equal((await service().state(uid)).match?.version, version);
+  now += 1;
+  assert.equal((await service().state(uid)).match?.version, version + 1);
+  const current = store.rooms.get(room.id)!,
+    expiring = Game.restore(current.game);
+  expiring.state.current = uid;
+  current.game = expiring.exportState();
+  current.deadline = now - 1;
+  current.aiNextAt = now - 100000;
+  const timed = await service().state(uid);
+  assert.equal(timed.match?.version, expiring.state.version + 1);
+  assert.equal(timed.match?.current, bot.id);
+  assert.equal(timed.match?.aiNextAt, now + AI_DELAY_MS);
 });
