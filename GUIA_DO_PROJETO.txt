@@ -2351,5 +2351,6 @@ IA variada e cartas de armamentos/peste — 02/11/2026:
   para testar a escolha de modo do Arco, grupo Rato, doença e inspeção no navegador.
 
 - .github/workflows/verify.yml e .github/workflows/deploy.yml — fixam Ubuntu 24.04
-  para manter compatibilidade do MongoDB 8.0 de integração com o kernel do runner.
-  A imagem nova de ubuntu-latest não inicia o banco (SERVER-121912).
+  e configuram GLIBC_TUNABLES=glibc.pthread.rseq=1 somente no MongoDB temporário
+  de integração. O TCMalloc usa caches de thread para evitar a incompatibilidade
+  rseq dos kernels hospedados recentes (SERVER-121912; docker-library/mongo#765).

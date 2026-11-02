@@ -4,11 +4,14 @@ permissions:
   contents: read
 jobs:
   check:
-    # MongoDB 8.0 refuses the Linux 6.19+ kernel on newer runner images (SERVER-121912).
     runs-on: ubuntu-24.04
     services:
       mongodb:
         image: mongo:8.0
+        env:
+          # Let glibc own rseq so TCMalloc uses thread caches on newer hosted kernels.
+          # https://github.com/docker-library/mongo/issues/765
+          GLIBC_TUNABLES: glibc.pthread.rseq=1
         ports:
           - 27017:27017
         options: >-
