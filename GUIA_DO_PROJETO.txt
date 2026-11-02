@@ -2309,3 +2309,43 @@ Ajustes de leitura do tutorial e ritmo da IA — 28/10/2026:
   Identifica descarte da mão/sacrifício do campo e marca os materiais selecionados.
 - tests/ai.test.ts e tests/tutorial-ui.test.ts — intervalos por relógio simulado,
   começo de turno da IA, timeout, conclusão/pulo/refazer e foco acessível.
+
+IA variada e cartas de armamentos/peste — 02/11/2026:
+- src/game/ai-deck.ts — sorteia 40 cartas publicadas e um mago publicado, respeitando
+  cópias por tipo, requisitos de mago, materiais de Invocação e armas compatíveis.
+  O sorteio é só do adversário; o jogador conserva seu próprio baralho.
+- src/game/ai-actions.ts — candidatos de ataques, feitiços, opções, materiais,
+  armamentos, estruturas, movimentação e montarias; orçamento intercalado por tipo.
+- src/game/ai-strategy.ts — ajusta a avaliação entre finalizar, sobreviver,
+  desenvolver o campo e pressionar. Dano ao mago inimigo tem prioridade alta.
+- src/game/ai.ts — até 150 candidatos e previsão limitada de uma ação seguinte
+  para combinar arma/bônus/remoção com ataque, sem consultar a mão oculta inimiga.
+  Mantém intervalo de 2,5 s. Busca cartas fortes nas escolhas públicas de ressurreição.
+- src/game/durable.ts e src/routes/gameRoutes.ts — mageId opcional só em ai:start;
+  revanche sorteia novo baralho e conserva apenas a preferência de mago escolhido.
+- public/HTML/index.html e public/JS/game.js — mago da IA aleatório por padrão ou
+  selecionado entre publicados; escolha fica visível somente no modo Contra IA.
+- scripts/pest-card-rules.ts — definições das cartas 027/048/049/066/072/089/107,
+  incluindo a mesma sequência declarativa de Leptospirose no feitiço e no Propagar.
+- src/game/equipment.ts — restrições reutilizáveis por tipo/subtipo/alcance,
+  modos escolhidos ao equipar, bônus por modo e identificação da carta vinculada.
+- src/game/effect-selection.ts — seleção por grupo, lado e tipo; condições de
+  quantidade mínima e anulação da sequência sem motor específico para uma carta.
+- src/game/status-auras.ts — bônus por grupo acumulável e condicionado a inimigos
+  com um status de origem aliada; aplica a novas entradas e termina após a limpeza.
+- src/types/card.ts e src/db/models/Card.ts — grupos livres, modos/restrições de
+  equipamento, limite por rodada de passiva, efeitos ao comprar e seleção genérica.
+- src/game/engine.ts — limpeza, bloqueio individual de ataques, crescimento até
+  sair do campo, status acumulável sem expiração, roubo de deck e compras automáticas.
+  Templates referenciados ficam persistidos na partida; salas antigas mantêm regras.
+- public/JS/battle-ui.js, public/JS/card-details.js e public/JS/card-view.js — destinos
+  válidos de arma, modo e grupo na inspeção e indicação de doença sem expiração.
+- scripts/update-pest-cards.ts — simulação/aplicação direcionada às sete cartas,
+  preserva artes e metadados, faz backup e confere versão antes de gravar.
+- tests/ai-expansion.test.ts — sorteios válidos, variedade, finalização do mago,
+  arma antes de ataque letal, uso de Torre e troca de prioridade conforme situação.
+- tests/pest-cards.test.ts — modos de Arco, restrições e Sangramento, doença e limpeza,
+  aura por grupo, Cura sem gastar ataque do mago, Propagar, crescimento e maldições.
+
+- tests/preview.ts — PREVIEW_MECHANICS=1 com PREVIEW_PEST=1 monta campo fictício
+  para testar a escolha de modo do Arco, grupo Rato, doença e inspeção no navegador.

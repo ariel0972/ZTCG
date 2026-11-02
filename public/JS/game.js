@@ -330,7 +330,10 @@ function dragBinding(element, source) {
         source: fieldSource(from.card, from.slot),
       };
       targets = [];
-      if (action === "play" && from.card.opcoes?.length) {
+      if (
+        action === "play" &&
+        (from.card.opcoes?.length || from.card.modosEquipamento?.length)
+      ) {
         render();
         return;
       }
@@ -391,10 +394,20 @@ function selectSlot(slot, asStructure = false, asRider = false) {
       return;
     }
     if (selected.type === "play" && selected.card.tipo !== "Feitico") {
+      if (
+        selected.card.equipmentTargets &&
+        !selected.card.equipmentTargets.includes(slot.id)
+      )
+        return;
+      if (selected.card.modosEquipamento?.length && !selected.mode) {
+        render();
+        return;
+      }
       void command({
         type: "play",
         cardId: selected.card.id,
         slotId: slot.id,
+        mode: selected.mode,
         targets: [],
       });
       return;
@@ -520,7 +533,7 @@ function handBlock(card) {
   if (card.tipo === "Armamento") {
     if ((p.counters.equipment ?? 0) >= 1 && !card.equipamentoGratuito)
       return "Você só pode jogar um armamento por turno.";
-    if (!state.equipmentTargets?.length)
+    if (!(card.equipmentTargets ?? state.equipmentTargets)?.length)
       return "Não há espaço com uma tropa ou mago para receber o armamento.";
   }
   if (card.tipo === "Feitico") {
@@ -679,11 +692,12 @@ function displacementBlockReason() {
     : "";
 }
 function renderOptionChoice(panel, action) {
-  if (!action.opcoes?.length) return false;
+  const options = action.opcoes ?? action.modosEquipamento;
+  if (!options?.length) return false;
   panel.append(
     node("p", "Escolha um efeito antes de selecionar os alvos.", "hint"),
   );
-  for (const option of action.opcoes) {
+  for (const option of options) {
     const button = actionButton(
       (selected.mode === option.id ? "✓ " : "") + option.nome,
       () => {
@@ -1870,6 +1884,8 @@ function updateLobby() {
   $("cancel").hidden = !queued;
   $("lobby-deck").disabled = queued;
   $("lobby-mode").disabled = queued;
+  $("lobby-ai-options").hidden = $("lobby-mode").value !== "ai";
+  $("lobby-ai-mage").disabled = queued;
   $("join").textContent =
     $("lobby-mode").value === "ai" ? "Jogar contra IA" : "Procurar oponente";
   deckSelector?.sync();
@@ -1877,7 +1893,7 @@ function updateLobby() {
     ? "Buscando outro duelista… Você pode cancelar a qualquer momento."
     : ready
       ? $("lobby-mode").value === "ai"
-        ? "IA iniciante: usa cartas e regras reais. Dá XP e aparece no histórico, sem influenciar rankings."
+        ? "IA com baralho sorteado e estratégia adaptativa. Dá XP e aparece no histórico, sem influenciar rankings."
         : "Baralho selecionado. Pronto para procurar um oponente."
       : "Escolha um baralho com 40 cartas publicadas e um mago publicado.";
 }
@@ -1888,6 +1904,10 @@ $("join").onclick = async () => {
   try {
     await send($("lobby-mode").value === "ai" ? "ai:start" : "queue:join", {
       deckId: $("lobby-deck").value,
+      ...($("lobby-mode").value === "ai" &&
+      $("lobby-ai-mage").value !== "random"
+        ? { mageId: $("lobby-ai-mage").value }
+        : {}),
     });
   } catch (e) {
     message(e.message, true);
@@ -1948,6 +1968,14 @@ async function load() {
     const [data, cardData] = await Promise.all([api("/decks"), api("/cards")]);
     decks = data.decks;
     catalog = cardData.cards;
+    for (const mage of catalog.filter(
+      (c) => c.tipo === "Mago" && c.publicado,
+    )) {
+      const option = document.createElement("option");
+      option.value = mage.numeroCatalogo;
+      option.textContent = mage.nome;
+      $("lobby-ai-mage").append(option);
+    }
     const requested = new URLSearchParams(location.search).get("deck");
     deckSelector = createDeckSelector($("lobby-deck"), {
       userId: user.id,

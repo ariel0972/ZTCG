@@ -1,3 +1,9 @@
+import {
+  cardPassives,
+  equipmentAttack,
+  equipmentAllowed,
+  equipmentReceiver,
+} from "./equipment";
 import type {
   DeclarativePassive,
   PassiveFilter,
@@ -21,8 +27,14 @@ export interface PassiveEvent {
   targetId?: string;
   targetCard?: Instance;
   slotId?: string;
+  stolenFrom?: string;
+  deckIndex?: number;
 }
 export const passiveActionIds = [
+  "applyElement",
+  "executeEffects",
+  "replaceStolen",
+  "returnToHand",
   "stackReduction",
   "statusWard",
   "reactionDamage",
@@ -55,6 +67,7 @@ export const passiveActionIds = [
   "move",
 ] as const;
 export const passiveEventTriggers = [
+  "onDeckStolen",
   "onDeath",
   "onStructureDestroyed",
   "onHeal",
@@ -77,6 +90,14 @@ export function describePassiveActions(actions: PassiveAction[]) {
   return actions
     .map((a) => {
       switch (a.id) {
+        case "applyElement":
+          return "Aplicou o elemento " + a.elemento;
+        case "executeEffects":
+          return "Executou os efeitos configurados";
+        case "replaceStolen":
+          return "Substituiu a carta roubada por uma carta com efeito ao comprar";
+        case "returnToHand":
+          return "Devolveu o alvo para a mão";
         case "stackReduction":
           return (
             "Acumula redução de dano até " +
@@ -170,6 +191,10 @@ export function matchesPassiveFilter(
 ) {
   if (!filter) return true;
   return (
+    (!filter.grupo || !!card?.grupos?.includes(filter.grupo)) &&
+    (!filter.subtipo || card?.subtipo === filter.subtipo) &&
+    (!filter.direcoes ||
+      (!!card && filter.direcoes.includes(card.direcaoAtaque ?? "Frente"))) &&
     (!filter.numeroCatalogo ||
       card?.numeroCatalogo === filter.numeroCatalogo) &&
     (!filter.tipo || card?.tipo === filter.tipo) &&
@@ -223,6 +248,11 @@ export function passiveMatches(
       return false;
   }
   return (rule.condicoes ?? []).every((condition) => {
+    if (condition.tipo === "cartaVinculada")
+      return (
+        equipmentReceiver(source, slots)?.id === event.cardId &&
+        matchesPassiveFilter(event.card, condition.filtro)
+      );
     if (condition.tipo === "campoFrontal") {
       const position = slots.find((s) =>
         slotCards(s).some((c) => c.id === source.id),
@@ -306,7 +336,7 @@ export function basicAttackElement(
 ) {
   let element = card.elemento;
   for (const source of [card, ...weapons])
-    for (const rule of source.habilidadesPassivas.map(normalizePassive)) {
+    for (const rule of cardPassives(source).map(normalizePassive)) {
       if (
         rule.gatilho !== "continuous" ||
         !passiveMatches(
@@ -325,7 +355,7 @@ export function basicAttackElement(
   return element;
 }
 export function basicAttackLimit(card: Instance, slots: Slot[]) {
-  return card.habilidadesPassivas
+  return cardPassives(card)
     .map(normalizePassive)
     .reduce((limit, rule) => {
       if (
@@ -346,7 +376,7 @@ export function basicAttackLimit(card: Instance, slots: Slot[]) {
     }, 1);
 }
 export function blockedOwnAttack(card: Instance, slots: Slot[]) {
-  return card.habilidadesPassivas
+  return cardPassives(card)
     .map(normalizePassive)
     .some(
       (rule) =>
@@ -402,7 +432,7 @@ export function attackInterceptor(
       );
       if (protection) return { slot: s, card: source, protection };
       if (boundOnly || attacker.tipo !== "Tropa") continue;
-      for (const rule of source.habilidadesPassivas.map(normalizePassive)) {
+      for (const rule of cardPassives(source).map(normalizePassive)) {
         if (
           rule.gatilho !== "onTargeted" ||
           !passiveMatches(
@@ -437,7 +467,7 @@ export function restrictedBasicAttack(
   attacker: Instance,
   slots: Slot[] = [],
 ) {
-  return defender.habilidadesPassivas.some((h) => {
+  return cardPassives(defender).some((h) => {
     const rule = normalizePassive(h);
     const event: PassiveEvent = {
       ownerId: defender.ownerId,
@@ -476,7 +506,7 @@ export function adjacentAttackBonus(card: Instance, slots: Slot[]) {
       source.card.hpAtual <= 0
     )
       continue;
-    for (const h of source.card.habilidadesPassivas) {
+    for (const h of cardPassives(source.card)) {
       const rule = normalizePassive(h);
       if (
         rule.gatilho !== "continuous" ||
@@ -529,7 +559,7 @@ export function targetAttackBonus(
   target: Instance,
   slots: Slot[],
 ) {
-  return card.habilidadesPassivas
+  return cardPassives(card)
     .map(normalizePassive)
     .reduce((bonus, rule) => {
       if (
@@ -574,7 +604,7 @@ export function spellDamageBonus(
   if (!element) return temporary;
   return (
     temporary +
-    card.habilidadesPassivas
+    cardPassives(card)
       .flatMap((h) => normalizePassive(h).efeitos)
       .reduce(
         (sum, action) =>
@@ -945,7 +975,8 @@ export function currentBasicAttack(card: Instance, slots: Slot[]) {
             s.ownerId === card.ownerId &&
             arms.some((a) => s.id.endsWith(":" + a)),
         )
-        .reduce((n, s) => n + (s.card?.bonusAtaque ?? 0), 0)
+        .filter((s) => equipmentAllowed(s.card!, card))
+        .reduce((n, s) => n + equipmentAttack(s.card!), 0)
     : 0;
   return (
     (card.ataque ?? 0) +
@@ -958,7 +989,7 @@ export function currentBasicAttack(card: Instance, slots: Slot[]) {
   );
 }
 export function abilityManaCost(card: Instance, base: number, slots: Slot[]) {
-  const discount = card.habilidadesPassivas
+  const discount = cardPassives(card)
     .map(normalizePassive)
     .filter(
       (r) =>

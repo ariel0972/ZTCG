@@ -50,6 +50,8 @@ export function renderCardDetails(host, card, { reactions = {} } = {}) {
       make("span", labels[card.elemento] || card.elemento, "card-info-pill"),
     );
   if (card.subtipo) intro.append(make("span", card.subtipo, "card-info-pill"));
+  for (const group of card.grupos ?? [])
+    intro.append(make("span", "Grupo: " + group, "card-info-pill"));
   if (card.assinatura)
     intro.append(make("span", "Assinatura", "card-info-pill"));
   const toggle = make(
@@ -150,6 +152,16 @@ export function renderCardDetails(host, card, { reactions = {} } = {}) {
         `Bônus permanente de Fogo: +${card.fireDamageBonus} dano · ${card.fireSpellsCast || 0} feitiços de Fogo conjurados.`,
       ),
     );
+  if (card.modosEquipamento?.length) {
+    const modes = section("Modos do armamento", true);
+    for (const mode of card.modosEquipamento) {
+      modes.append(
+        make("h3", (card.equipmentMode === mode.id ? "✓ " : "") + mode.nome),
+      );
+      for (const passive of mode.habilidadesPassivas ?? [])
+        modes.append(make("p", passiveDescription(passive)));
+    }
+  }
   const indicators = (card.habilidadesPassivas || []).filter(
     (p) => p.gatilho === "onElementalReaction",
   );
@@ -265,7 +277,7 @@ export function renderCardDetails(host, card, { reactions = {} } = {}) {
       current.append(
         make(
           "p",
-          `${status.nome}${status.valor === undefined ? "" : ` · intensidade ${status.valor}`} · ${status.permanente ? "até receber " + (labels[status.removerElemento] || status.removerElemento || "o elemento configurado") : status.turnosRestantes + (status.unidade === "turno" ? " turno(s)" : " rodada(s)")}`,
+          `${status.nome}${status.valor === undefined ? "" : ` · intensidade ${status.valor}`} · ${status.semExpiracao ? "sem expiração; removível por limpeza" : status.permanente ? "até receber " + (labels[status.removerElemento] || status.removerElemento || "o elemento configurado") : status.turnosRestantes + (status.unidade === "turno" ? " turno(s)" : " rodada(s)")}`,
         ),
       );
     }

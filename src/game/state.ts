@@ -31,6 +31,11 @@ export interface BattleEvent {
 }
 
 export interface Instance extends Card {
+  equipmentMode?: string;
+  fieldGrowth?: { hp: number };
+  passiveUses?: Record<string, { round: number; count: number }>;
+  attacksBlockedUntilTurn?: number;
+  onDrawEffects?: Effect[];
   id: string;
   ownerId: string;
   hpAtual: number;
@@ -149,6 +154,14 @@ export interface AttackField extends EffectClock {
   card: Pick<Instance, "id" | "ownerId" | "numeroCatalogo" | "nome" | "imgURL">;
 }
 export interface State {
+  cardTemplates?: Record<string, Card>;
+  statusAuras?: {
+    id: string;
+    ownerId: string;
+    grupo: string;
+    status: string;
+    valor: number;
+  }[];
   attachments?: {
     source: Instance;
     targetId: string;

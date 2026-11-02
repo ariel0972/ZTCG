@@ -29,6 +29,65 @@ const spellVariant = new Schema(
 );
 const effect = new Schema(
   {
+    selecao: {
+      type: new Schema(
+        {
+          jogador: {
+            type: String,
+            enum: ["aliado", "inimigo", "qualquer"],
+            required: true,
+          },
+          tipo: { type: String, enum: cardTypes },
+          grupo: String,
+          minimo: n,
+        },
+        { _id: false, strict: "throw" },
+      ),
+      default: undefined,
+    },
+    requerCampo: {
+      type: new Schema(
+        {
+          jogador: {
+            type: String,
+            enum: ["aliado", "inimigo", "qualquer"],
+            required: true,
+          },
+          tipo: { type: String, enum: cardTypes },
+          grupo: String,
+          minimo: n,
+        },
+        { _id: false, strict: "throw" },
+      ),
+      default: undefined,
+    },
+    anularSeCampo: {
+      type: new Schema(
+        {
+          jogador: {
+            type: String,
+            enum: ["aliado", "inimigo", "qualquer"],
+            required: true,
+          },
+          tipo: { type: String, enum: cardTypes },
+          grupo: String,
+          minimo: n,
+        },
+        { _id: false, strict: "throw" },
+      ),
+      default: undefined,
+    },
+    grupo: String,
+    semExpiracao: Boolean,
+    acumularValor: Boolean,
+    ateSairCampo: Boolean,
+    bonusLimpeza: {
+      type: new Schema(
+        { status: String, ataque: n },
+        { _id: false, strict: "throw" },
+      ),
+      default: undefined,
+    },
     id: { type: String, required: true },
     alvo: { type: String, enum: ["Proprio"] },
     valor: n,
@@ -261,6 +320,13 @@ const active = new Schema(
 );
 const passiveFilter = new Schema(
   {
+    grupo: String,
+    subtipo: String,
+    direcoes: {
+      type: [String],
+      enum: ["Frente", "Diagonal", "Universal"],
+      default: undefined,
+    },
     numeroCatalogo: String,
     tipo: { type: String, enum: cardTypes },
     elemento: { type: String, enum: elements },
@@ -274,7 +340,13 @@ const passiveCondition = new Schema(
   {
     tipo: {
       type: String,
-      enum: ["campoVazio", "vidaPercentual", "cartaEmCampo", "campoFrontal"],
+      enum: [
+        "campoVazio",
+        "vidaPercentual",
+        "cartaEmCampo",
+        "campoFrontal",
+        "cartaVinculada",
+      ],
     },
     filtro: { type: passiveFilter, default: undefined },
     elemento: { type: String, enum: elements },
@@ -289,6 +361,12 @@ const passiveCondition = new Schema(
 );
 const passiveAction = new Schema(
   {
+    efeitos: { type: [effect], default: undefined },
+    efeitosAoComprar: { type: [effect], default: undefined },
+    bloquearComEstrutura: Boolean,
+    bloquearComMontaria: Boolean,
+    excetoElementos: { type: [String], enum: elements, default: undefined },
+    ateSairCampo: Boolean,
     maximo: n,
     removerElemento: { type: String, enum: elements },
     excecoes: { type: [String], default: undefined },
@@ -318,6 +396,8 @@ const passiveAction = new Schema(
 );
 const passive = new Schema(
   {
+    id: String,
+    limitePorRodada: { type: Number, min: 1, max: 20 },
     gatilho: { type: String, enum: triggers, required: true },
     efeito: String,
     escopo: {
@@ -409,6 +489,40 @@ const schema = new Schema<Card>(
     recuperacaoMana: n,
     bonusAtaque: n,
     bonusHp: n,
+    grupos: { type: [String], default: undefined },
+    restricaoEquipamento: {
+      type: new Schema(
+        {
+          tipos: { type: [String], enum: ["Tropa", "Mago"], required: true },
+          direcoes: {
+            type: [String],
+            enum: ["Frente", "Diagonal", "Universal"],
+            default: undefined,
+          },
+          excluirSubtipos: {
+            type: [String],
+            enum: ["Animal", "Humano", "Monstro", "Planta", "Invocação"],
+            default: undefined,
+          },
+        },
+        { _id: false, strict: "throw" },
+      ),
+      default: undefined,
+    },
+    modosEquipamento: {
+      type: [
+        new Schema(
+          {
+            id: { type: String, required: true },
+            nome: { type: String, required: true },
+            bonusAtaque: n,
+            habilidadesPassivas: [passive],
+          },
+          { _id: false, strict: "throw" },
+        ),
+      ],
+      default: undefined,
+    },
     subtipo: String,
     direcaoAtaque: { type: String, enum: ["Frente", "Diagonal", "Universal"] },
     alvo: { type: String, enum: targets },

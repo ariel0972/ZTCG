@@ -81,6 +81,22 @@ export function fieldRulesDescription(rules = {}) {
 function effectDescription(effect) {
   const description =
     {
+      cleanse: "Remove condições negativas dos alvos.",
+      growMaxHp:
+        "Concede +" +
+        effect.valor +
+        " de vida máxima e atual" +
+        (effect.ateSairCampo ? " até sair do campo." : "."),
+      blockAttacks:
+        "Impede apenas os ataques restantes da carta neste turno, sem consumir o limite do mago.",
+      statusAura:
+        "Concede +" +
+        effect.valor +
+        " ATQ ao grupo " +
+        effect.grupo +
+        " enquanto houver inimigo com " +
+        effect.status +
+        ".",
       fieldRules:
         fieldRulesDescription(effect.regrasCampo) +
         " Dura " +
@@ -219,6 +235,14 @@ export function passiveDescription(h) {
       .map(
         (e) =>
           ({
+            applyElement:
+              "aplica o elemento " + (labels[e.elemento] || e.elemento),
+            executeEffects:
+              "executa: " + (e.efeitos ?? []).map(effectDescription).join(" "),
+            replaceStolen:
+              "cria uma carta de maldição no lugar de cada carta roubada do baralho; o efeito resolve ao comprá-la",
+            returnToHand:
+              "devolve a tropa atingida à mão, respeitando as proteções e elementos configurados",
             stackReduction:
               "acumula " +
               e.valor +
@@ -275,21 +299,26 @@ export function passiveDescription(h) {
       .join("; ");
     const conditions = (h.condicoes || [])
       .map((c) =>
-        c.tipo === "vidaPercentual"
-          ? `vida ${c.comparacao === "menor" ? "menor que" : "menor ou igual a"} ${c.percentual}%`
-          : c.tipo === "campoFrontal"
-            ? "campo à frente com " +
-              c.elemento +
-              (c.verificar === "carta" ? " na tropa" : " aplicado")
-            : c.tipo === "cartaEmCampo"
-              ? `${c.presente === false ? "sem" : "com"} carta ${JSON.stringify(c.filtro)} no campo ${c.jogador}`
-              : `campo ${c.jogador} vazio`,
+        c.tipo === "cartaVinculada"
+          ? "a carta vinculada está atacando" +
+            (c.filtro?.direcoes
+              ? " com alcance " + c.filtro.direcoes.join(" ou ")
+              : "")
+          : c.tipo === "vidaPercentual"
+            ? `vida ${c.comparacao === "menor" ? "menor que" : "menor ou igual a"} ${c.percentual}%`
+            : c.tipo === "campoFrontal"
+              ? "campo à frente com " +
+                c.elemento +
+                (c.verificar === "carta" ? " na tropa" : " aplicado")
+              : c.tipo === "cartaEmCampo"
+                ? `${c.presente === false ? "sem" : "com"} carta ${JSON.stringify(c.filtro)} no campo ${c.jogador}`
+                : `campo ${c.jogador} vazio`,
       )
       .join(", ");
     const filters = h.filtroEvento
       ? Object.values(h.filtroEvento).join(", ")
       : "";
-    return `${trigger} ${scope}: ${effects}${filters ? " · Filtro: " + filters : ""}${conditions ? " · Condição: " + conditions : ""}${h.reacao ? " · " + h.reacao.nome + " (" + h.reacao.quando + ")" : ""}.`;
+    return `${trigger} ${scope}${h.limitePorRodada ? " · até " + h.limitePorRodada + " vez(es) por rodada" : ""}: ${effects}${filters ? " · Filtro: " + filters : ""}${conditions ? " · Condição: " + conditions : ""}${h.reacao ? " · " + h.reacao.nome + " (" + h.reacao.quando + ")" : ""}.`;
   }
   if (h.efeito === "aplicarStatusAtacante")
     return `Ao receber ataque básico, aplica ${h.status} ao atacante, mesmo se não receber dano ou morrer.`;
@@ -297,7 +326,7 @@ export function passiveDescription(h) {
     return `Ganha +${h.valor} de ataque básico com tropas ${h.elemento || "de qualquer elemento"} vizinhas e concede +${h.valor} a elas. Bônus se acumulam.`;
   if (h.efeito === "restringirAtaqueBasico")
     return `Não pode receber ataques básicos de ${h.tipoAtacante || "cartas"} com ${[h.elemento, h.direcao].filter(Boolean).join(" ou ")}.`;
-  return `${{ onDeath: "Quando um aliado morre", onSpellCast: "Ao conjurar um feitiço", onTurnStart: "No início do turno", onRevive: "Ao reviver uma tropa", onSacrifice: "Ao sacrificar uma tropa", onStatusApplied: "Ao aplicar um efeito", onAttack: "Ao atacar", onKill: "Ao eliminar uma tropa", onTurnEnd: "No fim do turno" }[h.gatilho] || "Passiva"}: ${{ ganharVida: "ganha vida", curarMago: "cura o mago", recuperarMana: "recupera mana", comprarCarta: "compra carta", comprarCartaCemiterio: "recupera carta do cemitério", ganharVidaEManaSacrificio: "recupera 2 de vida e 2 de mana", manaCampoVazio: "recupera mana se o campo estiver vazio", causarDanoExtra: "causa dano adicional" }[h.efeito] || "efeito especial"}${h.valor === undefined ? "" : " (" + h.valor + ")"}${h.condicao ? " · Condição: " + h.condicao : ""}.`;
+  return `${{ onDeckStolen: "Ao roubar carta do baralho inimigo", onDeath: "Quando um aliado morre", onSpellCast: "Ao conjurar um feitiço", onTurnStart: "No início do turno", onRevive: "Ao reviver uma tropa", onSacrifice: "Ao sacrificar uma tropa", onStatusApplied: "Ao aplicar um efeito", onAttack: "Ao atacar", onKill: "Ao eliminar uma tropa", onTurnEnd: "No fim do turno" }[h.gatilho] || "Passiva"}: ${{ ganharVida: "ganha vida", curarMago: "cura o mago", recuperarMana: "recupera mana", comprarCarta: "compra carta", comprarCartaCemiterio: "recupera carta do cemitério", ganharVidaEManaSacrificio: "recupera 2 de vida e 2 de mana", manaCampoVazio: "recupera mana se o campo estiver vazio", causarDanoExtra: "causa dano adicional" }[h.efeito] || "efeito especial"}${h.valor === undefined ? "" : " (" + h.valor + ")"}${h.condicao ? " · Condição: " + h.condicao : ""}.`;
 }
 export function cardTile(card, callback, count = 0) {
   const button = node("button", "", "card-tile");

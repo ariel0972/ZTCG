@@ -1,4 +1,13 @@
-import { blocksStatus } from "./status-ward";
+import { selectField, enoughInField } from "./effect-selection";
+import { synchronizeStatusAuras } from "./status-auras";
+import {
+  cardPassives,
+  equipmentAllowed,
+  equipmentAttack,
+  equipmentReceiver,
+  clearOffFieldEquipmentModes,
+} from "./equipment";
+import { blocksStatus, isNegativeStatus } from "./status-ward";
 import {
   circleWaiver,
   deploymentAllowed,
@@ -240,6 +249,8 @@ export class Game {
     }
     try {
       const result = this.performResolution(operation);
+      clearOffFieldEquipmentModes(this.state);
+      synchronizeStatusAuras(this.state);
       this.recordTransfers(base);
       this.state.version = version + 1;
       return result ?? { duplicate: false, version: this.state.version };
@@ -498,6 +509,27 @@ export class Game {
       });
     }
     this.state = {
+      cardTemplates: Object.fromEntries(
+        catalog
+          .filter((c) =>
+            catalog.some((source) =>
+              [
+                ...source.habilidadesPassivas,
+                ...(source.modosEquipamento ?? []).flatMap(
+                  (m) => m.habilidadesPassivas,
+                ),
+              ]
+                .map(normalizePassive)
+                .some((p) =>
+                  p.efeitos.some(
+                    (a) =>
+                      a.id === "replaceStolen" && a.carta === c.numeroCatalogo,
+                  ),
+                ),
+            ),
+          )
+          .map((c) => [c.numeroCatalogo, c]),
+      ),
       version: 0,
       turn: 1,
       round: 1,
@@ -561,6 +593,10 @@ export class Game {
   private fieldView(card: Instance) {
     return {
       ...card,
+      ...(card.tipo === "Armamento"
+        ? { bonusAtaque: equipmentAttack(card) }
+        : {}),
+      habilidadesPassivas: cardPassives(card),
       palavrasChave: fieldKeywords(card),
       habilidadesAtivas: card.habilidadesAtivas.map((h) => ({
         ...h,
@@ -581,7 +617,19 @@ export class Game {
         this.finish(this.opponent(player.id).id, "Fadiga: baralho vazio.");
         return;
       }
-      player.hand.push(card);
+      if (card.onDrawEffects?.length) {
+        player.graveyard.push(card);
+        this.event("notice", card, "Maldição comprada: " + card.nome + ".");
+        this.effects(
+          player.id,
+          card.onDrawEffects,
+          [player.mage.id],
+          undefined,
+          card,
+          card.nome,
+        );
+        if (this.state.status === "FINISHED") return;
+      } else player.hand.push(card);
     }
   }
   private log(text: string) {
@@ -1040,7 +1088,12 @@ export class Game {
           s.ownerId === slot.ownerId &&
           position.some((p) => s.id.endsWith(`:${p}`)),
       )
-      .flatMap((s) => (s.card ? [s.card] : []));
+      .flatMap((s) =>
+        s.card &&
+        equipmentAllowed(s.card, beneficiary ?? slot.rider ?? slot.card)
+          ? [s.card]
+          : [],
+      );
   }
   private damage(
     id: string,
@@ -1373,7 +1426,7 @@ export class Game {
       ? grant
       : undefined;
   }
-  private equipmentPlacementError(user: string, slot: Slot) {
+  private equipmentPlacementError(user: string, slot: Slot, weapon?: Card) {
     if (this.state.phase === "BATTLE" && this.state.turn <= 2)
       return "Armamentos são bloqueados nos dois primeiros turnos após a preparação.";
     if (slot.ownerId !== user || slot.kind !== "Armamento" || slot.card)
@@ -1394,6 +1447,13 @@ export class Game {
       })
     )
       return "Este espaço precisa de uma tropa ou mago em campo para receber o armamento.";
+    if (
+      weapon &&
+      !this.weaponBeneficiaries(slot).some((s) =>
+        equipmentAllowed(weapon, s.rider ?? s.card),
+      )
+    )
+      return "Este armamento não pode ser usado por esta carta, subtipo ou alcance.";
     return "";
   }
   private weaponBeneficiaries(weaponSlot: Slot) {
@@ -1406,6 +1466,12 @@ export class Game {
     );
   }
   private removeFieldBonuses(card: Instance) {
+    delete card.equipmentMode;
+    if (card.fieldGrowth) {
+      card.hp = Math.max(1, (card.hp ?? 1) - card.fieldGrowth.hp);
+      card.hpAtual = Math.min(card.hpAtual, card.hp);
+      delete card.fieldGrowth;
+    }
     delete card.fieldModifiers;
     if (!card.reviveBonuses) return;
     card.hp = Math.max(0, (card.hp ?? 0) - card.reviveBonuses.hp);
@@ -1429,6 +1495,8 @@ export class Game {
     delete card.deathReward;
     delete card.killedBy;
     delete card.concealedTrap;
+    delete card.attacksBlockedUntilTurn;
+    delete card.passiveUses;
   }
   private event(
     kind: string,
@@ -1673,17 +1741,29 @@ export class Game {
       )
         listeners.push(event.card);
       const activations = listeners.flatMap((source) =>
-        source.habilidadesPassivas
+        cardPassives(source)
           .map(normalizePassive)
           .filter(
             (rule) =>
               rule.gatilho === trigger &&
-              (source.hpAtual > 0 || source.id === event.cardId) &&
+              (source.hpAtual > 0 ||
+                source.id === event.cardId ||
+                (source.tipo === "Armamento" &&
+                  !!equipmentReceiver(source, this.state.slots))) &&
               passiveMatches(rule, source, event, this.state.slots),
           )
           .map((rule) => ({ source, rule })),
       );
       for (const { source, rule } of activations) {
+        const ruleKey =
+          rule.id ?? trigger + ":" + source.habilidadesPassivas.indexOf(rule);
+        const usage = source.passiveUses?.[ruleKey];
+        if (
+          rule.limitePorRodada &&
+          usage?.round === this.state.round &&
+          usage.count >= rule.limitePorRodada
+        )
+          continue;
         let activated = false;
         const counters = new Set<string>();
         for (const action of rule.efeitos) {
@@ -1701,8 +1781,14 @@ export class Game {
           } else
             activated = this.passiveEffect(source, action, event) || activated;
         }
-        if (activated)
+        if (activated) {
+          if (rule.limitePorRodada)
+            (source.passiveUses ??= {})[ruleKey] = {
+              round: this.state.round,
+              count: usage?.round === this.state.round ? usage.count + 1 : 1,
+            };
           this.event("passive", source, describePassiveActions(rule.efeitos));
+        }
       }
     } finally {
       this.passiveDepth--;
@@ -1714,6 +1800,42 @@ export class Game {
     event: PassiveEvent,
   ): boolean {
     const owner = this.player(source.ownerId);
+    if (action.id === "executeEffects") {
+      this.effects(
+        owner.id,
+        action.efeitos,
+        this.validateTargets(owner.id, action.alvo, []),
+        undefined,
+        source,
+        source.nome,
+      );
+      return true;
+    }
+    if (action.id === "replaceStolen") {
+      if (!event.stolenFrom) return false;
+      const template = this.state.cardTemplates?.[action.carta];
+      if (!template) this.fail("Definição de carta gerada indisponível.");
+      const generated: Instance = {
+        ...structuredClone(template),
+        id: randomUUID(),
+        ownerId: event.stolenFrom,
+        hpAtual: 0,
+        attacked: false,
+        usedAbility: false,
+        statuses: [],
+        onDrawEffects: structuredClone(action.efeitosAoComprar),
+        nome: "Praga · " + template.nome,
+        efeitos: [],
+        alvo: "Global",
+        custoMana: 0,
+      };
+      this.player(event.stolenFrom).deck.splice(
+        event.deckIndex ?? 0,
+        0,
+        generated,
+      );
+      return true;
+    }
     if (action.id === "stackReduction") {
       const previous = source.statuses.find(
         (s) =>
@@ -1930,6 +2052,31 @@ export class Game {
     const target = id ? (this.findCard(id) ?? this.targetSlot(id)?.card) : null;
     if (!target) return false;
     switch (action.id) {
+      case "applyElement":
+        if (target.hpAtual <= 0) return false;
+        this.react(owner.id, [target.id], action.elemento);
+        return true;
+      case "returnToHand": {
+        const slot = this.targetSlot(target.id);
+        if (
+          target.tipo !== "Tropa" ||
+          !slot ||
+          target.hpAtual <= 0 ||
+          (action.bloquearComEstrutura && slot.structure) ||
+          (action.bloquearComMontaria && slot.rider) ||
+          action.excetoElementos?.includes(target.elemento ?? "Neutro")
+        )
+          return false;
+        this.effects(
+          owner.id,
+          [{ id: "returnToHand", devolverVinculos: true }],
+          [target.id],
+          undefined,
+          source,
+          source.nome,
+        );
+        return true;
+      }
       case "damage":
         if (!action.valor) return false;
         this.damage(
@@ -1953,6 +2100,8 @@ export class Game {
         if (!action.valor || target.hpAtual <= 0) return false;
         target.hp = (target.hp ?? 0) + action.valor;
         target.hpAtual += action.valor;
+        if (action.ateSairCampo)
+          (target.fieldGrowth ??= { hp: 0 }).hp += action.valor;
         this.reportHealthGain(target, action.valor, source);
         if (target.hpAtual > 0) delete target.killedBy;
         return true;
@@ -2308,24 +2457,43 @@ export class Game {
     )
       this.fail("Este efeito não aceita destino de deslocamento.");
     for (const effect of effects) {
+      if (
+        effect.anularSeCampo &&
+        enoughInField(this.state, ownerId, effect.anularSeCampo)
+      ) {
+        this.event(
+          "notice",
+          source ?? player.mage,
+          (cause ?? source?.nome ?? "Efeito") +
+            " foi anulado pela condição de campo.",
+        );
+        return;
+      }
+      if (
+        effect.requerCampo &&
+        !enoughInField(this.state, ownerId, effect.requerCampo)
+      )
+        continue;
       if (effect.elementoMago && effect.elementoMago !== player.mage.elemento)
         continue;
       if (effect.alvo === "Proprio" && (!source || !this.targetSlot(source.id)))
         this.fail(
           "Efeito na própria carta exige uma habilidade de origem em campo.",
         );
-      const selectionIds = effect.selecaoCampo
-        ? this.state.slots
-            .flatMap(slotCards)
-            .filter(
-              (c) =>
-                c.tipo ===
-                  (effect.selecaoCampo === "TodasTropas"
-                    ? "Tropa"
-                    : "Estrutura") && c.hpAtual > 0,
-            )
-            .map((c) => c.id)
-        : selection;
+      const selectionIds = effect.selecao
+        ? selectField(this.state, ownerId, effect.selecao).map((c) => c.id)
+        : effect.selecaoCampo
+          ? this.state.slots
+              .flatMap(slotCards)
+              .filter(
+                (c) =>
+                  c.tipo ===
+                    (effect.selecaoCampo === "TodasTropas"
+                      ? "Tropa"
+                      : "Estrutura") && c.hpAtual > 0,
+              )
+              .map((c) => c.id)
+          : selection;
       const ids = (
         effect.alvo === "Proprio" ? [source!.id] : selectionIds
       ).filter(
@@ -2341,6 +2509,93 @@ export class Game {
             )),
       );
       switch (effect.id) {
+        case "blockAttacks":
+          for (const id of ids) {
+            const c = this.findCard(id);
+            if (c) c.attacksBlockedUntilTurn = this.state.turn;
+          }
+          break;
+        case "growMaxHp":
+          for (const id of ids) {
+            const c = this.findCard(id);
+            if (!c || c.hpAtual <= 0 || !this.impactAllowed(c.id)) continue;
+            const value = effect.valor ?? 1;
+            c.hp = (c.hp ?? 0) + value;
+            c.hpAtual += value;
+            if (effect.ateSairCampo) (c.fieldGrowth ??= { hp: 0 }).hp += value;
+            this.reportHealthGain(c, value, source);
+          }
+          break;
+        case "statusAura": {
+          if (!source || !effect.grupo || !effect.status)
+            this.fail("Aura exige grupo, status e origem.");
+          const auras = (this.state.statusAuras ??= []),
+            id =
+              ownerId +
+              ":" +
+              source.numeroCatalogo +
+              ":" +
+              effect.grupo +
+              ":" +
+              effect.status;
+          const aura = auras.find((a) => a.id === id);
+          if (aura) aura.valor += effect.valor ?? 1;
+          else
+            auras.push({
+              id,
+              ownerId,
+              grupo: effect.grupo,
+              status: effect.status,
+              valor: effect.valor ?? 1,
+            });
+          break;
+        }
+        case "cleanse": {
+          let removed = false;
+          for (const id of ids) {
+            const c = this.findCard(id);
+            if (!c || !this.impactAllowed(c.id)) continue;
+            const negative = c.statuses.filter((s) => isNegativeStatus(s.nome));
+            if (
+              negative.some(
+                (s) =>
+                  canonicalStatus(s.nome) ===
+                  canonicalStatus(effect.bonusLimpeza?.status ?? ""),
+              )
+            )
+              removed = true;
+            c.statuses = c.statuses.filter((s) => !isNegativeStatus(s.nome));
+            c.scheduledStatuses = c.scheduledStatuses?.filter(
+              (s) => !isNegativeStatus(s.status.nome),
+            );
+            if (negative.length)
+              this.event(
+                "notice",
+                c,
+                "Condições negativas removidas por " +
+                  (cause ?? source?.nome ?? "limpeza") +
+                  ".",
+              );
+          }
+          if (removed && effect.bonusLimpeza && source)
+            this.effects(
+              ownerId,
+              [
+                {
+                  id: "status",
+                  status: "BonusAtaque",
+                  valor: effect.bonusLimpeza.ataque,
+                  duracao: 1,
+                  unidade: "turno",
+                },
+              ],
+              [source.id],
+              undefined,
+              source,
+              cause,
+            );
+          break;
+        }
         case "deployFromZone": {
           const zones = effect.zonas ?? ["Deck"];
           const available = [
@@ -3057,6 +3312,13 @@ export class Game {
               } else scheduled.push({ round, turn, status });
               continue;
             }
+            const previousValue =
+                card.statuses.find(
+                  (s) => s.nome === canonicalStatus(effect.status!),
+                )?.valor ?? 0,
+              previousTick = card.statuses.find(
+                (s) => s.nome === canonicalStatus(effect.status!),
+              )?.nextTickTurn;
             const applied = applyStatus(
               card.statuses,
               effect.status!,
@@ -3086,6 +3348,16 @@ export class Game {
                 effect.duracaoInicial,
                 effect.duracao ?? 0,
               );
+            if (effect.semExpiracao) {
+              applied.semExpiracao = true;
+              applied.danoPeriodico = effect.valor ?? 1;
+            }
+            if (effect.acumularValor) {
+              applied.valor = previousValue + (effect.valor ?? 1);
+              applied.danoPeriodico = applied.valor;
+              if (previousTick !== undefined)
+                applied.nextTickTurn = previousTick;
+            }
             if (effect.trocaAliada) applied.trocaAliada = true;
             if (applied && effect.requerStatus)
               applied.requerStatus = effect.requerStatus;
@@ -3101,10 +3373,19 @@ export class Game {
           break;
         case "stealDeck":
           for (let i = 0; i < effect.valor!; i++) {
-            const stolen = this.opponent(ownerId).deck.pop();
+            const from = this.opponent(ownerId),
+              index = from.deck.length - 1;
+            const stolen = from.deck.pop();
             if (!stolen) break;
             stolen.ownerId = ownerId;
             player.hand.push(stolen);
+            this.trigger("onDeckStolen", {
+              ownerId,
+              cardId: stolen.id,
+              card: stolen,
+              stolenFrom: from.id,
+              deckIndex: index,
+            });
           }
           break;
         case "draw":
@@ -3489,10 +3770,17 @@ export class Game {
     if (!physical) this.fail("Carta não está na sua mão.");
     if (physical.tipo === "Feitico" && this.state.phase === "PREPARATION")
       this.fail("Feitiços são bloqueados durante a preparação.");
+    const mode =
+      physical.tipo === "Armamento"
+        ? physical.modosEquipamento?.find((m) => m.id === cmd.mode)
+        : undefined;
+    if (physical.modosEquipamento?.length && !mode)
+      this.fail("Escolha um dos modos deste armamento.");
     const card = chooseAction(
       modifiedSpell(physical, player.mage, this.state),
-      cmd.mode,
+      mode ? undefined : cmd.mode,
     );
+    if (mode) card.equipmentMode = mode.id;
     if (
       cmd.destinationId &&
       !card.efeitos.some((e) =>
@@ -3643,6 +3931,7 @@ export class Game {
         const blocked = this.equipmentPlacementError(
           user,
           this.ownSlot(cmd.slotId, user),
+          card,
         );
         if (blocked) this.fail(blocked);
       }
@@ -3666,7 +3955,7 @@ export class Game {
       const slot = this.ownSlot(cmd.slotId, user);
       if (card.tipo === "Mago") this.fail("O mago já está em campo.");
       if (card.tipo === "Armamento") {
-        const blocked = this.equipmentPlacementError(user, slot);
+        const blocked = this.equipmentPlacementError(user, slot, card);
         if (blocked) this.fail(blocked);
       }
       if (
@@ -4493,6 +4782,11 @@ export class Game {
     const p = this.player(user);
     if (!card || !["Tropa", "Mago", "Estrutura"].includes(card.tipo))
       return "Selecione uma tropa, mago ou estrutura.";
+    if (
+      card.attacksBlockedUntilTurn !== undefined &&
+      this.state.turn <= card.attacksBlockedUntilTurn
+    )
+      return "Esta carta não pode mais atacar neste turno.";
     if (blockedOwnAttack(card, this.state.slots))
       return "Uma condição da passiva desta carta impede o ataque básico.";
     if (
@@ -6099,6 +6393,15 @@ export class Game {
                             entryCost(c)!.quantidade
                             ? "Não há materiais suficientes para pagar o custo de entrada."
                             : "",
+                      }
+                    : {}),
+                  ...(c.tipo === "Armamento"
+                    ? {
+                        equipmentTargets: this.state.slots
+                          .filter(
+                            (s) => !this.equipmentPlacementError(p.id, s, c),
+                          )
+                          .map((s) => s.id),
                       }
                     : {}),
                   canDiscard: this.canDiscard(c),

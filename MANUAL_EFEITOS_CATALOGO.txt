@@ -2048,3 +2048,41 @@ não contam para rankings de jogadores, taxas competitivas ou ranking de baralho
 As restrições normais de desistência continuam valendo. O modo tutorial é separado
 para não conceder XP por repetir exemplos guiados. O catálogo continua editável;
 nenhuma carta ou regra de efeito foi alterada para facilitar vitórias contra IA.
+
+GRUPOS, ARMAMENTOS E DOENÇAS — 02/11/2026
+As regras novas são configuráveis em qualquer carta compatível pelo JSON do catálogo.
+Grupo não substitui subtipo: grupos:["Rato"] mantém Animal, Humano etc. Filtros de
+passiva aceitam grupo, subtipo e direcoes; seleção de efeito aceita selecao com
+jogador (aliado/inimigo/qualquer), tipo opcional e grupo opcional. requerCampo e
+anularSeCampo usam jogador, grupo e minimo; a anulação encerra a sequência de efeitos.
+
+Armamentos: restricaoEquipamento define tipos (Tropa/Mago), direcoes opcionais e
+excluirSubtipos. modosEquipamento contém id, nome, bonusAtaque opcional e
+habilidadesPassivas. O modo é escolhido ao jogar e termina ao sair do campo.
+A condição de passiva cartaVinculada limita um gatilho ao ataque da carta equipada;
+aceita filtro por alcance. applyElement aplica reações ao alvo configurado.
+returnToHand passivo pode bloquear devolução com estrutura, montaria ocupada ou
+excetoElementos. As restrições continuam válidas quando o destinatário muda.
+
+Status periódico: semExpiracao:true mantém o relógio de ciclos sem reduzir duração;
+acumularValor:true soma a intensidade em reaplicações e preserva o próximo tick.
+Peste Negra usa valor:1, duracao:1 e ambos os campos. Remoções usam cleanse;
+bonusLimpeza:{status:"Peste Negra",ataque:1} dá bônus à fonte só se remover esse status.
+statusAura usa grupo, status e valor para bônus acumulável até o último inimigo
+infectado desaparecer. Novas cartas do grupo também recebem a aura enquanto ativa.
+
+growMaxHp aumenta máxima e atual; ateSairCampo:true remove esse crescimento na saída.
+blockAttacks com alvo:Proprio bloqueia só os ataques restantes da fonte no turno,
+sem gastar o limite de ataques do mago; limpeza de status não remove esse custo.
+Passivas com id e limitePorRodada limitam suas ativações usando a rodada da partida.
+executeEffects executa uma sequência genérica em Global/TodosInimigos/TodosAliados/
+TodasTropasInimigas, sem gastar mana, carta ou limite de feitiços.
+
+onDeckStolen é o gatilho de roubo do baralho (não da mão). replaceStolen usa carta
+como template e efeitosAoComprar como regra da maldição. Cada fonte em campo cria
+sua cópia na posição roubada. A compra revela, resolve e descarta a maldição antes
+da compra substituta; não conta como conjuração. A regra do Rato causa 1 de dano
+direto sem elemento no mago e compra outra carta, podendo encadear várias maldições.
+Leptospirose é compartilhada com Propagar: 2 de dano imediato nos inimigos e +1 PV
+máximo/atual aos Ratos aliados; Rato inimigo anula. Propagar usa essa sequência uma
+vez por rodada após sobreviver a um ataque com metade da vida ou menos.

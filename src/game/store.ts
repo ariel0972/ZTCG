@@ -6,6 +6,7 @@ import type { Card } from "../types/card";
 import type { DeckDefinition } from "./state";
 export interface Waiting {
   bot?: boolean;
+  aiMageId?: string;
   id: string;
   nome: string;
   deckId: string;

@@ -214,14 +214,24 @@ export function gameRoutes(game: DurableGame, social: MatchSocial) {
     if (["queue:join", "match:rematch", "ai:start"].includes(event))
       await assertTutorialComplete(user);
     if (event === "queue:join" || event === "ai:start") {
-      const { deckId } = z
-        .object({ deckId: z.string().regex(/^[a-f\d]{24}$/i) })
+      const { deckId, ...options } = z
+        .object({
+          deckId: z.string().regex(/^[a-f\d]{24}$/i),
+          mageId: z
+            .string()
+            .regex(/^\d{3,6}$/)
+            .optional(),
+        })
         .strict()
+        .refine(
+          (v) => event === "ai:start" || v.mageId === undefined,
+          "Mago adversário só pode ser escolhido contra IA.",
+        )
         .parse(data);
       const account = await User.findById(user);
       result =
         event === "ai:start"
-          ? await game.startAi(user, account!.nome, deckId, requestId)
+          ? await game.startAi(user, account!.nome, deckId, requestId, options)
           : await game.join(user, account!.nome, deckId, requestId);
     } else if (event === "queue:cancel")
       result = await game.cancel(user, requestId);

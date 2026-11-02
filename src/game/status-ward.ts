@@ -19,6 +19,9 @@ const negative = new Set([
   "Vapor",
   "Explosão",
 ]);
+export const isNegativeStatus = (name: string) =>
+  negative.has(canonicalStatus(name)) &&
+  canonicalStatus(name) !== "ReducaoAtaqueTropa";
 export function blocksStatus(
   card: Instance,
   name: string,

@@ -221,14 +221,18 @@
     "versao": 1,
     "alvo": "UnicoAliado",
     "elemento": "Fogo",
-    "tiposAlvo": ["Tropa"],
+    "tiposAlvo": [
+      "Tropa"
+    ],
     "destinoAposUso": "banido",
     "efeitos": [
       {
         "id": "fieldModifier",
         "concessao": {
           "bonusAtaque": 2,
-          "palavrasChave": ["Campo livre"],
+          "palavrasChave": [
+            "Campo livre"
+          ],
           "elementoAtaque": "Fogo",
           "visual": "asasDeFogo"
         }
@@ -246,7 +250,10 @@
     "versao": 1,
     "alvo": "UnicoAliado",
     "elemento": "Fogo",
-    "tiposAlvo": ["Tropa", "Mago"],
+    "tiposAlvo": [
+      "Tropa",
+      "Mago"
+    ],
     "efeitos": [
       {
         "id": "damage",
@@ -282,7 +289,9 @@
       }
     ],
     "maxAlvos": 1,
-    "palavrasChave": ["Reação"]
+    "palavrasChave": [
+      "Reação"
+    ]
   },
   {
     "numeroCatalogo": "032",
@@ -416,7 +425,10 @@
         "id": "damage",
         "valor": 6,
         "filtroAlvo": {
-          "excetoElementos": ["Agua", "Ar"]
+          "excetoElementos": [
+            "Agua",
+            "Ar"
+          ]
         }
       },
       {
@@ -472,7 +484,9 @@
         "perfurante": true,
         "selecaoCampo": "TodasTropas",
         "filtroAlvo": {
-          "excetoElementos": ["Agua"]
+          "excetoElementos": [
+            "Agua"
+          ]
         }
       },
       {
@@ -486,7 +500,9 @@
         "duracao": 2,
         "selecaoCampo": "TodasTropas",
         "filtroAlvo": {
-          "excetoElementos": ["Terra"]
+          "excetoElementos": [
+            "Terra"
+          ]
         }
       }
     ]
@@ -530,7 +546,10 @@
         "devolverVinculos": true,
         "filtroAlvo": {
           "tipo": "Tropa",
-          "excetoElementos": ["Fogo", "Terra"]
+          "excetoElementos": [
+            "Fogo",
+            "Terra"
+          ]
         }
       },
       {
@@ -553,7 +572,9 @@
       }
     ],
     "maxAlvos": 1,
-    "tiposAlvo": ["Tropa"]
+    "tiposAlvo": [
+      "Tropa"
+    ]
   },
   {
     "numeroCatalogo": "009",
@@ -584,7 +605,9 @@
       }
     ],
     "maxAlvos": 1,
-    "tiposAlvo": ["Tropa"]
+    "tiposAlvo": [
+      "Tropa"
+    ]
   },
   {
     "numeroCatalogo": "034",
@@ -608,7 +631,9 @@
     "versao": 1,
     "alvo": "UnicoInimigo",
     "elemento": "Ar",
-    "tiposAlvo": ["Tropa"],
+    "tiposAlvo": [
+      "Tropa"
+    ],
     "efeitos": [
       {
         "id": "damage",
@@ -657,7 +682,9 @@
     "versao": 1,
     "alvo": "UnicoInimigo",
     "elemento": "Ar",
-    "tiposAlvo": ["Tropa"],
+    "tiposAlvo": [
+      "Tropa"
+    ],
     "efeitos": [
       {
         "id": "displace",
@@ -727,7 +754,10 @@
     "versao": 1,
     "alvo": "UnicoAliado",
     "elemento": "Zarcos",
-    "tiposAlvo": ["Tropa", "Mago"],
+    "tiposAlvo": [
+      "Tropa",
+      "Mago"
+    ],
     "efeitos": [
       {
         "id": "attachMana",
@@ -805,7 +835,10 @@
         "id": "spellBoost",
         "valor": 1,
         "descontoMana": 2,
-        "elementos": ["Neutro", "Zarcos"],
+        "elementos": [
+          "Neutro",
+          "Zarcos"
+        ],
         "duracao": 2
       }
     ]
@@ -1030,7 +1063,9 @@
         "efeitos": [
           {
             "id": "equipmentGrant",
-            "destinatarios": ["Tropa"],
+            "destinatarios": [
+              "Tropa"
+            ],
             "ignorarLimite": true
           }
         ]
@@ -1044,7 +1079,9 @@
           {
             "id": "shuffleGraveyard",
             "valor": 2,
-            "tiposCarta": ["Armamento"]
+            "tiposCarta": [
+              "Armamento"
+            ]
           }
         ]
       }
@@ -1075,7 +1112,9 @@
     "elemento": "Neutro",
     "alvoAutomatico": "UltimoAtacanteTropa",
     "ignoraEsconder": true,
-    "tiposAlvo": ["Tropa"],
+    "tiposAlvo": [
+      "Tropa"
+    ],
     "efeitos": [
       {
         "id": "damage",
@@ -1099,7 +1138,10 @@
     "versao": 1,
     "alvo": "UnicoInimigo",
     "elemento": "Neutro",
-    "tiposAlvo": ["Tropa", "Estrutura"],
+    "tiposAlvo": [
+      "Tropa",
+      "Estrutura"
+    ],
     "efeitos": [
       {
         "id": "damage",
@@ -1122,7 +1164,9 @@
     "publicado": true,
     "versao": 1,
     "alvo": "UnicoInimigo",
-    "tiposAlvo": ["Tropa"],
+    "tiposAlvo": [
+      "Tropa"
+    ],
     "efeitos": [
       {
         "id": "control"
@@ -1237,9 +1281,15 @@
       {
         "id": "deployFromZone",
         "valor": 2,
-        "zonas": ["Deck"],
-        "tiposCarta": ["Tropa"],
-        "excluirSubtipos": ["Invocação"],
+        "zonas": [
+          "Deck"
+        ],
+        "tiposCarta": [
+          "Tropa"
+        ],
+        "excluirSubtipos": [
+          "Invocação"
+        ],
         "destino": "Tropa"
       }
     ]
@@ -1327,7 +1377,9 @@
     "publicado": true,
     "versao": 1,
     "alvo": "UnicoAliado",
-    "tiposAlvo": ["Tropa"],
+    "tiposAlvo": [
+      "Tropa"
+    ],
     "efeitos": [
       {
         "id": "sacrifice",
@@ -1335,7 +1387,10 @@
           "mana": 5,
           "vida": 2,
           "vidaEspecial": 5,
-          "subtipos": ["Invocação", "Animal"]
+          "subtipos": [
+            "Invocação",
+            "Animal"
+          ]
         }
       }
     ],
@@ -1369,7 +1424,10 @@
         "status": "Incapacitado",
         "duracao": 1,
         "bonusContraSubtipos": {
-          "subtipos": ["Monstro", "Animal"],
+          "subtipos": [
+            "Monstro",
+            "Animal"
+          ],
           "valor": 1
         }
       }
@@ -1471,23 +1529,78 @@
     "numeroCatalogo": "066",
     "nome": "Peste Negra",
     "tipo": "Feitico",
-    "custoMana": 2,
-    "descricao": "",
+    "custoMana": 4,
+    "descricao": "Infecta todas as tropas inimigas com Peste Negra: 1 de dano por ciclo, sem expirar, removível por limpeza. Cada nova aplicação acumula +1 no dano. Com 3 cartas do grupo Rato no seu campo, também infecta o mago inimigo. Cada aplicação concede +1 ATQ aos seus Ratos, acumulável, enquanto restar um inimigo infectado.",
     "imgURL": "/assets/Cards/Peste Negra.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
-    "alvo": "UnicoInimigo"
+    "alvo": "TodasTropasInimigas",
+    "elemento": "Neutro",
+    "efeitos": [
+      {
+        "id": "status",
+        "status": "Peste Negra",
+        "valor": 1,
+        "duracao": 1,
+        "semExpiracao": true,
+        "acumularValor": true
+      },
+      {
+        "id": "status",
+        "status": "Peste Negra",
+        "valor": 1,
+        "duracao": 1,
+        "semExpiracao": true,
+        "acumularValor": true,
+        "selecao": {
+          "jogador": "inimigo",
+          "tipo": "Mago"
+        },
+        "requerCampo": {
+          "jogador": "aliado",
+          "grupo": "Rato",
+          "minimo": 3
+        }
+      },
+      {
+        "id": "statusAura",
+        "grupo": "Rato",
+        "status": "Peste Negra",
+        "valor": 1
+      }
+    ]
   },
   {
     "numeroCatalogo": "072",
     "nome": "Leptospirose",
     "tipo": "Feitico",
-    "custoMana": 2,
-    "descricao": "",
+    "custoMana": 5,
+    "descricao": "Causa 2 de dano imediato a todos os inimigos. Seus Ratos ganham +1 de vida máxima e atual até sair do campo. Se houver uma carta do grupo Rato no campo inimigo, todos os efeitos são anulados.",
     "imgURL": "/assets/Cards/Leptospirose.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
-    "alvo": "UnicoInimigo"
+    "alvo": "TodosInimigos",
+    "elemento": "Neutro",
+    "efeitos": [
+      {
+        "id": "damage",
+        "valor": 2,
+        "anularSeCampo": {
+          "jogador": "inimigo",
+          "grupo": "Rato",
+          "minimo": 1
+        }
+      },
+      {
+        "id": "growMaxHp",
+        "valor": 1,
+        "ateSairCampo": true,
+        "selecao": {
+          "jogador": "aliado",
+          "grupo": "Rato"
+        }
+      }
+    ]
   },
   {
     "numeroCatalogo": "081",
@@ -1675,25 +1788,263 @@
     "numeroCatalogo": "048",
     "nome": "Machado",
     "tipo": "Armamento",
-    "custoMana": 6,
-    "descricao": "",
+    "custoMana": 5,
+    "descricao": "Animais não podem usar este armamento. Uma tropa equipada de alcance Diagonal ou Universal aplica Sangramento à tropa inimiga atingida pelo ataque básico: 1 de dano por ciclo durante 3 rodadas.",
     "imgURL": "/assets/Cards/Machado.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
     "bonusAtaque": 2,
-    "bonusHp": 1
+    "bonusHp": 0,
+    "elemento": "Neutro",
+    "restricaoEquipamento": {
+      "tipos": [
+        "Tropa"
+      ],
+      "excluirSubtipos": [
+        "Animal"
+      ]
+    },
+    "habilidadesPassivas": [
+      {
+        "gatilho": "onAttack",
+        "escopo": "aliado",
+        "condicoes": [
+          {
+            "tipo": "cartaVinculada",
+            "filtro": {
+              "direcoes": [
+                "Diagonal",
+                "Universal"
+              ]
+            }
+          }
+        ],
+        "filtroAlvo": {
+          "tipo": "Tropa",
+          "relacao": "inimigo"
+        },
+        "efeitos": [
+          {
+            "id": "status",
+            "alvo": "alvoAtaque",
+            "status": "Sangrando",
+            "valor": 1,
+            "duracao": 3
+          }
+        ]
+      }
+    ]
   },
   {
     "numeroCatalogo": "049",
     "nome": "Arco Elemental",
     "tipo": "Armamento",
-    "custoMana": 6,
-    "descricao": "",
+    "custoMana": 7,
+    "descricao": "Só pode equipar tropas de alcance Diagonal ou Universal. Escolha um elemento ao equipar, até sair do campo. Água cura 1 PV de quem ataca; Fogo dá +2 de dano além do bônus do arco; Terra atordoa por 1 rodada; Ar devolve a tropa atingida e seus armamentos à mão, exceto se for de Ar, estiver montada ou protegida por estrutura. Aplica o elemento escolhido no ataque.",
     "imgURL": "/assets/Cards/Arco Elemental.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
     "bonusAtaque": 2,
-    "bonusHp": 1
+    "bonusHp": 0,
+    "elemento": "Neutro",
+    "restricaoEquipamento": {
+      "tipos": [
+        "Tropa"
+      ],
+      "direcoes": [
+        "Diagonal",
+        "Universal"
+      ]
+    },
+    "habilidadesPassivas": [],
+    "modosEquipamento": [
+      {
+        "id": "agua",
+        "nome": "Água · curar 1 PV por ataque",
+        "habilidadesPassivas": [
+          {
+            "gatilho": "continuous",
+            "escopo": "proprio",
+            "efeitos": [
+              {
+                "id": "attackElement",
+                "elemento": "Agua"
+              }
+            ]
+          },
+          {
+            "gatilho": "onAttack",
+            "escopo": "aliado",
+            "condicoes": [
+              {
+                "tipo": "cartaVinculada"
+              }
+            ],
+            "efeitos": [
+              {
+                "id": "applyElement",
+                "alvo": "alvoAtaque",
+                "elemento": "Agua"
+              }
+            ]
+          },
+          {
+            "gatilho": "onAttack",
+            "escopo": "aliado",
+            "condicoes": [
+              {
+                "tipo": "cartaVinculada"
+              }
+            ],
+            "efeitos": [
+              {
+                "id": "heal",
+                "alvo": "cartaEvento",
+                "valor": 1
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "fogo",
+        "nome": "Fogo · +2 de dano",
+        "bonusAtaque": 2,
+        "habilidadesPassivas": [
+          {
+            "gatilho": "continuous",
+            "escopo": "proprio",
+            "efeitos": [
+              {
+                "id": "attackElement",
+                "elemento": "Fogo"
+              }
+            ]
+          },
+          {
+            "gatilho": "onAttack",
+            "escopo": "aliado",
+            "condicoes": [
+              {
+                "tipo": "cartaVinculada"
+              }
+            ],
+            "efeitos": [
+              {
+                "id": "applyElement",
+                "alvo": "alvoAtaque",
+                "elemento": "Fogo"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "terra",
+        "nome": "Terra · atordoar por 1 rodada",
+        "habilidadesPassivas": [
+          {
+            "gatilho": "continuous",
+            "escopo": "proprio",
+            "efeitos": [
+              {
+                "id": "attackElement",
+                "elemento": "Terra"
+              }
+            ]
+          },
+          {
+            "gatilho": "onAttack",
+            "escopo": "aliado",
+            "condicoes": [
+              {
+                "tipo": "cartaVinculada"
+              }
+            ],
+            "efeitos": [
+              {
+                "id": "applyElement",
+                "alvo": "alvoAtaque",
+                "elemento": "Terra"
+              }
+            ]
+          },
+          {
+            "gatilho": "onAttack",
+            "escopo": "aliado",
+            "condicoes": [
+              {
+                "tipo": "cartaVinculada"
+              }
+            ],
+            "efeitos": [
+              {
+                "id": "status",
+                "alvo": "alvoAtaque",
+                "status": "Atordoado",
+                "duracao": 1
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ar",
+        "nome": "Ar · devolver tropa à mão",
+        "habilidadesPassivas": [
+          {
+            "gatilho": "continuous",
+            "escopo": "proprio",
+            "efeitos": [
+              {
+                "id": "attackElement",
+                "elemento": "Ar"
+              }
+            ]
+          },
+          {
+            "gatilho": "onAttack",
+            "escopo": "aliado",
+            "condicoes": [
+              {
+                "tipo": "cartaVinculada"
+              }
+            ],
+            "efeitos": [
+              {
+                "id": "applyElement",
+                "alvo": "alvoAtaque",
+                "elemento": "Ar"
+              }
+            ]
+          },
+          {
+            "gatilho": "onAttack",
+            "escopo": "aliado",
+            "filtroAlvo": {
+              "tipo": "Tropa",
+              "relacao": "inimigo"
+            },
+            "condicoes": [
+              {
+                "tipo": "cartaVinculada"
+              }
+            ],
+            "efeitos": [
+              {
+                "id": "returnToHand",
+                "alvo": "alvoAtaque",
+                "bloquearComEstrutura": true,
+                "bloquearComMontaria": true,
+                "excetoElementos": [
+                  "Ar"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
   },
   {
     "numeroCatalogo": "099",
@@ -1726,7 +2077,11 @@
         "efeitos": [
           {
             "id": "statusWard",
-            "excecoes": ["Incapacitado", "Atordoado", "Abalo"]
+            "excecoes": [
+              "Incapacitado",
+              "Atordoado",
+              "Abalo"
+            ]
           }
         ]
       },
@@ -1889,8 +2244,12 @@
     "direcaoAtaque": "Frente",
     "subtipo": "Monstro",
     "elemento": "Neutro",
-    "resistencia": ["Neutro"],
-    "fraqueza": ["Fogo"],
+    "resistencia": [
+      "Neutro"
+    ],
+    "fraqueza": [
+      "Fogo"
+    ],
     "habilidadesPassivas": [
       {
         "gatilho": "continuous",
@@ -2031,7 +2390,10 @@
     ],
     "elemento": "Neutro",
     "subtipo": "Humano",
-    "resistencia": ["Fogo", "Ar"],
+    "resistencia": [
+      "Fogo",
+      "Ar"
+    ],
     "fraqueza": []
   },
   {
@@ -2081,7 +2443,9 @@
     "direcaoAtaque": "Frente",
     "elemento": "Neutro",
     "subtipo": "Invocação",
-    "resistencia": ["Fogo"],
+    "resistencia": [
+      "Fogo"
+    ],
     "fraqueza": [],
     "habilidadesPassivas": [
       {
@@ -2121,8 +2485,13 @@
     ],
     "custoEntrada": {
       "quantidade": 1,
-      "tiposCarta": ["Tropa"],
-      "origens": ["mao", "campo"],
+      "tiposCarta": [
+        "Tropa"
+      ],
+      "origens": [
+        "mao",
+        "campo"
+      ],
       "mesmoElemento": true
     }
   },
@@ -2130,12 +2499,12 @@
     "numeroCatalogo": "027",
     "nome": "Rato",
     "tipo": "Tropa",
-    "custoMana": 4,
-    "descricao": "",
+    "custoMana": 2,
+    "descricao": "Ataca uma vez por rodada. Quando outra tropa aliada morre, toma seu lugar. Praga: para cada carta que você roubar do deck inimigo, este Rato deixa uma maldição no lugar. Ao comprá-la, o adversário sofre 1 de dano direto no mago, descarta a maldição e compra outra carta. Cada Rato em campo cria sua própria maldição.",
     "imgURL": "/assets/Cards/Rato.png",
     "publicado": true,
     "versao": 2,
-    "hp": 1,
+    "hp": 4,
     "ataque": 2,
     "manaGerada": 1,
     "direcaoAtaque": "Frente",
@@ -2152,9 +2521,41 @@
             "id": "move",
             "destino": "slotEvento"
           }
-        ],
-        "descricao": "Quando outra tropa aliada morre, este Rato em campo move-se para o espaço disponível dela."
+        ]
+      },
+      {
+        "gatilho": "onDeckStolen",
+        "escopo": "aliado",
+        "efeitos": [
+          {
+            "id": "replaceStolen",
+            "carta": "066",
+            "efeitosAoComprar": [
+              {
+                "id": "damage",
+                "valor": 1,
+                "perfurante": true
+              },
+              {
+                "id": "draw",
+                "valor": 1
+              }
+            ]
+          }
+        ]
       }
+    ],
+    "elemento": "Neutro",
+    "resistencia": [
+      "Neutro"
+    ],
+    "fraqueza": [
+      "Fogo",
+      "Terra"
+    ],
+    "subtipo": "Animal",
+    "grupos": [
+      "Rato"
     ]
   },
   {
@@ -2172,7 +2573,9 @@
     "direcaoAtaque": "Frente",
     "elemento": "Neutro",
     "subtipo": "Animal",
-    "fraqueza": ["Fogo"],
+    "fraqueza": [
+      "Fogo"
+    ],
     "resistencia": [],
     "habilidadesPassivas": [
       {
@@ -2207,9 +2610,15 @@
     "direcaoAtaque": "Frente",
     "elemento": "Neutro",
     "subtipo": "Animal",
-    "fraqueza": ["Fogo", "Agua"],
+    "fraqueza": [
+      "Fogo",
+      "Agua"
+    ],
     "resistencia": [],
-    "palavrasChave": ["Campo livre", "Montaria"],
+    "palavrasChave": [
+      "Campo livre",
+      "Montaria"
+    ],
     "montaria": {
       "filtro": {
         "numeroCatalogo": "021"
@@ -2319,8 +2728,14 @@
     ],
     "elemento": "Neutro",
     "subtipo": "Humano",
-    "resistencia": ["Terra", "Agua"],
-    "fraqueza": ["Fogo", "Ar"]
+    "resistencia": [
+      "Terra",
+      "Agua"
+    ],
+    "fraqueza": [
+      "Fogo",
+      "Ar"
+    ]
   },
   {
     "numeroCatalogo": "077",
@@ -2337,8 +2752,12 @@
     "direcaoAtaque": "Frente",
     "subtipo": "Monstro",
     "elemento": "Neutro",
-    "resistencia": ["Neutro"],
-    "fraqueza": ["Fogo"],
+    "resistencia": [
+      "Neutro"
+    ],
+    "fraqueza": [
+      "Fogo"
+    ],
     "habilidadesPassivas": [
       {
         "gatilho": "continuous",
@@ -2394,7 +2813,10 @@
           }
         ],
         "descricao": "Atordoa uma tropa ou mago inimigo por 1 ciclo completo. Não causa dano. Esta carta não pode mais atacar neste turno; pode usar após já ter atacado.",
-        "tiposAlvo": ["Tropa", "Mago"]
+        "tiposAlvo": [
+          "Tropa",
+          "Mago"
+        ]
       }
     ]
   },
@@ -2416,15 +2838,91 @@
     "numeroCatalogo": "089",
     "nome": "Enxame de Ratos",
     "tipo": "Tropa",
-    "custoMana": 4,
-    "descricao": "",
+    "custoMana": 5,
+    "descricao": "Ataca duas vezes por rodada. Quando outro aliado morre, ganha +1 de vida máxima e atual até sair do campo. Propagar: após sobreviver a um ataque com metade da vida ou menos, usa os efeitos de Leptospirose sem mana ou carta, uma vez por rodada.",
     "imgURL": "/assets/Cards/Enxame de Ratos.png",
     "publicado": true,
     "versao": 1,
-    "hp": 1,
+    "hp": 12,
     "ataque": 2,
-    "manaGerada": 1,
-    "direcaoAtaque": "Frente"
+    "manaGerada": 3,
+    "direcaoAtaque": "Frente",
+    "elemento": "Neutro",
+    "resistencia": [
+      "Neutro"
+    ],
+    "fraqueza": [
+      "Fogo"
+    ],
+    "subtipo": "Animal",
+    "grupos": [
+      "Rato"
+    ],
+    "habilidadesPassivas": [
+      {
+        "gatilho": "continuous",
+        "escopo": "proprio",
+        "efeitos": [
+          {
+            "id": "attackLimit",
+            "valor": 2
+          }
+        ]
+      },
+      {
+        "gatilho": "onDeath",
+        "escopo": "aliado",
+        "excluirFonte": true,
+        "efeitos": [
+          {
+            "id": "growMaxHp",
+            "alvo": "fonte",
+            "valor": 1,
+            "ateSairCampo": true
+          }
+        ]
+      },
+      {
+        "id": "propagar",
+        "gatilho": "onAttacked",
+        "escopo": "proprio",
+        "limitePorRodada": 1,
+        "condicoes": [
+          {
+            "tipo": "vidaPercentual",
+            "alvo": "fonte",
+            "percentual": 50,
+            "comparacao": "menorOuIgual"
+          }
+        ],
+        "efeitos": [
+          {
+            "id": "executeEffects",
+            "alvo": "TodosInimigos",
+            "efeitos": [
+              {
+                "id": "damage",
+                "valor": 2,
+                "anularSeCampo": {
+                  "jogador": "inimigo",
+                  "grupo": "Rato",
+                  "minimo": 1
+                }
+              },
+              {
+                "id": "growMaxHp",
+                "valor": 1,
+                "ateSairCampo": true,
+                "selecao": {
+                  "jogador": "aliado",
+                  "grupo": "Rato"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
   },
   {
     "numeroCatalogo": "095",
@@ -2441,7 +2939,9 @@
     "direcaoAtaque": "Frente",
     "elemento": "Neutro",
     "subtipo": "Monstro",
-    "fraqueza": ["Terra"],
+    "fraqueza": [
+      "Terra"
+    ],
     "resistencia": [],
     "habilidadesAtivas": [
       {
@@ -2484,8 +2984,12 @@
     "direcaoAtaque": "Frente",
     "elemento": "Neutro",
     "subtipo": "Humano",
-    "resistencia": ["Ar"],
-    "fraqueza": ["Terra"],
+    "resistencia": [
+      "Ar"
+    ],
+    "fraqueza": [
+      "Terra"
+    ],
     "habilidadesPassivas": [
       {
         "gatilho": "onDeath",
@@ -2509,15 +3013,78 @@
     "numeroCatalogo": "107",
     "nome": "Médico da Peste",
     "tipo": "Tropa",
-    "custoMana": 4,
-    "descricao": "",
+    "custoMana": 5,
+    "descricao": "Ataca uma vez por rodada. Quando outro aliado morre, ganha Campo livre até o fim do turno atual.",
     "imgURL": "/assets/Cards/Médico da Peste.png",
     "publicado": true,
     "versao": 1,
-    "hp": 1,
+    "hp": 12,
     "ataque": 2,
-    "manaGerada": 1,
-    "direcaoAtaque": "Frente"
+    "manaGerada": 3,
+    "direcaoAtaque": "Frente",
+    "elemento": "Neutro",
+    "resistencia": [
+      "Neutro"
+    ],
+    "fraqueza": [
+      "Fogo"
+    ],
+    "subtipo": "Humano",
+    "habilidadesPassivas": [
+      {
+        "gatilho": "onDeath",
+        "escopo": "aliado",
+        "excluirFonte": true,
+        "efeitos": [
+          {
+            "id": "status",
+            "alvo": "fonte",
+            "status": "Campo livre",
+            "duracao": 1,
+            "unidade": "turno"
+          }
+        ]
+      }
+    ],
+    "habilidadesAtivas": [
+      {
+        "id": "cura",
+        "nome": "Cura",
+        "custoMana": 4,
+        "alvo": "UnicoAliado",
+        "tiposAlvo": [
+          "Tropa",
+          "Mago"
+        ],
+        "descricao": "Cura 2 PV de tropa ou mago aliado. O Médico perde apenas seus ataques restantes neste turno, sem consumir ataques do mago. Pode usar depois de atacar.",
+        "efeitos": [
+          {
+            "id": "heal",
+            "valor": 2
+          },
+          {
+            "id": "blockAttacks",
+            "alvo": "Proprio"
+          }
+        ]
+      },
+      {
+        "id": "medicar",
+        "nome": "Medicar",
+        "custoMana": 5,
+        "alvo": "TodosAliados",
+        "descricao": "Remove condições negativas de todos os aliados. Se remover Peste Negra, o Médico recebe +1 ATQ até o fim do turno.",
+        "efeitos": [
+          {
+            "id": "cleanse",
+            "bonusLimpeza": {
+              "status": "Peste Negra",
+              "ataque": 1
+            }
+          }
+        ]
+      }
+    ]
   },
   {
     "numeroCatalogo": "130",
@@ -2563,8 +3130,12 @@
       }
     ],
     "elemento": "Fogo",
-    "resistencia": ["Ar"],
-    "fraqueza": ["Agua"],
+    "resistencia": [
+      "Ar"
+    ],
+    "fraqueza": [
+      "Agua"
+    ],
     "habilidadesAtivas": [
       {
         "id": "arder",
@@ -2621,8 +3192,12 @@
       }
     ],
     "elemento": "Fogo",
-    "resistencia": ["Ar"],
-    "fraqueza": ["Agua"],
+    "resistencia": [
+      "Ar"
+    ],
+    "fraqueza": [
+      "Agua"
+    ],
     "habilidadesAtivas": [
       {
         "id": "protecaoRochosa",
@@ -2724,8 +3299,12 @@
       }
     ],
     "elemento": "Fogo",
-    "resistencia": ["Ar"],
-    "fraqueza": ["Agua"]
+    "resistencia": [
+      "Ar"
+    ],
+    "fraqueza": [
+      "Agua"
+    ]
   },
   {
     "numeroCatalogo": "117",
@@ -2752,8 +3331,12 @@
       }
     ],
     "elemento": "Fogo",
-    "resistencia": ["Ar"],
-    "fraqueza": ["Agua"],
+    "resistencia": [
+      "Ar"
+    ],
+    "fraqueza": [
+      "Agua"
+    ],
     "habilidadesAtivas": [
       {
         "id": "olharFurioso",
@@ -2841,13 +3424,22 @@
       }
     ],
     "elemento": "Agua",
-    "resistencia": ["Fogo"],
-    "fraqueza": ["Terra"],
+    "resistencia": [
+      "Fogo"
+    ],
+    "fraqueza": [
+      "Terra"
+    ],
     "subtipo": "Invocação",
     "custoEntrada": {
       "quantidade": 1,
-      "tiposCarta": ["Tropa"],
-      "origens": ["mao", "campo"],
+      "tiposCarta": [
+        "Tropa"
+      ],
+      "origens": [
+        "mao",
+        "campo"
+      ],
       "mesmoElemento": true
     }
   },
@@ -2929,8 +3521,12 @@
     ],
     "subtipo": "Animal",
     "elemento": "Terra",
-    "fraqueza": ["Ar"],
-    "resistencia": ["Agua"]
+    "fraqueza": [
+      "Ar"
+    ],
+    "resistencia": [
+      "Agua"
+    ]
   },
   {
     "numeroCatalogo": "076",
@@ -2975,9 +3571,15 @@
     "direcaoAtaque": "Universal",
     "elemento": "Ar",
     "subtipo": "Animal",
-    "fraqueza": ["Fogo"],
-    "resistencia": ["Terra"],
-    "palavrasChave": ["Campo livre"],
+    "fraqueza": [
+      "Fogo"
+    ],
+    "resistencia": [
+      "Terra"
+    ],
+    "palavrasChave": [
+      "Campo livre"
+    ],
     "habilidadesPassivas": [
       {
         "gatilho": "continuous",
@@ -3097,8 +3699,12 @@
       }
     ],
     "elemento": "Fogo",
-    "fraqueza": ["Agua"],
-    "resistencia": ["Ar"],
+    "fraqueza": [
+      "Agua"
+    ],
+    "resistencia": [
+      "Ar"
+    ],
     "habilidadesAtivas": [
       {
         "id": "imbuirEmChamas",
@@ -3158,8 +3764,12 @@
       }
     ],
     "elemento": "Agua",
-    "fraqueza": ["Terra"],
-    "resistencia": ["Fogo"],
+    "fraqueza": [
+      "Terra"
+    ],
+    "resistencia": [
+      "Fogo"
+    ],
     "habilidadesAtivas": [
       {
         "id": "protecaoAquatica",
@@ -3199,8 +3809,12 @@
       }
     ],
     "elemento": "Ar",
-    "fraqueza": ["Fogo"],
-    "resistencia": ["Terra"],
+    "fraqueza": [
+      "Fogo"
+    ],
+    "resistencia": [
+      "Terra"
+    ],
     "habilidadesPassivas": [
       {
         "gatilho": "onSpellCast",
@@ -3262,8 +3876,12 @@
       }
     ],
     "elemento": "Terra",
-    "fraqueza": ["Ar"],
-    "resistencia": ["Agua"],
+    "fraqueza": [
+      "Ar"
+    ],
+    "resistencia": [
+      "Agua"
+    ],
     "habilidadesPassivas": [
       {
         "gatilho": "onSpellCast",
@@ -3333,8 +3951,13 @@
           {
             "id": "deployFromZone",
             "valor": 1,
-            "zonas": ["Deck", "Cemiterio"],
-            "tiposCarta": ["Estrutura"],
+            "zonas": [
+              "Deck",
+              "Cemiterio"
+            ],
+            "tiposCarta": [
+              "Estrutura"
+            ],
             "carta": "056",
             "destino": "Estrutura"
           }
@@ -3473,8 +4096,12 @@
         ]
       }
     ],
-    "fraqueza": ["Zarcos"],
-    "resistencia": ["Neutro"]
+    "fraqueza": [
+      "Zarcos"
+    ],
+    "resistencia": [
+      "Neutro"
+    ]
   },
   {
     "numeroCatalogo": "136",
@@ -3498,8 +4125,12 @@
               "valor": 2
             }
           ],
-          "danoNormal": ["Agua"],
-          "anularFeiticos": ["Ar"]
+          "danoNormal": [
+            "Agua"
+          ],
+          "anularFeiticos": [
+            "Ar"
+          ]
         }
       }
     ],

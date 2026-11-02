@@ -307,9 +307,46 @@ void fakeDatabase().then(async (db) => {
       game.player(owner).mana = 10;
       game.player(owner).hand.unshift(instance("040", owner));
     }
+    if (process.env.PREVIEW_PEST === "1") {
+      for (const player of game.state.players) {
+        player.mage = instance(player.id === owner ? "019" : "016", player.id);
+        game.state.slots.find(
+          (s) => s.ownerId === player.id && s.kind === "Mago",
+        )!.card = player.mage;
+      }
+      ["023", "027", "089"].forEach((id, column) => {
+        const slot = game.state.slots.find(
+          (s) => s.id === owner + ":front:" + column,
+        )!;
+        slot.card = instance(id, owner);
+        slot.structure = null;
+        slot.rider = null;
+      });
+      game.state.slots.find((s) => s.id === owner + ":front:0")!.card!.hpAtual =
+        8;
+      ["023", "107", "023"].forEach((id, column) => {
+        const slot = game.state.slots.find(
+          (s) => s.id === enemy.ownerId + ":front:" + column,
+        )!;
+        slot.card = instance(id, enemy.ownerId);
+        slot.structure = null;
+        slot.rider = null;
+        if (column === 2) {
+          slot.card.hp = 40;
+          slot.card.hpAtual = 40;
+        }
+      });
+      game.player(owner).hand = ["049", "048", "066", "107", "072", "009"].map(
+        (id) => instance(id, owner),
+      );
+      game.player(owner).graveyard = [];
+    }
     room.game = game.exportState();
     room.deadline =
-      Date.now() + (process.env.PREVIEW_REACTIONS === "1" ? 1200000 : 120000);
+      Date.now() +
+      (process.env.PREVIEW_REACTIONS === "1" || process.env.PREVIEW_PEST === "1"
+        ? 1200000
+        : 120000);
     // Keep the fictitious opponent connected for this isolated visual fixture.
     await store.touch(enemy.ownerId, Date.now() + 3600000);
     await store.touch(owner, Date.now() + 3600000);

@@ -10,6 +10,7 @@ export interface Status extends EffectClock {
     descontoMana: number;
   };
   permanente?: boolean;
+  semExpiracao?: boolean;
   removerElemento?: import("../types/card").Card["elemento"];
   danoPeriodico?: number;
   sourceCardId?: string;
@@ -145,7 +146,7 @@ export function tickRound(
           : 0);
     damage += value;
     if (value) onDamage?.(status, value);
-    status.turnosRestantes--;
+    if (!status.semExpiracao) status.turnosRestantes--;
   }
   return damage;
 }

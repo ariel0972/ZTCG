@@ -140,7 +140,7 @@ test("cada jogador tem limite próprio de um armamento na preparação", () => {
   const g = make();
   for (const owner of ["p1", "p2"]) {
     g.player(owner).mana = 20;
-    play(g, card("048", owner), owner + ":arm:back-left");
+    play(g, card("047", owner), owner + ":arm:back-left");
     assert.throws(
       () => play(g, card("038", owner), owner + ":arm:back-right"),
       /um armamento por turno/,
@@ -236,7 +236,7 @@ test("abertura permite só tropas no turno 1 e libera ataques e efeitos sem dano
   assert.equal(g.player("p2").counters.attacks, 1);
   act(g, "p2", { type: "endTurn" });
   assert.equal(g.state.turn, 3);
-  play(g, card("048"), "p1:arm:back-left");
+  play(g, card("047"), "p1:arm:back-left");
 });
 test("projeção da recuperação do mago acompanha passiva contínua sem alterar o custo da mão", () => {
   const g = battleAt();

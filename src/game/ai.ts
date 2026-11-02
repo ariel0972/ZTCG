@@ -1,46 +1,35 @@
+import { deploymentCards } from "./deployment";
+import { aiCandidates } from "./ai-actions";
+import { aiBoardScore, aiStrategy } from "./ai-strategy";
+import { randomAiDeck } from "./ai-deck";
 import { randomUUID } from "node:crypto";
-import type { Card } from "../types/card";
+import { cardSchema, type Card } from "../types/card";
 import type { Waiting } from "./store";
-import { AppError } from "../lib/errors";
 import { Game } from "./engine";
-import { entryCost } from "./entry-cost";
-import { slotCards } from "./state";
 export const AI_DELAY_MS = 2500;
-export function aiEntry(catalog: Card[], now: number): Waiting {
-  const mage =
-    catalog.find((c) => c.numeroCatalogo === "016" && c.publicado) ??
-    catalog.find((c) => c.tipo === "Mago" && c.publicado);
-  const troops = catalog
-    .filter((c) => c.tipo === "Tropa" && c.publicado && !entryCost(c))
-    .slice(0, 9);
-  const spells = ["001", "002", "003", "008", "009", "057"].flatMap((id) =>
-    catalog.filter(
-      (c) =>
-        c.numeroCatalogo === id &&
-        c.publicado &&
-        !entryCost(c) &&
-        (!c.requerElementoMago || c.requerElementoMago === mage?.elemento),
-    ),
-  );
-  const cartas = [...troops, ...spells]
-    .flatMap((c) => Array(3).fill(c.numeroCatalogo))
-    .slice(0, 40);
-  if (!mage || cartas.length !== 40)
-    throw new AppError(
-      503,
-      "O baralho da IA está indisponível neste catálogo.",
-    );
+const unknownCard = cardSchema.parse({
+  numeroCatalogo: "000",
+  nome: "Carta desconhecida",
+  tipo: "Feitico",
+  custoMana: 99,
+  alvo: "Global",
+  publicado: false,
+});
+export function aiEntry(
+  catalog: Card[],
+  now: number,
+  options: { mageId?: string } = {},
+  random = Math.random,
+): Waiting {
+  const deck = randomAiDeck(catalog, options.mageId, random);
   return {
     id: randomUUID().replace(/-/g, "").slice(0, 24),
     nome: "IA · Guardião de treino",
     bot: true,
     deckId: "ai",
-    deck: { nome: "Guardião de treino", mago: mage.numeroCatalogo, cartas },
-    catalog: catalog.filter(
-      (c) =>
-        c.numeroCatalogo === mage.numeroCatalogo ||
-        cartas.includes(c.numeroCatalogo),
-    ),
+    deck,
+    catalog,
+    ...(options.mageId ? { aiMageId: options.mageId } : {}),
     catalogHash: "ai",
     joinedAt: now,
   };
@@ -58,30 +47,6 @@ export function aiNeedsAction(game: Game, bot: string) {
     return !s.coinToss?.result && s.coinToss?.chooserId === bot;
   return s.current === bot;
 }
-function boardScore(g: Game, bot: string) {
-  const foe = g.state.players.find((p) => p.id !== bot)!;
-  const power = (owner: string) =>
-    g.state.slots
-      .filter((s) => s.ownerId === owner)
-      .flatMap(slotCards)
-      .filter((c) => c.tipo !== "Mago" && c.hpAtual > 0)
-      .reduce(
-        (n, c) =>
-          n +
-          c.hpAtual * 0.24 +
-          (c.ataque ?? 0) * 0.9 +
-          c.statuses
-            .filter((s) => s.nome === "BonusAtaque" && s.turnosRestantes > 0)
-            .reduce((n, s) => n + (s.valor ?? 0) * 0.8, 0),
-        0,
-      );
-  return (
-    (g.player(bot).mage.hpAtual - foe.mage.hpAtual) * 2 +
-    power(bot) -
-    power(foe.id) +
-    g.player(bot).mana * 0.05
-  );
-}
 export function chooseAiCommand(
   game: Game,
   bot: string,
@@ -98,7 +63,14 @@ export function chooseAiCommand(
     };
   if (s.pendingHandChoice) {
     const enemy = s.players.find((p) => p.id !== bot)!;
-    return { type: "chooseHand", cardId: enemy.hand[0]?.id };
+    const best = [...enemy.hand].sort(
+      (a, b) =>
+        (b.hp ?? 0) +
+        (b.ataque ?? 0) * 2 +
+        b.custoMana -
+        ((a.hp ?? 0) + (a.ataque ?? 0) * 2 + a.custoMana),
+    )[0];
+    return { type: "chooseHand", cardId: best?.id };
   }
   if (s.pendingSpell)
     return {
@@ -110,130 +82,119 @@ export function chooseAiCommand(
     const choice = s.pendingRevives[0];
     return {
       type: "chooseRevive",
-      cardId: choice.cards[0],
-      destinationId: view.reviveDestinations?.[0],
+      cardId: deploymentCards(s, choice).sort(
+        (a, b) =>
+          (b.hp ?? 0) +
+          (b.ataque ?? 0) * 2 -
+          ((a.hp ?? 0) + (a.ataque ?? 0) * 2),
+      )[0]?.id,
+      destinationId: [...(view.reviveDestinations ?? [])].sort((a, b) => {
+        const power = (id: string) => {
+          const sl = s.slots.find((s) => s.id === id)!;
+          return (
+            (sl.card?.ataque ?? 0) +
+            (sl.card ? (sl.card.hp ?? 0) - sl.card.hpAtual : 0) +
+            (sl.column === 0 || sl.column === 2 ? 1 : 0)
+          );
+        };
+        return power(b) - power(a);
+      })[0],
     };
   }
   if (s.phase === "COIN_TOSS") return { type: "chooseCoin", face: "heads" };
   if (s.phase === "PREPARATION" && player.preparation.bonusDraws)
     return { type: "preparationBonus", accept: false };
-  const candidates: Record<string, unknown>[] = [];
-  const front = view.slots.filter(
-    (sl) =>
-      sl.ownerId === bot && sl.kind === "Tropa" && !sl.card && !sl.terrain,
-  );
-  for (const card of player.hand) {
-    if (card.tipo === "Tropa" && !entryCost(card))
-      for (const slot of front)
-        candidates.push({
-          type: "play",
-          cardId: card.id,
-          slotId: slot.id,
-          targets: [],
-        });
-    if (s.phase !== "BATTLE" || card.tipo !== "Feitico") continue;
-    if (
-      [
-        "Global",
-        "TodosInimigos",
-        "TodasTropasInimigas",
-        "TodosAliados",
-      ].includes(card.alvo ?? "")
-    )
-      candidates.push({ type: "play", cardId: card.id, targets: [] });
-    else if (
-      ["UnicoInimigo", "UnicoAliado", "MultiplosInimigos"].includes(
-        card.alvo ?? "",
-      )
-    )
-      for (const slot of view.slots.filter((sl) =>
-        ["UnicoInimigo", "MultiplosInimigos"].includes(card.alvo!)
-          ? sl.ownerId !== bot
-          : sl.ownerId === bot,
-      ))
-        if (slot.card && !("oculta" in slot.card && slot.card.oculta))
-          candidates.push({
-            type: "play",
-            cardId: card.id,
-            targets: [slot.card.id],
-          });
+  const candidates = aiCandidates(game, bot),
+    strategy = aiStrategy(game, bot);
+  const publicGame = Game.restore(game.exportState(), () => 0.5);
+  for (const enemy of publicGame.state.players.filter((p) => p.id !== bot)) {
+    enemy.hand = [];
+    enemy.deck = enemy.deck.map((c) => ({
+      ...unknownCard,
+      id: c.id,
+      ownerId: enemy.id,
+      hpAtual: 0,
+      attacked: false,
+      usedAbility: false,
+      statuses: [],
+    }));
   }
-  if (s.phase === "BATTLE")
-    for (const slot of view.slots.filter((sl) => sl.ownerId === bot))
-      for (const source of ["card", "rider", "structure"] as const) {
-        const card = slot[source];
-        if (!card || !("habilidadesAtivas" in card)) continue;
-        for (const targetId of (slot.attackTargets?.[source] ?? []).filter(
-          (id) => view.slots.some((target) => target.id === id && target.card),
-        ))
-          candidates.push({
-            type: "attack",
-            slotId: slot.id,
-            targetId,
-            source,
-          });
-        for (const ability of card.habilidadesAtivas) {
-          const base = {
-            type: "ability",
-            slotId: slot.id,
-            source,
-            abilityId: ability.id,
-          };
-          if (
-            !ability.alvo ||
-            ability.alvoAutomatico ||
-            [
-              "Global",
-              "TodosInimigos",
-              "TodasTropasInimigas",
-              "TodosAliados",
-            ].includes(ability.alvo)
-          )
-            candidates.push({ ...base, targets: [] });
-          else if (["UnicoInimigo", "UnicoAliado"].includes(ability.alvo))
-            for (const target of view.slots.filter((sl) =>
-              ability.alvo === "UnicoAliado"
-                ? sl.ownerId === bot
-                : sl.ownerId !== bot,
-            ))
-              if (
-                target.card &&
-                !("oculta" in target.card && target.card.oculta)
-              )
-                candidates.push({ ...base, targets: [target.card.id] });
-        }
-      }
-  let best: Record<string, unknown> | null = null,
-    bestScore = 0.05;
-  const before = boardScore(game, bot);
-  for (const command of candidates.slice(0, 90)) {
+  const before = aiBoardScore(publicGame, bot, strategy);
+  const ranked: {
+    command: Record<string, unknown>;
+    score: number;
+    trial: Game;
+  }[] = [];
+  for (const command of candidates) {
     try {
-      const trial = Game.restore(game.exportState());
-      // Planning uses public board information, never the opponent's hidden hand.
-      for (const enemy of trial.state.players.filter((p) => p.id !== bot))
-        enemy.hand = [];
+      const trial = Game.restore(publicGame.exportState(), () => 0.5);
       const concealed =
         command.type === "attack" &&
         s.slots.find((sl) => sl.id === command.targetId)?.card?.concealedTrap;
-      let score: number;
-      if (concealed) score = 2;
-      else {
+      let score = 1;
+      if (!concealed) {
         trial.execute(bot, {
           ...command,
           version: trial.state.version,
           actionId: randomUUID(),
         });
-        score = boardScore(trial, bot) - before;
+        // Forecast the public effect, without assuming the opponent will decline a dodge.
+        for (let i = 0; i < 6 && trial.state.pendingImpact; i++)
+          trial.execute(trial.state.pendingImpact.request.ownerId, {
+            type: "respondDodge",
+            dodge: true,
+            version: trial.state.version,
+            actionId: randomUUID(),
+          });
+        score = aiBoardScore(trial, bot, strategy) - before;
         if (trial.state.status === "FINISHED")
-          score = trial.state.winner === bot ? 10000 : -10000;
-        if (trial.responseKey()) score += 0.5;
+          score = trial.state.winner === bot ? 1000000 : -1000000;
+        if (trial.state.pendingHandChoice?.ownerId === bot)
+          score +=
+            (view.players.find((p) => p.id !== bot)?.handCount ?? 0) > 0
+              ? 2
+              : 0;
       }
-      if (score > bestScore) {
-        best = command;
-        bestScore = score;
-      }
+      ranked.push({ command, score, trial });
     } catch {
-      /* Illegal candidates never alter the real match. */
+      /* The engine validates all costs, targets, opening restrictions and status. */
+    }
+  }
+  ranked.sort((a, b) => b.score - a.score);
+  let best: Record<string, unknown> | null = null,
+    bestScore = 0.05;
+  for (const candidate of ranked.slice(0, 8)) {
+    let score = candidate.score;
+    if (
+      score < 100000 &&
+      !candidate.trial.responseKey() &&
+      aiNeedsAction(candidate.trial, bot)
+    ) {
+      let follow = 0;
+      // A bounded second step finds equip/buff/movement or removal followed by damage.
+      for (const next of aiCandidates(candidate.trial, bot).slice(0, 24)) {
+        try {
+          const trial = Game.restore(candidate.trial.exportState(), () => 0.5);
+          trial.execute(bot, {
+            ...next,
+            version: trial.state.version,
+            actionId: randomUUID(),
+          });
+          const gain =
+            trial.state.status === "FINISHED" && trial.state.winner === bot
+              ? 100000
+              : aiBoardScore(trial, bot, strategy) -
+                aiBoardScore(candidate.trial, bot, strategy);
+          follow = Math.max(follow, gain);
+        } catch {
+          /* Invalid follow-ups are ignored. */
+        }
+      }
+      score += follow * 0.7;
+    }
+    if (score > bestScore) {
+      best = candidate.command;
+      bestScore = score;
     }
   }
   return best ?? { type: "endTurn" };

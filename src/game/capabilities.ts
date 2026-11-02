@@ -5,6 +5,10 @@ import { canonicalStatus } from "./status";
 import { reactionDescriptions } from "./reactions";
 
 export const effectIds = [
+  "cleanse",
+  "growMaxHp",
+  "blockAttacks",
+  "statusAura",
   "deployFromZone",
   "summonCircle",
   "fieldRules",
@@ -121,6 +125,22 @@ const statusIds = [
 ];
 export function playableErrors(card: Card): string[] {
   const errors: string[] = [];
+  if (
+    (card.modosEquipamento || card.restricaoEquipamento) &&
+    card.tipo !== "Armamento"
+  )
+    errors.push("Modos e restrições de equipamento exigem Armamento.");
+  for (const mode of card.modosEquipamento ?? [])
+    errors.push(
+      ...playableErrors({
+        ...card,
+        modosEquipamento: undefined,
+        habilidadesPassivas: [
+          ...card.habilidadesPassivas,
+          ...mode.habilidadesPassivas,
+        ],
+      }).map((e) => mode.nome + ": " + e),
+    );
   if (card.destinoAposUso && card.tipo !== "Feitico")
     errors.push("Destino após uso exige Feitico.");
   if (card.custoEntrada && card.tipo === "Mago")
@@ -186,6 +206,19 @@ export function playableErrors(card: Card): string[] {
     ability = false,
   ) => {
     for (const e of effects) {
+      if (
+        (e.semExpiracao || e.acumularValor) &&
+        (e.id !== "status" || !e.valor)
+      )
+        errors.push(
+          "Acúmulo e duração ilimitada exigem status e valor positivo.",
+        );
+      if (e.grupo && e.id !== "statusAura")
+        errors.push("Grupo da aura exige statusAura.");
+      if (e.id === "statusAura" && (!e.grupo || !e.status || !e.valor))
+        errors.push("statusAura exige grupo, condição e valor positivo.");
+      if (e.bonusLimpeza && e.id !== "cleanse")
+        errors.push("Bônus de limpeza exige cleanse.");
       if (
         e.id === "deployFromZone" &&
         (!["Deck", "Cemiterio", "Reserva"].includes(target ?? "") ||
@@ -321,7 +354,13 @@ export function playableErrors(card: Card): string[] {
       if (
         e.alvo &&
         (!ability ||
-          !["damage", "heal", "status", "fieldModifier"].includes(e.id) ||
+          ![
+            "damage",
+            "heal",
+            "status",
+            "fieldModifier",
+            "blockAttacks",
+          ].includes(e.id) ||
           !["Tropa", "Mago", "Estrutura"].includes(card.tipo))
       )
         errors.push(
@@ -619,6 +658,8 @@ export function playableErrors(card: Card): string[] {
         errors.push("Status/duração inválidos.");
       if (
         ![
+          "cleanse",
+          "blockAttacks",
           "fieldRules",
           "returnToHand",
           "equipmentGrant",
@@ -811,6 +852,10 @@ export function playableErrors(card: Card): string[] {
   }
   for (const h of card.habilidadesPassivas) {
     if ("efeitos" in h) {
+      if (h.limitePorRodada && !h.id)
+        errors.push("Passiva limitada por rodada exige id próprio.");
+      if (h.id && ["__proto__", "constructor", "prototype"].includes(h.id))
+        errors.push("Identificador de passiva reservado.");
       const ongoing = h.gatilho === "continuous" || h.gatilho === "onTargeted";
       if (
         !ongoing &&
@@ -890,6 +935,13 @@ export function playableErrors(card: Card): string[] {
           "Filtro por ataque atual exige desconto de habilidades, evitando dependência circular de ataque.",
         );
       for (const effect of h.efeitos) {
+        if (effect.id === "executeEffects")
+          checkEffects(effect.efeitos, effect.alvo, true);
+        if (effect.id === "replaceStolen") {
+          if (h.gatilho !== "onDeckStolen")
+            errors.push("Substituir carta roubada exige onDeckStolen.");
+          checkEffects(effect.efeitosAoComprar, "UnicoAliado", true);
+        }
         if (
           effect.id === "reactionDamage" &&
           (h.gatilho !== "onElementalReaction" || !h.reacao)

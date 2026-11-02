@@ -119,7 +119,13 @@ export class DurableGame {
       return result;
     });
   }
-  async startAi(user: string, nome: string, deckId: string, requestId: string) {
+  async startAi(
+    user: string,
+    nome: string,
+    deckId: string,
+    requestId: string,
+    options: { mageId?: string } = {},
+  ) {
     const { deck, catalog } = await this.load(deckId, user, true);
     const entry: Waiting = {
       id: user,
@@ -150,7 +156,10 @@ export class DurableGame {
           "Cancele a busca de oponente antes de jogar contra IA.",
         );
       this.prune(data);
-      const room = this.makeRoom([entry, aiEntry(catalog, this.now())]);
+      const room = this.makeRoom([
+        entry,
+        aiEntry(catalog, this.now(), options),
+      ]);
       await this.store.insertRoom(room);
       data.active[user] = room.id;
       data.generations[user] = (data.generations[user] ?? 0) + 1;
@@ -667,7 +676,15 @@ export class DurableGame {
           409,
           "Um jogador já entrou em outra fila ou partida.",
         );
-      const room = this.makeRoom(old.entries);
+      const entries =
+        old.mode === "ai"
+          ? old.entries.map((e) =>
+              e.bot
+                ? aiEntry(e.catalog, this.now(), { mageId: e.aiMageId })
+                : e,
+            )
+          : old.entries;
+      const room = this.makeRoom(entries);
       await this.store.insertRoom(room);
       for (const e of old.entries.filter((e) => !e.bot))
         data.active[e.id] = room.id;
