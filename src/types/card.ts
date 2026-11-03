@@ -111,6 +111,14 @@ export const effectSchema = z
     semExpiracao: z.boolean().optional(),
     acumularValor: z.boolean().optional(),
     ateSairCampo: z.boolean().optional(),
+    dado: z
+      .object({
+        lados: z.number().int().min(2).max(20),
+        bonusPar: number,
+        bonusImpar: number,
+      })
+      .strict()
+      .optional(),
     bonusLimpeza: z
       .object({ status: z.string().min(1).max(80), ataque: number.min(1) })
       .strict()
@@ -192,6 +200,9 @@ export const effectSchema = z
     perfurante: z.boolean().optional(),
     ignoraResistencia: z.boolean().optional(),
     devolverVinculos: z.boolean().optional(),
+    apenasAlvo: z.boolean().optional(),
+    requerEstrutura: z.boolean().optional(),
+    terreno: z.literal("Lama").optional(),
     regrasCampo: z
       .object({
         descontos: z
@@ -287,6 +298,7 @@ export const activeSchema = z
     descricao: z.string().max(2000).optional(),
     alvo: z.enum(targets).optional(),
     alvoAutomatico: z.enum(["Proprio", "Frontal"]).optional(),
+    apenasFrontal: z.boolean().optional(),
     maxAlvos: z.number().int().min(1).max(20).optional(),
     filtroAlvo: z
       .object({

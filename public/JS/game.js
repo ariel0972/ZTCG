@@ -576,6 +576,7 @@ function targetAction() {
     ? {
         ...action,
         sourceCardId: selected?.card?.id,
+        sourceColumn: selected?.slot?.column,
         casterElement: myPlayer().mage.elemento,
       }
     : null;
@@ -966,7 +967,8 @@ function renderActions() {
             : state.openingBlocked
               ? "Bloqueado na preparação e no primeiro turno de cada jogador."
               : (ability.id === "deslocar" ||
-                    ability.alvoAutomatico === "Frontal") &&
+                    ability.alvoAutomatico === "Frontal" ||
+                    ability.apenasFrontal) &&
                   !state.slots.some(
                     (s) =>
                       s.ownerId !== user.id &&

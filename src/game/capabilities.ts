@@ -5,6 +5,8 @@ import { canonicalStatus } from "./status";
 import { reactionDescriptions } from "./reactions";
 
 export const effectIds = [
+  "recover",
+  "terrain",
   "cleanse",
   "growMaxHp",
   "blockAttacks",
@@ -217,6 +219,39 @@ export function playableErrors(card: Card): string[] {
         errors.push("Grupo da aura exige statusAura.");
       if (e.id === "statusAura" && (!e.grupo || !e.status || !e.valor))
         errors.push("statusAura exige grupo, condição e valor positivo.");
+      if (
+        e.dado &&
+        (!["damage", "heal", "draw", "stealDeck", "mana", "growMaxHp"].includes(
+          e.id,
+        ) ||
+          e.valor === undefined)
+      )
+        errors.push(
+          "Dado exige efeito quantitativo de dano, cura, compra, roubo, mana ou vida máxima.",
+        );
+      if (e.apenasAlvo !== undefined && e.id !== "returnToHand")
+        errors.push("apenasAlvo exige returnToHand.");
+      if (
+        e.requerEstrutura !== undefined &&
+        !["damage", "heal", "status", "returnToHand", "terrain"].includes(e.id)
+      )
+        errors.push("requerEstrutura exige efeito em carta ou campo.");
+      if (e.terreno && e.id !== "terrain")
+        errors.push("terreno exige terrain.");
+      if (
+        e.id === "terrain" &&
+        (e.terreno !== "Lama" ||
+          !e.duracao ||
+          ![
+            "UnicoAliado",
+            "UnicoInimigo",
+            "CampoAliado",
+            "CampoInimigo",
+          ].includes(target ?? ""))
+      )
+        errors.push(
+          "terrain exige terreno suportado, duração e alvo em campo.",
+        );
       if (e.bonusLimpeza && e.id !== "cleanse")
         errors.push("Bônus de limpeza exige cleanse.");
       if (
@@ -369,7 +404,7 @@ export function playableErrors(card: Card): string[] {
       const effectTarget = e.alvo === "Proprio" ? "UnicoAliado" : target;
       const configurable = ["arrowRain", "lightOrb"].includes(e.id);
       if (
-        ["revive", "shuffleGraveyard"].includes(e.id) &&
+        ["revive", "shuffleGraveyard", "recover"].includes(e.id) &&
         effectTarget !== "Cemiterio"
       )
         errors.push("Ressurreição e embaralhar tropas exigem alvo Cemiterio.");
@@ -379,9 +414,11 @@ export function playableErrors(card: Card): string[] {
         );
       if (
         e.tiposCarta &&
-        !["shuffleGraveyard", "deployFromZone"].includes(e.id)
+        !["shuffleGraveyard", "deployFromZone", "recover"].includes(e.id)
       )
         errors.push("tiposCarta exige shuffleGraveyard.");
+      if (e.id === "recover" && (!e.valor || e.valor > 3))
+        errors.push("Recuperação do cemitério exige quantidade entre 1 e 3.");
       if (e.id === "shuffleGraveyard" && (!e.valor || e.valor > 3))
         errors.push("Embaralhar cemitério exige quantidade entre 1 e 3.");
       if (
@@ -659,6 +696,7 @@ export function playableErrors(card: Card): string[] {
       if (
         ![
           "cleanse",
+          "terrain",
           "blockAttacks",
           "fieldRules",
           "returnToHand",
@@ -836,6 +874,13 @@ export function playableErrors(card: Card): string[] {
           (h.alvoAutomatico === "Proprio" ? "UnicoAliado" : "UnicoInimigo"))
     )
       errors.push(`Alvo automático incompatível na habilidade ${h.id}.`);
+    if (
+      h.apenasFrontal &&
+      (card.tipo !== "Tropa" || h.alvo !== "UnicoInimigo" || h.alvoAutomatico)
+    )
+      errors.push(
+        "apenasFrontal exige habilidade de tropa com seleção de inimigo.",
+      );
     if (h.alvoAutomatico === "Frontal" && card.tipo !== "Tropa")
       errors.push("Alvo frontal automático exige tropa.");
     if ((h.efeitos ?? []).filter((e) => e.id === "displace").length > 1)

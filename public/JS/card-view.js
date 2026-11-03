@@ -112,11 +112,16 @@ function effectDescription(effect) {
         "Marca um espaço de Invocação sem mana ou materiais. Ao entrar uma tropa, consome o círculo e recupera " +
         effect.valor +
         " mana.",
+      terrain: `Aplica ${effect.terreno} ao campo da tropa por ${effect.duracao} rodada(s).`,
       returnToHand:
         "Devolve a tropa à mão" +
-        (effect.devolverVinculos
-          ? ", incluindo montaria, ocupante, estrutura e armamentos vinculados."
-          : ", incluindo montaria e ocupante."),
+        (effect.apenasAlvo
+          ? effect.devolverVinculos
+            ? ", apenas a carta escolhida e seus armamentos."
+            : ", apenas a carta escolhida."
+          : effect.devolverVinculos
+            ? ", incluindo montaria, ocupante, estrutura e armamentos vinculados."
+            : ", incluindo montaria e ocupante."),
       spellBoost: `Fortalece feitiços dos elementos indicados em +${effect.valor}, reduz seu custo em ${effect.descontoMana}, por ${effect.duracao} rodada(s).`,
       stealMana: `Rouba ${Math.round((effect.fracao ?? 0) * 100)}% da mana adversária, arredondada para baixo${effect.valor ? ", mais " + effect.valor : ""}.`,
       returnOnElement: `Volta do cemitério à mão ao usar outra carta de ${effect.elemento}, uma vez nesse ciclo.`,
@@ -165,10 +170,19 @@ function effectDescription(effect) {
       banish: "Bane o alvo.",
       forget: "Esquece o alvo.",
       field: `Aplica ${effect.elemento || "um elemento"} ao campo.`,
+      recover: `Recupera até ${effect.valor || 1} carta(s) escolhida(s) do seu cemitério para a mão.`,
       searchElemental:
         "Escolha um feitiço elemental do seu baralho para adicionar à mão.",
     }[effect.id] || "Efeito ainda não definido no catálogo.";
   const extra = [
+    effect.requerEstrutura === undefined
+      ? ""
+      : effect.requerEstrutura
+        ? "Só se houver estrutura no alvo."
+        : "Só se não houver estrutura no alvo.",
+    effect.dado
+      ? `Role um dado de ${effect.dado.lados} lados: soma +${effect.dado.bonusPar} ao valor se cair par ou +${effect.dado.bonusImpar} se cair ímpar.`
+      : "",
     effect.perfurante ? "Ignora estruturas." : "",
     effect.ignoraResistencia
       ? "Ignora resistência; fraquezas e proteções são mantidas."

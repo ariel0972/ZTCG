@@ -341,10 +341,43 @@ void fakeDatabase().then(async (db) => {
       );
       game.player(owner).graveyard = [];
     }
+    if (process.env.PREVIEW_ROGUE === "1") {
+      ["043", "088", "042"].forEach((id, column) => {
+        const s = game.state.slots.find(
+          (s) => s.id === owner + ":front:" + column,
+        )!;
+        s.card = instance(id, owner);
+        s.structure = null;
+        s.rider = null;
+      });
+      ["023", "020", "074"].forEach((id, column) => {
+        const s = game.state.slots.find(
+          (s) => s.id === enemy.ownerId + ":front:" + column,
+        )!;
+        s.card = instance(id, enemy.ownerId);
+        s.structure = column < 2 ? instance("056", enemy.ownerId) : null;
+        s.rider = column === 2 ? instance("023", enemy.ownerId) : null;
+      });
+      const arm = game.state.slots.find(
+        (s) => s.id === enemy.ownerId + ":arm:front-right",
+      )!;
+      arm.card = instance("047", enemy.ownerId);
+      game.state.slots.find(
+        (s) => s.id === enemy.ownerId + ":front:2",
+      )!.rider!.hpAtual += 5;
+      game.player(owner).hand = ["097", "047", "001"].map((id) =>
+        instance(id, owner),
+      );
+      game.player(owner).graveyard = ["001", "097", "023"].map((id) =>
+        instance(id, owner),
+      );
+    }
     room.game = game.exportState();
     room.deadline =
       Date.now() +
-      (process.env.PREVIEW_REACTIONS === "1" || process.env.PREVIEW_PEST === "1"
+      (process.env.PREVIEW_REACTIONS === "1" ||
+      process.env.PREVIEW_PEST === "1" ||
+      process.env.PREVIEW_ROGUE === "1"
         ? 1200000
         : 120000);
     // Keep the fictitious opponent connected for this isolated visual fixture.

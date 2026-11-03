@@ -2354,3 +2354,27 @@ IA variada e cartas de armamentos/peste — 02/11/2026:
   e configuram GLIBC_TUNABLES=glibc.pthread.rseq=1 somente no MongoDB temporário
   de integração. O TCMalloc usa caches de thread para evitar a incompatibilidade
   rseq dos kernels hospedados recentes (SERVER-121912; docker-library/mongo#765).
+
+Ladino, Furtar, vento e bloqueios — 03/11/2026:
+- scripts/rogue-wind-card-rules.ts — regras declarativas das cartas 088/097/043/042;
+  Ladino compra ao matar tropa, Furto rápido rouba o topo e Destravar recupera feitiço.
+- scripts/update-rogue-wind-cards.ts — migração direcionada com backup e versão;
+  preserva imagens e metadados das quatro cartas cadastradas.
+- src/game/equipment.ts e src/game/passives.ts — Congelado/Atordoado bloqueiam
+  passivas de eventos da carta e do armamento vinculado; contínuas e mana permanecem.
+- src/game/engine.ts — captura armas antes da morte, sem transferir à montaria;
+  recupera cartas selecionadas, resolve quantidades com dado e roubo em lote antes
+  de criar maldições. Devolução individual preserva a outra carta da montaria.
+- src/types/card.ts e src/db/models/Card.ts — dado por paridade, seleção apenas
+  frontal, terreno, condição de estrutura e devolução de um único alvo.
+- public/JS/battle-targets.js, public/JS/game.js e public/JS/card-view.js — filtram
+  a coluna à frente e feitiços no cemitério e explicam as opções genéricas.
+- src/game/ai-actions.ts — a IA considera apenas a coluna permitida ao escolher
+  alvos de habilidades frontais com seleção entre montaria e ocupante.
+- tests/rogue-wind-cards.test.ts — cartas, dado, roubo com Ratos, recuperação,
+  passiva de morte, Lufada, Lama por dois ciclos, armas e estados incapacitantes.
+- tests/preparation-equipment.test.ts — morte de tropa equipada, inclusive montada,
+  descarta a arma uma vez e não transfere seus bônus à montaria sobrevivente.
+
+- tests/preview.ts — PREVIEW_ROGUE=1 com PREVIEW_MECHANICS=1 prepara campo isolado
+  com Ladino, Beija-flor, Toupeira, montaria, armamento e estruturas para testar a UI.

@@ -2086,3 +2086,25 @@ direto sem elemento no mago e compra outra carta, podendo encadear várias maldi
 Leptospirose é compartilhada com Propagar: 2 de dano imediato nos inimigos e +1 PV
 máximo/atual aos Ratos aliados; Rato inimigo anula. Propagar usa essa sequência uma
 vez por rodada após sobreviver a um ataque com metade da vida ou menos.
+
+RECUPERAÇÃO, DADO, TERRENO E SELEÇÃO FRONTAL — 03/11/2026
+- recover, valor 1–3, alvo Cemiterio: devolve as cartas escolhidas para a mão.
+  tiposCarta restringe os tipos permitidos, por exemplo ["Feitico"].
+- dado é opcional em damage/heal/draw/stealDeck/mana/growMaxHp.
+  Ex.: {"id":"stealDeck","valor":1,"dado":{"lados":6,"bonusPar":2,"bonusImpar":0}}.
+  O resultado é exibido e soma o bônus à quantidade base; Amplificar aumenta a base.
+  O roubo retira todas as cartas originais antes de ativar substituições como Praga.
+- Habilidade com apenasFrontal:true, alvo UnicoInimigo: seleciona tropa/montaria
+  ou ocupante da coluna oposta (2 - coluna da fonte); não usa alvoAutomatico.
+- returnToHand com apenasAlvo:true devolve só a carta escolhida de uma montaria.
+  devolverVinculos:true faz seus próprios armamentos acompanharem, sem levar a
+  outra carta da montaria nem os armamentos que pertencem a ela.
+- requerEstrutura:true/false filtra o alvo antes de cada efeito conforme a presença
+  de estrutura. Para devolver OU danificar a estrutura, configure primeiro a
+  devolução sem estrutura e depois o dano exigindo estrutura; valorEstrutura
+  direciona o dano à estrutura mesmo com Abalo.
+- terrain, terreno:"Lama", duracao positiva: aplica diretamente a Lama padrão ao
+  campo alvo, sem dano ou combinação elemental, mesmo protegido por estrutura.
+  Usa o ciclo completo de dois turnos e mantém a tropa que já ocupa o campo.
+- Congelado e Atordoado suspendem passivas de eventos e habilidades do armamento
+  equipado. Não suspendem passivas contínuas, geração de mana ou bônus impressos.

@@ -222,9 +222,30 @@ test("Beija-flor tem atributos finais, ataca duas vezes e reposiciona uma vez", 
     /movimento por turno/,
   );
 });
-test("Bater das Asas empurra um espaço e mantém montaria e ocupante na borda", () => {
+function pusher() {
+  return card("023", "p1", {
+    habilidadesAtivas: [
+      {
+        id: "empurrar",
+        nome: "Empurrar",
+        custoMana: 3,
+        alvo: "UnicoInimigo",
+        filtroAlvo: { tipo: "Tropa" },
+        efeitos: [
+          {
+            id: "displace",
+            direcao: "direita",
+            borda: "manter",
+            estrutura: "impedirUso",
+          },
+        ],
+      },
+    ],
+  });
+}
+test("Efeito genérico empurra um espaço e mantém montaria e ocupante na borda", () => {
   const g = ready();
-  position(g, "p1:front:0").card = card("043");
+  position(g, "p1:front:0").card = pusher();
   position(g, "p2:front:2").card = null;
   const target = card("074", "p2");
   const rider = card("021", "p2");
@@ -233,7 +254,7 @@ test("Bater das Asas empurra um espaço e mantém montaria e ocupante na borda",
   const ability = (id: string) => ({
     type: "ability",
     slotId: "p1:front:0",
-    abilityId: "baterDasAsas",
+    abilityId: "empurrar",
     targets: [id],
   });
   command(g, ability(rider.id));
@@ -256,7 +277,7 @@ test("Bater das Asas empurra um espaço e mantém montaria e ocupante na borda",
 test("empurrão rejeita espaço ocupado, estrutura, alvo mago e Lama sem gastar habilidade ou mana", () => {
   for (const kind of ["ocupado", "estrutura", "mago", "lama"]) {
     const g = ready();
-    position(g, "p1:front:0").card = card("043");
+    position(g, "p1:front:0").card = pusher();
     const target = card("020", "p2");
     position(g, "p2:front:1").card = target;
     position(g, "p2:front:2").card = null;
@@ -273,7 +294,7 @@ test("empurrão rejeita espaço ocupado, estrutura, alvo mago e Lama sem gastar 
       command(g, {
         type: "ability",
         slotId: "p1:front:0",
-        abilityId: "baterDasAsas",
+        abilityId: "empurrar",
         targets: [kind === "mago" ? g.player("p2").mage.id : target.id],
       }),
     );
@@ -283,7 +304,7 @@ test("empurrão rejeita espaço ocupado, estrutura, alvo mago e Lama sem gastar 
 test("deslocamento forçado aceita tropas cegas, congeladas e incapacitadas", () => {
   for (const name of ["Cego", "Congelado", "Incapacitado"]) {
     const g = ready();
-    position(g, "p1:front:0").card = card("043");
+    position(g, "p1:front:0").card = pusher();
     const target = position(g, "p2:front:2").card!;
     position(g, "p2:front:1").card = target;
     position(g, "p2:front:2").card = null;
@@ -291,7 +312,7 @@ test("deslocamento forçado aceita tropas cegas, congeladas e incapacitadas", ()
     command(g, {
       type: "ability",
       slotId: "p1:front:0",
-      abilityId: "baterDasAsas",
+      abilityId: "empurrar",
       targets: [target.id],
     });
     assert.equal(position(g, "p2:front:2").card!.id, target.id);

@@ -12,6 +12,8 @@ interface Action {
   maxAlvos?: number;
   tiposAlvo?: Card["tiposAlvo"];
   alvoAutomatico?: string;
+  apenasFrontal?: boolean;
+  sourceColumn?: number;
   filtroAlvo?: { numeroCatalogo?: string; tipo?: string; elemento?: string };
   opcoes?: Card["opcoes"];
 }
@@ -81,7 +83,17 @@ export function aiCandidates(game: Game, bot: string): AiCommand[] {
             ["Tropa", "Mago", "Estrutura"].includes(c.tipo!),
         );
     cards = cards.filter(
-      (c) => matches(c, a) && (!a.tiposAlvo || a.tiposAlvo.includes(c.tipo)),
+      (c) =>
+        (!a.apenasFrontal ||
+          game.state.slots.some(
+            (s) =>
+              s.ownerId !== bot &&
+              s.kind === "Tropa" &&
+              s.column === 2 - a.sourceColumn! &&
+              [s.card?.id, s.rider?.id].includes(c.id),
+          )) &&
+        matches(c, a) &&
+        (!a.tiposAlvo || a.tiposAlvo.includes(c.tipo)),
     );
     // Card searches may use their own deck; enemy hidden zones are never inspected.
     const unique = [...new Map(cards.map((c) => [c.id, c])).values()].sort(
@@ -191,7 +203,7 @@ export function aiCandidates(game: Game, bot: string): AiCommand[] {
           if (visible.abilityBlockReasons?.[source]?.[ability.id]) continue;
           expand(
             { type: "ability", slotId: slot.id, source, abilityId: ability.id },
-            ability,
+            { ...ability, sourceColumn: slot.column },
             2,
           );
         }

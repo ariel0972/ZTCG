@@ -278,3 +278,46 @@ test("custo de vida de habilidade sem dano é permitido no segundo turno", () =>
     dead.id,
   );
 });
+
+for (const mounted of [false, true])
+  test(
+    "morte da tropa equipada leva seu armamento ao cemitério" +
+      (mounted ? " sem transferir bônus à montaria" : ""),
+    () => {
+      const g = battleAt(),
+        s = position(g, "p1:front:0");
+      s.card = card(mounted ? "074" : "023");
+      if (mounted) s.rider = card("023");
+      play(g, card("047"), "p1:arm:front-left");
+      const victim = s.rider ?? s.card;
+      const horseHp = mounted ? s.card!.hpAtual : 0;
+      g.state.current = "p2";
+      play(
+        g,
+        card("001", "p2", {
+          elemento: "Neutro",
+          alvo: "UnicoInimigo",
+          custoMana: 0,
+          efeitos: [{ id: "damage", valor: 100 }],
+        }),
+        undefined,
+        [victim!.id],
+      );
+      assert.equal(position(g, "p1:arm:front-left").card, null);
+      assert.equal(
+        g.player("p1").graveyard.filter((c) => c.numeroCatalogo === "047")
+          .length,
+        1,
+      );
+      assert.ok(g.player("p1").graveyard.some((c) => c.id === victim!.id));
+      if (mounted) {
+        assert.ok(s.card);
+        assert.equal(position(g, "p1:front:0").card!.hpAtual, horseHp);
+      }
+      assert.ok(
+        g.state.events?.some(
+          (e) => e.kind === "zoneTransfer" && e.card?.nome === "Pele de Luokis",
+        ),
+      );
+    },
+  );

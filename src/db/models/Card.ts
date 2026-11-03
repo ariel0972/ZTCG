@@ -81,6 +81,17 @@ const effect = new Schema(
     semExpiracao: Boolean,
     acumularValor: Boolean,
     ateSairCampo: Boolean,
+    dado: {
+      type: new Schema(
+        {
+          lados: { ...n, min: 2, max: 20, required: true },
+          bonusPar: { ...n, required: true },
+          bonusImpar: { ...n, required: true },
+        },
+        { _id: false, strict: "throw" },
+      ),
+      default: undefined,
+    },
     bonusLimpeza: {
       type: new Schema(
         { status: String, ataque: n },
@@ -189,6 +200,9 @@ const effect = new Schema(
     perfurante: Boolean,
     ignoraResistencia: Boolean,
     devolverVinculos: Boolean,
+    apenasAlvo: Boolean,
+    requerEstrutura: Boolean,
+    terreno: { type: String, enum: ["Lama"] },
     regrasCampo: {
       type: new Schema(
         {
@@ -301,6 +315,7 @@ const active = new Schema(
     esperaRodadas: { type: Number, min: 0, max: 100 },
     alvo: { type: String, enum: targets },
     alvoAutomatico: { type: String, enum: ["Proprio", "Frontal"] },
+    apenasFrontal: Boolean,
     maxAlvos: { type: Number, min: 1, max: 20 },
     filtroAlvo: {
       type: new Schema(

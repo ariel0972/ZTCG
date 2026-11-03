@@ -1,5 +1,6 @@
 import {
   cardPassives,
+  cardEffectsBlocked,
   equipmentAttack,
   equipmentAllowed,
   equipmentReceiver,
@@ -214,6 +215,8 @@ export function passiveMatches(
   event: PassiveEvent,
   slots: Slot[],
 ) {
+  if (rule.gatilho !== "continuous" && cardEffectsBlocked(source, slots))
+    return false;
   if (rule.reacao) {
     const caused = event.originOwnerId === source.ownerId;
     const received = event.cardId === source.id;

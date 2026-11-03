@@ -1,5 +1,6 @@
 import type { Card } from "../types/card";
 import type { Instance, Slot } from "./state";
+import { hasStatus } from "./status";
 export function equipmentMode(card: Instance) {
   return card.modosEquipamento?.find((m) => m.id === card.equipmentMode);
 }
@@ -55,4 +56,11 @@ export function clearOffFieldEquipmentModes(state: import("./state").State) {
       ...p.forgotten,
     ])
       delete c.equipmentMode;
+}
+
+export function cardEffectsBlocked(card: Instance, slots: Slot[] = []) {
+  if (hasStatus(card.statuses, ["Congelado", "Atordoado"])) return true;
+  const receiver =
+    card.tipo === "Armamento" ? equipmentReceiver(card, slots) : undefined;
+  return !!receiver && hasStatus(receiver.statuses, ["Congelado", "Atordoado"]);
 }

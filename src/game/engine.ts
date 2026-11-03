@@ -6,6 +6,7 @@ import {
   equipmentAttack,
   equipmentReceiver,
   clearOffFieldEquipmentModes,
+  cardEffectsBlocked,
 } from "./equipment";
 import { blocksStatus, isNegativeStatus } from "./status-ward";
 import {
@@ -1625,6 +1626,15 @@ export class Game {
           (c): c is Instance => !!c && c.tipo === "Tropa" && c.hpAtual <= 0,
         )) {
           this.clearAttachments(dead.id);
+          const equipped = this.weapons(slot, dead);
+          for (const weapon of equipped) {
+            if (this.has(weapon, "Herança")) continue;
+            const weaponSlot = this.targetSlot(weapon.id)!;
+            this.clearAttachments(weapon.id);
+            this.removeFieldBonuses(weapon);
+            this.player(weapon.ownerId).graveyard.push(weapon);
+            weaponSlot.card = null;
+          }
           const killedBy = dead.killedBy;
           this.event("death", dead);
           if (slot.rider?.id === dead.id) {
@@ -1657,12 +1667,6 @@ export class Game {
             );
           }
           changed = true;
-          for (const weapon of slot.card ? [] : this.weapons(slot)) {
-            if (this.has(weapon, "Herança")) continue;
-            const weaponSlot = this.targetSlot(weapon.id)!;
-            player.graveyard.push(weapon);
-            weaponSlot.card = null;
-          }
           this.trigger("onDeath", {
             ownerId: player.id,
             cardId: dead.id,
@@ -1755,6 +1759,7 @@ export class Game {
           .map((rule) => ({ source, rule })),
       );
       for (const { source, rule } of activations) {
+        if (cardEffectsBlocked(source, this.state.slots)) continue;
         const ruleKey =
           rule.id ?? trigger + ":" + source.habilidadesPassivas.indexOf(rule);
         const usage = source.passiveUses?.[ruleKey];
@@ -2456,7 +2461,8 @@ export class Game {
       )
     )
       this.fail("Este efeito não aceita destino de deslocamento.");
-    for (const effect of effects) {
+    for (const configured of effects) {
+      let effect = configured;
       if (
         effect.anularSeCampo &&
         enoughInField(this.state, ownerId, effect.anularSeCampo)
@@ -2480,6 +2486,17 @@ export class Game {
         this.fail(
           "Efeito na própria carta exige uma habilidade de origem em campo.",
         );
+      if (effect.dado) {
+        const roll = 1 + Math.floor(this.random() * effect.dado.lados);
+        const even = roll % 2 === 0,
+          bonus = even ? effect.dado.bonusPar : effect.dado.bonusImpar;
+        effect = { ...effect, valor: (effect.valor ?? 0) + bonus };
+        this.event(
+          "notice",
+          source ?? player.mage,
+          `${cause ?? source?.nome ?? "Efeito"}: dado de ${effect.dado!.lados} lados caiu ${roll} (${even ? "par" : "ímpar"}); valor do efeito: ${effect.valor}.`,
+        );
+      }
       const selectionIds = effect.selecao
         ? selectField(this.state, ownerId, effect.selecao).map((c) => c.id)
         : effect.selecaoCampo
@@ -2498,15 +2515,17 @@ export class Game {
         effect.alvo === "Proprio" ? [source!.id] : selectionIds
       ).filter(
         (id) =>
-          !effect.filtroAlvo ||
-          (matchesPassiveFilter(
-            this.findCard(id) ?? this.targetSlot(id)?.card ?? undefined,
-            effect.filtroAlvo,
-          ) &&
-            !effect.filtroAlvo.excetoElementos?.includes(
-              (this.findCard(id) ?? this.targetSlot(id)?.card)?.elemento ??
-                "Neutro",
-            )),
+          (effect.requerEstrutura === undefined ||
+            !!this.targetSlot(id)?.structure === effect.requerEstrutura) &&
+          (!effect.filtroAlvo ||
+            (matchesPassiveFilter(
+              this.findCard(id) ?? this.targetSlot(id)?.card ?? undefined,
+              effect.filtroAlvo,
+            ) &&
+              !effect.filtroAlvo.excetoElementos?.includes(
+                (this.findCard(id) ?? this.targetSlot(id)?.card)?.elemento ??
+                  "Neutro",
+              ))),
       );
       switch (effect.id) {
         case "blockAttacks":
@@ -2693,6 +2712,24 @@ export class Game {
           });
           break;
         }
+        case "terrain": {
+          for (const id of ids) {
+            const slot = this.targetSlot(id);
+            if (!slot || slot.kind !== "Tropa")
+              this.fail("Terreno exige um campo de tropa.");
+            const target = this.findCard(id) ?? slot.card;
+            if (target && !this.impactAllowed(target.id)) continue;
+            this.resolveReaction("Lama", ownerId, target ?? null, slot);
+            if (slot.terrain) slot.terrain.rodadasRestantes = effect.duracao!;
+            this.event(
+              "notice",
+              source ?? player.mage,
+              `${cause ?? source?.nome ?? "Efeito"}: Lama aplicada por ${effect.duracao} rodadas.`,
+              { slotId: slot.id },
+            );
+          }
+          break;
+        }
         case "returnToHand": {
           const returned = new Set<string>();
           for (const id of ids) {
@@ -2703,11 +2740,12 @@ export class Game {
               this.fail("Devolução exige tropa em campo.");
             if (!this.impactAllowed(target.id)) continue;
             const group = [
-              slot.card,
-              slot.rider,
+              ...(effect.apenasAlvo ? [target] : [slot.card, slot.rider]),
               ...(effect.devolverVinculos ? [slot.structure] : []),
             ].filter((c): c is Instance => !!c);
-            const weapons = effect.devolverVinculos ? this.weapons(slot) : [];
+            const weapons = effect.devolverVinculos
+              ? this.weapons(slot, effect.apenasAlvo ? target : undefined)
+              : [];
             for (const weapon of weapons) {
               const position = this.targetSlot(weapon.id)!;
               for (const receiver of this.weaponBeneficiaries(position)) {
@@ -2716,8 +2754,12 @@ export class Game {
               }
               position.card = null;
             }
-            slot.card = null;
-            slot.rider = null;
+            if (effect.apenasAlvo && slot.rider?.id === target.id)
+              slot.rider = null;
+            else {
+              slot.card = effect.apenasAlvo ? (slot.rider ?? null) : null;
+              slot.rider = null;
+            }
             if (effect.devolverVinculos) slot.structure = null;
             for (const c of [...group, ...weapons]) {
               returned.add(c.id);
@@ -3371,12 +3413,16 @@ export class Game {
             });
           }
           break;
-        case "stealDeck":
+        case "stealDeck": {
+          const from = this.opponent(ownerId),
+            stolenCards: { card: Instance; index: number }[] = [];
           for (let i = 0; i < effect.valor!; i++) {
-            const from = this.opponent(ownerId),
-              index = from.deck.length - 1;
-            const stolen = from.deck.pop();
-            if (!stolen) break;
+            const index = from.deck.length - 1,
+              card = from.deck.pop();
+            if (!card) break;
+            stolenCards.push({ card, index });
+          }
+          for (const { card: stolen, index } of stolenCards) {
             stolen.ownerId = ownerId;
             player.hand.push(stolen);
             this.trigger("onDeckStolen", {
@@ -3388,12 +3434,36 @@ export class Game {
             });
           }
           break;
+        }
         case "draw":
           this.draw(player, effect.valor!);
           break;
         case "mana":
           this.gainMana(player, effect.valor!);
           break;
+        case "recover": {
+          if (!ids.length || ids.length > effect.valor!)
+            this.fail("Quantidade de cartas inválida para recuperar.");
+          for (const id of ids) {
+            const index = player.graveyard.findIndex(
+              (c) =>
+                c.id === id &&
+                (!effect.tiposCarta || effect.tiposCarta.includes(c.tipo)),
+            );
+            if (index < 0)
+              this.fail("Escolha uma carta compatível do seu cemitério.");
+            const recovered = player.graveyard.splice(index, 1)[0];
+            this.resetCard(recovered);
+            player.hand.push(recovered);
+            this.event(
+              "notice",
+              recovered,
+              (cause ?? source?.nome ?? "Efeito") +
+                ": recuperou do cemitério para a mão.",
+            );
+          }
+          break;
+        }
         case "searchElemental": {
           const i = player.deck.findIndex(
             (c) =>
@@ -5296,6 +5366,10 @@ export class Game {
       this.fail(
         "Esta carta não pode usar habilidades enquanto estiver atordoada, congelada ou cega.",
       );
+    if (card.tipo === "Armamento" && cardEffectsBlocked(card, this.state.slots))
+      this.fail(
+        "O armamento não pode usar habilidades enquanto a carta equipada estiver congelada ou atordoada.",
+      );
     const originalAbility = card.habilidadesAtivas.find(
       (h) => h.id === cmd.abilityId,
     );
@@ -5390,6 +5464,19 @@ export class Game {
       );
       if (new Set(targets).size !== targets.length)
         this.fail("Selecione alvos diferentes.");
+      if (
+        ability.apenasFrontal &&
+        targets.some((id) => {
+          const target = this.targetSlot(id);
+          return (
+            !target ||
+            target.kind !== "Tropa" ||
+            target.ownerId === user ||
+            target.column !== 2 - slot.column
+          );
+        })
+      )
+        this.fail("Escolha a tropa ou ocupante inimigo diretamente à frente.");
       if (
         ability.tiposAlvo &&
         targets.some(
@@ -5594,6 +5681,7 @@ export class Game {
               h.id,
               this.player(user).mage.elemento,
             ) ||
+            (card && cardEffectsBlocked(card, this.state.slots)) ||
             h.custoVida ||
             h.esperaRodadas ||
             h.efeitos?.some((e) => e.id === "spendAttack"),
@@ -5605,15 +5693,18 @@ export class Game {
             h.id,
             this.player(user).mage.elemento,
           ) ||
-            (h.custoVida && (card?.hpAtual ?? 0) <= h.custoVida
-              ? "Vida insuficiente para pagar a habilidade sem morrer."
-              : h.esperaRodadas &&
-                  card?.abilityRounds?.[h.id] !== undefined &&
-                  this.state.round - card.abilityRounds[h.id] <= h.esperaRodadas
-                ? "Aguarda uma rodada completa entre usos."
-                : h.efeitos?.some((e) => e.id === "spendAttack")
-                  ? this.attackSourceError(user, slot, card ?? null)
-                  : ""),
+            (card && cardEffectsBlocked(card, this.state.slots)
+              ? "Habilidades bloqueadas por Congelado ou Atordoado na carta ou em quem usa o armamento."
+              : h.custoVida && (card?.hpAtual ?? 0) <= h.custoVida
+                ? "Vida insuficiente para pagar a habilidade sem morrer."
+                : h.esperaRodadas &&
+                    card?.abilityRounds?.[h.id] !== undefined &&
+                    this.state.round - card.abilityRounds[h.id] <=
+                      h.esperaRodadas
+                  ? "Aguarda uma rodada completa entre usos."
+                  : h.efeitos?.some((e) => e.id === "spendAttack")
+                    ? this.attackSourceError(user, slot, card ?? null)
+                    : ""),
         ]),
     );
   }

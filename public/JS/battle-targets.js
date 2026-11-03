@@ -36,6 +36,11 @@ export function spellSlotTarget(action, slot, userId) {
   const own = slot.ownerId === userId,
     type = action.alvo;
   if (type === "Global") return false;
+  if (
+    action.apenasFrontal &&
+    (own || slot.kind !== "Tropa" || slot.column !== 2 - action.sourceColumn)
+  )
+    return false;
   if (action.efeitos?.some((e) => e.id === "relocate" && e.origem !== "alvo")) {
     if (
       !own ||
@@ -168,13 +173,17 @@ export function zoneCardAllowed(action, card) {
   if (action.id === "refazerCaminhos" || action.id === "recuperarEnergia")
     return card.tipo === "Feitico";
   const graveEffect = action.efeitos?.find((e) =>
-    ["revive", "shuffleGraveyard"].includes(e.id),
+    ["revive", "shuffleGraveyard", "recover"].includes(e.id),
   );
   if (graveEffect)
-    return (graveEffect.tiposCarta ?? ["Tropa"]).includes(card.tipo);
+    return graveEffect.id === "recover"
+      ? !graveEffect.tiposCarta || graveEffect.tiposCarta.includes(card.tipo)
+      : (graveEffect.tiposCarta ?? ["Tropa"]).includes(card.tipo);
   return true;
 }
 export function targetDescription(action) {
+  if (action?.apenasFrontal)
+    return "Escolha a tropa ou ocupante da coluna inimiga diretamente à frente.";
   if (action?.efeitos?.some((e) => e.id === "relocate"))
     return "Escolha outro espaço de tropa aliado destacado, vazio ou com uma tropa para trocar de lugar. Montaria e ocupante vão juntos; estruturas e armamentos permanecem.";
   if (action?.efeitos?.some((e) => e.id === "displace"))
