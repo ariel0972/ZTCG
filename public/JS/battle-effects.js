@@ -74,23 +74,32 @@ export function createBattleEffects(host = document.body) {
     if (reduced() || !face?.animate) return;
     const shield =
       variant === "resistance" || variant === "mana" || variant === "heal";
-    const animation = face.animate(
-      [
-        { transform: "translateX(0)", boxShadow: `0 0 0 2px ${color}` },
-        {
-          offset: 0.2,
-          transform: shield ? "scale(.96)" : "translateX(-4px)",
-          boxShadow: `0 0 22px ${color}`,
-        },
-        {
-          offset: 0.42,
-          transform: shield ? "scale(1.02)" : "translateX(4px)",
-          boxShadow: `0 0 12px ${color}`,
-        },
-        { transform: "translateX(0)", boxShadow: "0 0 0 transparent" },
-      ],
-      { duration: 950, easing: "ease-out" },
-    );
+    const frames =
+      variant === "miss"
+        ? [
+            { transform: "translateX(0) rotate(0)" },
+            { offset: 0.3, transform: "translateX(10px) rotate(-4deg)" },
+            { offset: 0.65, transform: "translateX(-4px) rotate(2deg)" },
+            { transform: "translateX(0) rotate(0)" },
+          ]
+        : [
+            { transform: "translateX(0)", boxShadow: `0 0 0 2px ${color}` },
+            {
+              offset: 0.2,
+              transform: shield ? "scale(.96)" : "translateX(-4px)",
+              boxShadow: `0 0 22px ${color}`,
+            },
+            {
+              offset: 0.42,
+              transform: shield ? "scale(1.02)" : "translateX(4px)",
+              boxShadow: `0 0 12px ${color}`,
+            },
+            { transform: "translateX(0)", boxShadow: "0 0 0 transparent" },
+          ];
+    const animation = face.animate(frames, {
+      duration: variant === "miss" ? 650 : 950,
+      easing: "ease-out",
+    });
     while (animations.size >= 16) {
       const oldest = animations.values().next().value;
       oldest.cancel();
@@ -110,8 +119,10 @@ export function createBattleEffects(host = document.body) {
       const damage = ["damage", "block"].includes(event.kind) && event.damage;
       const mana = event.kind === "mana" && event.mana;
       const healing = event.kind === "heal" && event.healing;
+      const miss = event.kind === "miss";
       if (
         !reaction &&
+        !miss &&
         (!healing || !Number.isFinite(healing.amount) || healing.amount <= 0) &&
         (!mana || !Number.isFinite(mana.amount) || mana.amount <= 0) &&
         (!damage || !Number.isFinite(damage.amount) || damage.amount < 0)
@@ -125,41 +136,47 @@ export function createBattleEffects(host = document.body) {
       const modifiers = damage?.modifiers ?? [];
       const weak = modifiers.includes("weakness"),
         resist = modifiers.includes("resistance");
-      const variant = reaction
-        ? reaction.key
-        : healing
-          ? "heal"
-          : mana
-            ? "mana"
-            : weak && resist
-              ? "mixed"
+      const variant = miss
+        ? "miss"
+        : reaction
+          ? reaction.key
+          : healing
+            ? "heal"
+            : mana
+              ? "mana"
+              : weak && resist
+                ? "mixed"
+                : weak
+                  ? "weakness"
+                  : resist
+                    ? "resistance"
+                    : "damage";
+      const color = miss
+        ? "#e5d7b8"
+        : reaction
+          ? reaction.color
+          : healing
+            ? "#83f5ae"
+            : mana
+              ? "#7cd8ff"
               : weak
-                ? "weakness"
+                ? "#ff9b85"
                 : resist
-                  ? "resistance"
-                  : "damage";
-      const color = reaction
-        ? reaction.color
-        : healing
-          ? "#83f5ae"
-          : mana
-            ? "#7cd8ff"
-            : weak
-              ? "#ff9b85"
-              : resist
-                ? "#91dfed"
-                : "#ffd2cd";
-      const icon = reaction
-        ? reaction.icon
-        : healing
-          ? "✚"
-          : mana
-            ? "✦"
-            : resist && !weak
-              ? "⬡"
-              : weak
-                ? "✹"
-                : "";
+                  ? "#91dfed"
+                  : "#ffd2cd";
+      const icon = miss
+        ? "↝"
+        : reaction
+          ? reaction.icon
+          : healing
+            ? "✚"
+            : mana
+              ? "✦"
+              : resist && !weak
+                ? "⬡"
+                : weak
+                  ? "✹"
+                  : "";
       const name = reaction
         ? event.reaction
         : weak && resist
@@ -171,13 +188,15 @@ export function createBattleEffects(host = document.body) {
               : "";
       const effect = doc.createElement("div");
       effect.className = `battle-effect battle-effect--${variant}`;
-      effect.dataset.kind = reaction
-        ? "reaction"
-        : healing
-          ? "heal"
-          : mana
-            ? "mana"
-            : "damage";
+      effect.dataset.kind = miss
+        ? "miss"
+        : reaction
+          ? "reaction"
+          : healing
+            ? "heal"
+            : mana
+              ? "mana"
+              : "damage";
       effect.dataset.anchor = event.card?.id || event.slotId || "";
       const simultaneous = [...active.keys()].filter(
         (other) => other.dataset.anchor === effect.dataset.anchor,
@@ -192,7 +211,7 @@ export function createBattleEffects(host = document.body) {
       const wash = doc.createElement("span");
       wash.className = "battle-effect__wash";
       effect.append(wash);
-      if (!reduced())
+      if (!reduced() && !miss)
         for (let i = 0; i < 6; i++) {
           const particle = doc.createElement("span");
           particle.className = "battle-effect__particle";
@@ -213,13 +232,15 @@ export function createBattleEffects(host = document.body) {
       symbol.textContent = icon;
       const label = doc.createElement("span");
       label.className = "battle-effect__label";
-      label.textContent = reaction
-        ? name
-        : healing
-          ? `+${healing.amount} vida`
-          : mana
-            ? `+${mana.amount} mana`
-            : `${name ? name + " · " : ""}${damage.amount === 0 ? "Bloqueado" : "−" + damage.amount}`;
+      label.textContent = miss
+        ? "Errou"
+        : reaction
+          ? name
+          : healing
+            ? `+${healing.amount} vida`
+            : mana
+              ? `+${mana.amount} mana`
+              : `${name ? name + " · " : ""}${damage.amount === 0 ? "Bloqueado" : "−" + damage.amount}`;
       label.title = event.summary || event.message || (reaction ? name : "");
       if (damage?.element && name && !label.title)
         label.title = `${name} a ${damage.element === "Agua" ? "Água" : damage.element}`;
@@ -230,7 +251,7 @@ export function createBattleEffects(host = document.body) {
         anchor,
         timer: setTimeout(() => remove(effect), 3450),
       });
-      if (damage || mana || healing) flash(anchor, variant, color);
+      if (damage || mana || healing || miss) flash(anchor, variant, color);
     },
     reset,
     close() {

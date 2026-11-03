@@ -662,3 +662,44 @@ test("cura usa indicador verde próprio e respeita movimento reduzido", async ()
     dom.window.close();
   }
 });
+
+test("Errou aparece na carta sem parecer dano e não repete na reconexão", async () => {
+  const path = "../public/JS/battle-events.js",
+    { createBattleEvents } = await import(path);
+  const dom = browserFixture(),
+    doc = dom.window.document,
+    old = Object.getOwnPropertyDescriptor(globalThis, "document");
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: doc,
+  });
+  const view = createBattleEvents(doc.body);
+  try {
+    view.update({ id: "miss", events: [] });
+    const event = {
+      sequence: 1,
+      kind: "miss",
+      card: { id: "c", nome: "Atacante", ownerId: "p1" },
+      message: "Atacante errou por cegueira.",
+    };
+    view.update({ id: "miss", events: [event] });
+    view.update({ id: "miss", events: [event] });
+    const effect = doc.querySelector(".battle-effect--miss")!;
+    assert.equal(
+      effect.querySelector(".battle-effect__label")!.textContent,
+      "Errou",
+    );
+    assert.equal(effect.getAttribute("data-kind"), "miss");
+    assert.equal(doc.querySelectorAll(".battle-effect--miss").length, 1);
+    assert.equal(doc.querySelectorAll(".battle-effect__particle").length, 0);
+    assert.ok(!doc.body.textContent?.includes("Bloqueado"));
+    assert.equal(doc.querySelectorAll(".battle-event--miss").length, 1);
+    view.update({ id: "other", events: [event] });
+    assert.equal(doc.querySelector(".battle-effect--miss"), null);
+  } finally {
+    view.close();
+    if (old) Object.defineProperty(globalThis, "document", old);
+    else delete (globalThis as any).document;
+    dom.window.close();
+  }
+});

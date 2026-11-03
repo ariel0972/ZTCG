@@ -49,12 +49,15 @@ export function createCardTransfers(host = document.body) {
     active.delete(node);
     node.remove();
   }
-  function point(r) {
+  function point(r, width, height) {
     const w = win?.innerWidth || 1024,
       h = win?.innerHeight || 768;
     return {
-      x: Math.max(8, Math.min(w - 80, r.left + r.width / 2 - 35)),
-      y: Math.max(8, Math.min(h - 110, r.top + r.height / 2 - 49)),
+      x: Math.max(8, Math.min(w - width - 8, r.left + r.width / 2 - width / 2)),
+      y: Math.max(
+        8,
+        Math.min(h - height - 8, r.top + r.height / 2 - height / 2),
+      ),
     };
   }
   function play(event, start) {
@@ -79,8 +82,19 @@ export function createCardTransfers(host = document.body) {
     const label = doc.createElement("span");
     label.textContent = move.to === "hand" ? "+1 carta" : "Cemitério";
     card.append(image, label);
-    const a = point(start),
-      b = point(endRect);
+    const discard = move.to === "graveyard",
+      width = discard ? 104 : 70,
+      height = discard ? 146 : 98,
+      duration = discard ? 1300 : 800;
+    card.style.setProperty("--transfer-width", width + "px");
+    card.style.setProperty("--transfer-height", height + "px");
+    card.style.setProperty("--transfer-duration", duration + "ms");
+    card.style.setProperty(
+      "--transfer-still-duration",
+      (discard ? 1200 : 700) + "ms",
+    );
+    const a = point(start, width, height),
+      b = point(endRect, width, height);
     for (const [key, value] of Object.entries({
       fromX: a.x,
       fromY: a.y,
@@ -95,7 +109,7 @@ export function createCardTransfers(host = document.body) {
     layer.append(card);
     active.set(
       card,
-      setTimeout(() => remove(card), 1100),
+      setTimeout(() => remove(card), duration + 300),
     );
     card.addEventListener("animationend", () => remove(card), { once: true });
   }

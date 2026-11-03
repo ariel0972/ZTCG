@@ -1,6 +1,7 @@
 import { deploymentCards } from "./deployment";
 import { aiCandidates } from "./ai-actions";
 import { aiBoardScore, aiStrategy } from "./ai-strategy";
+import { currentBasicAttack } from "./passives";
 import { randomAiDeck } from "./ai-deck";
 import { randomUUID } from "node:crypto";
 import { cardSchema, type Card } from "../types/card";
@@ -46,6 +47,49 @@ export function aiNeedsAction(game: Game, bot: string) {
   if (s.phase === "COIN_TOSS")
     return !s.coinToss?.result && s.coinToss?.chooserId === bot;
   return s.current === bot;
+}
+// Evaluate optional public reflections both ways, without inspecting hidden cards.
+function projectedResponses(game: Game): Game[] {
+  const branches = [game];
+  for (let n = 0; n < 12; n++) {
+    const index = branches.findIndex(
+      (g) =>
+        g.state.status === "ACTIVE" &&
+        (g.state.pendingImpact || g.state.pendingAttack),
+    );
+    if (index < 0) break;
+    const trial = branches[index],
+      impact = trial.state.pendingImpact;
+    if (impact) {
+      trial.execute(impact.request.ownerId, {
+        type: "respondDodge",
+        dodge: true,
+        version: trial.state.version,
+        actionId: randomUUID(),
+      });
+      continue;
+    }
+    const pending = trial.state.pendingAttack!,
+      owner = trial.state.players.find(
+        (p) => p.id !== pending.attackerOwnerId,
+      )!.id;
+    const choices = branches.length < 4 ? [true, false] : [true];
+    branches.splice(
+      index,
+      1,
+      ...choices.map((reflect) => {
+        const next = Game.restore(trial.exportState(), () => 0.5);
+        next.execute(owner, {
+          type: "respondAttack",
+          reflect,
+          version: next.state.version,
+          actionId: randomUUID(),
+        });
+        return next;
+      }),
+    );
+  }
+  return branches;
 }
 export function chooseAiCommand(
   game: Game,
@@ -120,82 +164,116 @@ export function chooseAiCommand(
     }));
   }
   const before = aiBoardScore(publicGame, bot, strategy);
+  const terminal = (g: Game, reward: number) =>
+    g.state.status === "FINISHED"
+      ? g.state.winner === bot
+        ? reward
+        : -1000000
+      : undefined;
+  const scoreBranch = (g: Game) =>
+    (terminal(g, 1000000) ?? aiBoardScore(g, bot, strategy) - before) +
+    (g.state.pendingHandChoice?.ownerId === bot &&
+    (view.players.find((p) => p.id !== bot)?.handCount ?? 0) > 0
+      ? 2
+      : 0);
   const ranked: {
     command: Record<string, unknown>;
     score: number;
-    trial: Game;
+    trials: Game[];
+    concealed: boolean;
   }[] = [];
   for (const command of candidates) {
     try {
       const trial = Game.restore(publicGame.exportState(), () => 0.5);
-      const concealed =
+      const concealed = !!(
         command.type === "attack" &&
-        s.slots.find((sl) => sl.id === command.targetId)?.card?.concealedTrap;
-      let score = 1;
+        s.slots.find((sl) => sl.id === command.targetId)?.card?.concealedTrap
+      );
+      let trials = [trial],
+        score = 1;
       if (!concealed) {
         trial.execute(bot, {
           ...command,
           version: trial.state.version,
           actionId: randomUUID(),
         });
-        // Forecast the public effect, without assuming the opponent will decline a dodge.
-        for (let i = 0; i < 6 && trial.state.pendingImpact; i++)
-          trial.execute(trial.state.pendingImpact.request.ownerId, {
-            type: "respondDodge",
-            dodge: true,
-            version: trial.state.version,
-            actionId: randomUUID(),
-          });
-        score = aiBoardScore(trial, bot, strategy) - before;
-        if (trial.state.status === "FINISHED")
-          score = trial.state.winner === bot ? 1000000 : -1000000;
-        if (trial.state.pendingHandChoice?.ownerId === bot)
-          score +=
-            (view.players.find((p) => p.id !== bot)?.handCount ?? 0) > 0
-              ? 2
-              : 0;
+        trials = projectedResponses(trial);
+        score = Math.min(...trials.map(scoreBranch));
+        if (trials.every((g) => terminal(g, 1000000) === 1000000))
+          return command;
       }
-      ranked.push({ command, score, trial });
+      ranked.push({ command, score, trials, concealed });
     } catch {
       /* The engine validates all costs, targets, opening restrictions and status. */
     }
   }
   ranked.sort((a, b) => b.score - a.score);
+  const attackPower = (command: Record<string, unknown>) => {
+    const slot = s.slots.find((sl) => sl.id === command.slotId),
+      card =
+        command.source === "rider"
+          ? slot?.rider
+          : command.source === "structure"
+            ? slot?.structure
+            : slot?.card;
+    return card ? currentBasicAttack(card, s.slots) : 0;
+  };
+  const mageAttacks = ranked
+    .filter(
+      (c) =>
+        c.command.type === "attack" &&
+        s.slots.some(
+          (sl) => sl.id === c.command.targetId && sl.kind === "Mago",
+        ),
+    )
+    .sort((a, b) => attackPower(b.command) - attackPower(a.command))
+    .slice(0, 4);
+  const frontier = [...new Set([...ranked.slice(0, 8), ...mageAttacks])];
   let best: Record<string, unknown> | null = null,
     bestScore = 0.05;
-  for (const candidate of ranked.slice(0, 8)) {
-    let score = candidate.score;
-    if (
-      score < 100000 &&
-      !candidate.trial.responseKey() &&
-      aiNeedsAction(candidate.trial, bot)
-    ) {
-      let follow = 0;
-      // A bounded second step finds equip/buff/movement or removal followed by damage.
-      for (const next of aiCandidates(candidate.trial, bot).slice(0, 24)) {
-        try {
-          const trial = Game.restore(candidate.trial.exportState(), () => 0.5);
-          trial.execute(bot, {
-            ...next,
-            version: trial.state.version,
-            actionId: randomUUID(),
-          });
-          const gain =
-            trial.state.status === "FINISHED" && trial.state.winner === bot
-              ? 100000
-              : aiBoardScore(trial, bot, strategy) -
-                aiBoardScore(candidate.trial, bot, strategy);
-          follow = Math.max(follow, gain);
-        } catch {
-          /* Invalid follow-ups are ignored. */
-        }
-      }
-      score += follow * 0.7;
-    }
+  for (const candidate of frontier) {
+    const score = candidate.concealed
+      ? candidate.score
+      : Math.min(
+          ...candidate.trials.map((branch) => {
+            let result = scoreBranch(branch);
+            if (
+              result < 100000 &&
+              !branch.responseKey() &&
+              aiNeedsAction(branch, bot)
+            ) {
+              let follow = 0;
+              for (const next of aiCandidates(branch, bot).slice(0, 24)) {
+                try {
+                  const trial = Game.restore(branch.exportState(), () => 0.5);
+                  trial.execute(bot, {
+                    ...next,
+                    version: trial.state.version,
+                    actionId: randomUUID(),
+                  });
+                  const gain = Math.min(
+                    ...projectedResponses(trial).map(
+                      (g) =>
+                        terminal(g, 100000) ??
+                        aiBoardScore(g, bot, strategy) -
+                          aiBoardScore(branch, bot, strategy),
+                    ),
+                  );
+                  follow = Math.max(follow, gain);
+                } catch {
+                  /* Invalid follow-ups are ignored. */
+                }
+              }
+              result += follow * 0.7;
+            }
+            return result;
+          }),
+        );
     if (score > bestScore) {
       best = candidate.command;
       bestScore = score;
     }
   }
+
   return best ?? { type: "endTurn" };
 }

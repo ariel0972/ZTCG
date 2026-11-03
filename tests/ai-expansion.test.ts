@@ -181,3 +181,70 @@ test("previsão de roubo não consulta a carta oculta do baralho inimigo", () =>
   g.player(human.id).deck = [card("027", human.id)];
   assert.deepEqual(chooseAiCommand(g, bot.id), before);
 });
+
+test("IA enfrenta a reflexão do Aprendiz e finaliza mago exposto como no campo relatado", () => {
+  const { g, bot, human, card, execute } = setup();
+  for (const p of g.state.players) {
+    const mage = card(p.id === bot.id ? "108" : "028", p.id);
+    mage.hpAtual = p.id === bot.id ? 14 : 3;
+    p.mage = mage;
+    g.state.slots.find((s) => s.ownerId === p.id && s.kind === "Mago")!.card =
+      mage;
+  }
+  for (const s of g.state.slots)
+    if (s.kind !== "Mago") {
+      s.card = null;
+      s.rider = null;
+      s.structure = null;
+    }
+  const own = (column: number) =>
+    g.state.slots.find(
+      (s) => s.ownerId === bot.id && s.kind === "Tropa" && s.column === column,
+    )!;
+  own(0).card = card("043");
+  own(0).card!.hpAtual = 2;
+  own(0).structure = card("056");
+  own(0).structure!.hpAtual = 5;
+  own(1).card = card("098");
+  own(2).card = card("044");
+  own(2).card!.hpAtual = 11;
+  const bow = card("049");
+  bow.equipmentMode = "fogo";
+  g.state.slots.find((s) => s.id === bot.id + ":arm:front-left")!.card = bow;
+  const sword = card("037");
+  sword.bonusAtaque = 2;
+  g.state.slots.find((s) => s.id === bot.id + ":arm:front-right")!.card = sword;
+  const enemyMage = g.state.slots.find(
+    (s) => s.ownerId === human.id && s.kind === "Mago",
+  )!;
+  const first = chooseAiCommand(g, bot.id)!;
+  assert.equal(first.type, "attack", JSON.stringify(first));
+  assert.equal(first.targetId, enemyMage.id);
+  const decline = Game.restore(g.exportState(), () => 0.5);
+  decline.execute(bot.id, {
+    ...first,
+    version: decline.state.version,
+    actionId: randomUUID(),
+  });
+  decline.execute(human.id, {
+    type: "respondAttack",
+    reflect: false,
+    version: decline.state.version,
+    actionId: randomUUID(),
+  });
+  assert.equal(decline.state.winner, bot.id);
+  execute(first);
+  assert.ok(g.state.pendingAttack);
+  g.execute(human.id, {
+    type: "respondAttack",
+    reflect: true,
+    version: g.state.version,
+    actionId: randomUUID(),
+  });
+  const next = chooseAiCommand(g, bot.id)!;
+  assert.equal(next.type, "attack", JSON.stringify(next));
+  assert.equal(next.targetId, enemyMage.id);
+  execute(next);
+  assert.equal(g.state.status, "FINISHED");
+  assert.equal(g.state.winner, bot.id);
+});

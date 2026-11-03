@@ -2381,3 +2381,21 @@ Ladino, Furtar, vento e bloqueios — 03/11/2026:
 
 - tests/match-social.test.ts — o teste de chat lento lê quadros SSE completos até
   a versão esperada, aceitando heartbeats e divisões normais dos pacotes HTTP.
+
+Descarte, ataque errado e reação contra IA — 03/11/2026:
+- public/JS/card-transfers.js e public/CSS/battle.css — descarte para o cemitério
+  usa carta de 104x146, voo de 1300ms (+500ms), posição limitada à tela e redução
+  de movimento com cartão estático; compra mantém tamanho e tempo anteriores.
+- src/game/engine.ts — evento miss identifica falha por Cego em ataque e retaliação,
+  preservando custos, contadores e resolução de efeitos já existentes.
+- public/JS/battle-effects.js e public/JS/battle-events.js — Errou junto à fonte
+  com gesto curto de ataque em falso, aviso acessível, fila de 60ms e sem mostrar
+  dano zero. Redução de movimento, espectadores e reconexão usam o mesmo evento.
+- src/game/ai.ts — simula aceitar/recusar reflexão pública e o ataque seguinte;
+  inclui ataques fortes ao mago na busca para não passar diante de finalização
+  após consumir a reação do Aprendiz. Não consulta cartas ocultas do adversário.
+- tests/ai-expansion.test.ts — reproduz campo com Aprendiz a 3 PV, Beija-flor,
+  Palhaço, Salamandra e armamentos; IA vence tanto com reflexão quanto recusada.
+- tests/turn-feedback.test.ts e tests/battle-effects.test.ts — erro sem dano em
+  ataque/retaliação, evento sem repetição e descarte maior com mais 500ms, limpeza
+  dos elementos, limites em tela pequena e movimento reduzido.

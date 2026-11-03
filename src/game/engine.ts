@@ -1941,6 +1941,15 @@ export class Game {
       );
       source.statuses = source.statuses.filter((s) => s.nome !== "Esconder");
       if (hasStatus(source.statuses, ["Cego"]) && this.random() < 0.5) {
+        this.event(
+          "miss",
+          source,
+          `${source.nome} errou a retaliação por cegueira.`,
+          {
+            slotId: this.targetSlot(source.id)?.id,
+            originOwnerId: source.ownerId,
+          },
+        );
         this.log(`${source.nome} errou a retaliação por cegueira.`);
         return true;
       }
@@ -5107,6 +5116,10 @@ export class Game {
     );
     if (this.has(card, "Cegueira") || this.has(card, "Cego")) {
       if (this.random() < 0.5) {
+        this.event("miss", card, `${card.nome} errou por cegueira.`, {
+          slotId: slot.id,
+          originOwnerId: user,
+        });
         if (target.card)
           this.trigger("onAttacked", {
             ownerId: target.card.ownerId,

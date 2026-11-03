@@ -28,7 +28,7 @@ function instance(
     usedAbility: false,
   };
 }
-function make(preparation = false) {
+function make(preparation = false, random = () => 0.8) {
   const cartas = catalog
     .filter((c) => c.publicado && c.tipo === "Tropa")
     .flatMap((c) => Array(3).fill(c.numeroCatalogo))
@@ -41,7 +41,7 @@ function make(preparation = false) {
       deck: { nome: "Teste", mago: "108", cartas },
     })),
     catalog,
-    () => 0.8,
+    random,
   );
   if (!preparation)
     Object.assign(g.state, {
@@ -457,4 +457,131 @@ test("migração de Ar preserva custos de habilidades, dano e artes e não alter
     () => turnFeedbackPatch({ ...orb, numeroCatalogo: "080" }),
     /fora/,
   );
+});
+
+test("ataque cego que falha emite Errou sem dano e consome o ataque", () => {
+  const g = make(false, () => 0.1),
+    a = troop(g, "p1:front:0"),
+    b = troop(g, "p2:front:2");
+  a.statuses = [{ nome: "Cego", turnosRestantes: 2 }];
+  act(g, { type: "attack", slotId: "p1:front:0", targetId: "p2:front:2" });
+  assert.equal(slot(g, "p2:front:2").card!.hpAtual, 30);
+  assert.equal(g.player("p1").counters.attacks, 1);
+  const miss = g.state.events!.find((e) => e.kind === "miss")!;
+  assert.equal(miss.card.id, a.id);
+  assert.equal(miss.slotId, "p1:front:0");
+  assert.equal(miss.originOwnerId, "p1");
+  assert.match(miss.message!, /errou/);
+  assert.ok(!g.state.events?.some((e) => e.kind === "damage"));
+  assert.ok(g.spectatorSnapshot().events?.some((e) => e.kind === "miss"));
+  const hit = make(false, () => 0.8);
+  troop(hit, "p1:front:0").statuses = [{ nome: "Cego", turnosRestantes: 2 }];
+  troop(hit, "p2:front:2");
+  act(hit, { type: "attack", slotId: "p1:front:0", targetId: "p2:front:2" });
+  assert.ok(!hit.state.events?.some((e) => e.kind === "miss"));
+});
+test("retaliação cega também informa Errou", () => {
+  const g = make(false, () => 0.1);
+  const a = troop(g, "p1:front:0");
+  a.habilidadesPassivas = [
+    {
+      gatilho: "onAttacked",
+      escopo: "proprio",
+      efeitos: [{ id: "counterAttack", alvo: "atacante" }],
+    },
+  ];
+  a.statuses = [{ nome: "Cego", turnosRestantes: 2 }];
+  troop(g, "p2:front:2");
+  g.state.current = "p2";
+  act(g, { type: "attack", slotId: "p2:front:2", targetId: "p1:front:0" });
+  assert.ok(
+    g.state.events?.some(
+      (e) =>
+        e.kind === "miss" &&
+        e.card.id === a.id &&
+        e.message?.includes("retaliação"),
+    ),
+  );
+  assert.equal(slot(g, "p2:front:2").card!.hpAtual, 30);
+});
+
+test("descarte aumenta a carta e acrescenta 500ms sem alterar a compra", async (t) => {
+  const dom = new JSDOM(
+      "<body><div data-card-zone='deck' data-zone-owner='p1'></div><div data-card-zone='hand' data-zone-owner='p1'></div><div data-card-zone='graveyard' data-zone-owner='p1'></div><div data-live-card-id='card'></div></body>",
+      { pretendToBeVisual: true },
+    ),
+    doc = dom.window.document;
+  Object.defineProperty(dom.window, "innerWidth", { value: 320 });
+  Object.defineProperty(dom.window, "innerHeight", { value: 480 });
+  Object.defineProperty(dom.window, "matchMedia", {
+    value: () => ({ matches: true }),
+  });
+  for (const node of doc.querySelectorAll("div"))
+    node.getBoundingClientRect = () =>
+      ({
+        left: 300,
+        top: 460,
+        width: 70,
+        height: 98,
+        right: 370,
+        bottom: 558,
+      }) as DOMRect;
+  const path = "../public/JS/card-transfers.js",
+    { createCardTransfers } = await import(path);
+  t.mock.timers.enable({ apis: ["Date", "setTimeout"], now: 10000 });
+  const view = createCardTransfers(doc.body);
+  try {
+    view.capture();
+    view.show({
+      card: { id: "card", imgURL: "/card.png" },
+      movement: {
+        from: "field",
+        to: "graveyard",
+        fromOwnerId: "p1",
+        toOwnerId: "p1",
+      },
+    });
+    const discard = doc.querySelector(".card-transfer") as HTMLElement;
+    const duration = parseFloat(
+      discard.style.getPropertyValue("--transfer-duration"),
+    );
+    assert.ok(
+      parseFloat(discard.style.getPropertyValue("--transfer-width")) > 70,
+    );
+    assert.equal(
+      discard.style.getPropertyValue("--transfer-still-duration"),
+      "1200ms",
+    );
+    assert.ok(parseFloat(discard.style.getPropertyValue("--toX")) <= 208);
+    assert.ok(parseFloat(discard.style.getPropertyValue("--toY")) <= 326);
+    t.mock.timers.tick(1100);
+    assert.ok(discard.isConnected);
+    t.mock.timers.tick(500);
+    assert.equal(discard.isConnected, false);
+    view.reset();
+    view.capture();
+    view.show({
+      card: { id: "draw", imgURL: "/back.png" },
+      movement: {
+        from: "deck",
+        to: "hand",
+        fromOwnerId: "p1",
+        toOwnerId: "p1",
+      },
+    });
+    const draw = doc.querySelector(".card-transfer") as HTMLElement;
+    assert.equal(
+      duration - parseFloat(draw.style.getPropertyValue("--transfer-duration")),
+      500,
+    );
+    assert.equal(draw.style.getPropertyValue("--transfer-width"), "70px");
+    assert.equal(
+      draw.style.getPropertyValue("--transfer-still-duration"),
+      "700ms",
+    );
+  } finally {
+    view.close();
+    t.mock.timers.reset();
+    dom.window.close();
+  }
 });

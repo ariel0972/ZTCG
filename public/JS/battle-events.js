@@ -21,9 +21,14 @@ export function createBattleEvents(
   const visualTimers = new Set();
   function showFieldEffect(event) {
     if (
-      !["damage", "block", "mana", "heal", "elementalReaction"].includes(
-        event.kind,
-      )
+      ![
+        "damage",
+        "block",
+        "mana",
+        "heal",
+        "miss",
+        "elementalReaction",
+      ].includes(event.kind)
     )
       return;
     if (host.ownerDocument.hidden) return;
@@ -58,6 +63,7 @@ export function createBattleEvents(
     summon: "Entrou em campo",
     spell: "Feitiço usado",
     attack: "Atacou",
+    miss: "Ataque errou",
     death: "Foi para o cemitério",
     passive: "Passiva ativada",
     ability: "Habilidade usada",
@@ -97,7 +103,7 @@ export function createBattleEvents(
           : "Comprou: " + card.nome
         : "") ||
       event.summary ||
-      (["attack", "block"].includes(event.kind) && event.message
+      (["attack", "block", "miss"].includes(event.kind) && event.message
         ? event.message
         : `${labels[event.kind] || "Carta usada"} · ${card.nome}${event.message ? " · " + event.message : ""}`);
     if (card.imgURL) item.append(image);
@@ -125,6 +131,7 @@ export function createBattleEvents(
       event.kind !== "block" &&
       event.kind !== "mana" &&
       event.kind !== "heal" &&
+      event.kind !== "miss" &&
       !globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches
     ) {
       face.animate?.(
@@ -158,13 +165,11 @@ export function createBattleEvents(
       const fresh = events.filter((e) => e.sequence > sequence);
       if (!fresh.length) return;
       sequence = fresh.at(-1).sequence;
-      // Keep field feedback for every hit, even when the toast list is capped.
+      for (const event of fresh) show(event);
+      // Field results take priority over the generic attacker flash, even with a full toast list.
       for (const event of fresh) {
         showFieldEffect(event);
         transfers.show(event);
-      }
-      for (const event of fresh) {
-        show(event);
       }
     },
     close() {
