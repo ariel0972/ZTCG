@@ -2378,3 +2378,6 @@ Ladino, Furtar, vento e bloqueios — 03/11/2026:
 
 - tests/preview.ts — PREVIEW_ROGUE=1 com PREVIEW_MECHANICS=1 prepara campo isolado
   com Ladino, Beija-flor, Toupeira, montaria, armamento e estruturas para testar a UI.
+
+- tests/match-social.test.ts — o teste de chat lento lê quadros SSE completos até
+  a versão esperada, aceitando heartbeats e divisões normais dos pacotes HTTP.

@@ -449,7 +449,8 @@ test("SSE do jogo continua atualizando enquanto o armazenamento do chat está le
       },
     );
     const reader = response.body!.getReader();
-    await reader.read();
+    const decoder = new TextDecoder();
+    let buffer = decoder.decode((await reader.read()).value, { stream: true });
     await Promise.race([
       entered,
       new Promise((_, reject) => {
@@ -460,8 +461,24 @@ test("SSE do jogo continua atualizando enquanto o armazenamento do chat está le
     const room = (await f.store.room(f.id))!;
     room.game.state.version++;
     await f.store.saveRoom(room.revision, room);
+    const readVersion = async () => {
+      for (;;) {
+        let boundary: number;
+        while ((boundary = buffer.indexOf("\n\n")) >= 0) {
+          const frame = buffer.slice(0, boundary);
+          buffer = buffer.slice(boundary + 2);
+          if (!frame.startsWith("data: ")) continue;
+          const data = JSON.parse(frame.slice(6));
+          if (data.match?.version === room.game.state.version) return data;
+        }
+        const chunk = await reader.read();
+        if (chunk.done)
+          throw new Error("Fluxo encerrado antes da atualização da partida");
+        buffer += decoder.decode(chunk.value, { stream: true });
+      }
+    };
     const next = await Promise.race([
-      reader.read(),
+      readVersion(),
       new Promise<never>((_, reject) => {
         timeout = setTimeout(
           () => reject(new Error("Chat bloqueou a partida")),
@@ -470,12 +487,7 @@ test("SSE do jogo continua atualizando enquanto o armazenamento do chat está le
       }),
     ]);
     clearTimeout(timeout);
-    assert.equal(
-      new TextDecoder()
-        .decode(next.value)
-        .includes(`"version":${room.game.state.version}`),
-      true,
-    );
+    assert.equal(next.match.version, room.game.state.version);
     await reader.cancel();
   } finally {
     clearTimeout(timeout);
