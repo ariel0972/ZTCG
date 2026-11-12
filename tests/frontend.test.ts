@@ -8,6 +8,7 @@ import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import { createApp } from "../src/application";
 import { fakeDatabase } from "./support/database";
+import initial from "../src/data/catalog.json";
 test("interface real em DOM: catálogo, filtros, limites, detalhes, salvamento e admin", async () => {
   process.env.SECRET = "secret-only-for-tests-01234567890123456789";
   const db = await fakeDatabase(),
@@ -68,7 +69,7 @@ test("interface real em DOM: catálogo, filtros, limites, detalhes, salvamento e
     await until(
       () =>
         dom!.window.document.querySelectorAll("#card-list .card-tile")
-          .length === 131,
+          .length === initial.length,
     );
     const doc = dom.window.document;
     assert.equal(doc.getElementById("deck-count")!.textContent, "40 / 40");
@@ -187,7 +188,7 @@ test("interface real em DOM: catálogo, filtros, limites, detalhes, salvamento e
     await until(
       () =>
         dom!.window.document.querySelectorAll("#catalog-select option")
-          .length === 131,
+          .length === initial.length,
     );
     const adminDoc = dom.window.document;
     (adminDoc.getElementById("new-type") as HTMLSelectElement).value =

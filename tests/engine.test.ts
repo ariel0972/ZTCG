@@ -55,8 +55,8 @@ function inst(g: Game, id: string, owner = "p1") {
 }
 
 test("catálogo legado convertido, completo e publicação executável", () => {
-  assert.equal(catalog.length, 131);
-  assert.equal(new Set(catalog.map((c) => c.numeroCatalogo)).size, 131);
+  assert.equal(catalog.length, 133);
+  assert.equal(new Set(catalog.map((c) => c.numeroCatalogo)).size, 133);
   for (const c of catalog.filter((c) => c.publicado))
     assert.deepEqual(playableErrors(c), [], c.nome);
   assert.deepEqual(validateDeck(deck(), catalog, true), []);
