@@ -28,6 +28,7 @@ export const effectIds = [
   "revealStealHand",
   "bloodScent",
   "damage",
+  "basicStrike",
   "revive",
   "shuffleGraveyard",
   "nextActionDamage",
@@ -555,6 +556,18 @@ export function playableErrors(card: Card): string[] {
         errors.push("periodicDamage exige feitiço de área, valor e duração.");
       if (e.id === "returnOnElement" && (!e.elemento || target !== "Global"))
         errors.push("returnOnElement exige Global e elemento.");
+      if (e.ataque && e.id !== "basicStrike")
+        errors.push("Configuração de ataque exige basicStrike.");
+      if (
+        e.id === "basicStrike" &&
+        (!ability ||
+          !e.ataque ||
+          !["Tropa", "Mago", "Estrutura"].includes(card.tipo) ||
+          target !== "UnicoInimigo")
+      )
+        errors.push(
+          "Golpe com ataque atual exige habilidade de carta com ataque e alvo UnicoInimigo.",
+        );
       if (!(effectIds as readonly string[]).includes(e.id))
         errors.push(`Efeito ${e.id} não implementado.`);
       if (
@@ -695,6 +708,7 @@ export function playableErrors(card: Card): string[] {
         errors.push("Status/duração inválidos.");
       if (
         ![
+          "basicStrike",
           "cleanse",
           "terrain",
           "blockAttacks",
@@ -927,7 +941,14 @@ export function playableErrors(card: Card): string[] {
         )
       )
         errors.push("Vida do alvo exige bônus contínuo de ataque básico.");
-      if (h.filtroAlvo && !["onKill", "onAttack", "onHeal"].includes(h.gatilho))
+      if (
+        h.filtroAlvo &&
+        !["onKill", "onAttack", "onHeal"].includes(h.gatilho) &&
+        !(
+          h.gatilho === "continuous" &&
+          h.efeitos.every((e) => e.id === "attackBonus")
+        )
+      )
         errors.push("Filtro de alvo exige evento de abate, ataque ou cura.");
       if (
         h.filtroEvento?.ataqueMinimo !== undefined ||
@@ -942,6 +963,7 @@ export function playableErrors(card: Card): string[] {
         errors.push("Ataque mínimo exige condição cartaEmCampo de desconto.");
       for (const filter of [
         h.filtroEvento,
+        h.filtroAlvo,
         ...(h.condicoes?.flatMap((c) =>
           c.tipo === "cartaEmCampo" ? [c.filtro] : [],
         ) ?? []),
@@ -1021,6 +1043,7 @@ export function playableErrors(card: Card): string[] {
                 "attackAura",
                 "attackBonus",
                 "abilityDiscount",
+                "spellDiscount",
                 "manaRecovery",
                 "blockOwnAttack",
                 "attackLimit",
@@ -1042,6 +1065,7 @@ export function playableErrors(card: Card): string[] {
                       "attackAura",
                       "attackBonus",
                       "abilityDiscount",
+                      "spellDiscount",
                       "blockAttack",
                       "manaRecovery",
                       "reflectAttack",

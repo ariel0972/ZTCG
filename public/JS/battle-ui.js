@@ -104,6 +104,64 @@ export function renderSpellAura(player, front, back) {
     front.append(label);
   }
 }
+// Cosmetic state is derived only from the visible, current card snapshot.
+export function cardStateVisuals(face, card, hand = false) {
+  if (hand || card.oculta) return;
+  const aliases = {
+    Escondido: "Esconder",
+    "Em Guarda": "Guardar",
+    Atordoamento: "Atordoado",
+    Cegueira: "Cego",
+  };
+  const names = new Set(
+    [
+      ...(card.palavrasChave ?? []),
+      ...(card.statuses ?? [])
+        .filter((s) => s.turnosRestantes > 0)
+        .map((s) => s.nome),
+    ].map((n) => aliases[n] || n),
+  );
+  const states = [
+    ["hidden", "Escondido", names.has("Esconder"), "◌"],
+    [
+      "guard",
+      "Em guarda",
+      names.has("Guardar") || names.has("Interceptar"),
+      "◇",
+    ],
+    ["stunned", "Atordoado", names.has("Atordoado"), "✦"],
+    ["blind", "Cego", names.has("Cego"), "◉"],
+    ["disabled", "Incapacitado", names.has("Incapacitado"), "⊘"],
+  ];
+  const layer = node("div", "", "card-state-layer");
+  for (const [key, label, active, symbol] of states) {
+    if (!active) continue;
+    face.classList.add("state-" + key);
+    const mark = node("span", "", "card-state card-state--" + key);
+    mark.title = label;
+    mark.setAttribute("role", "img");
+    mark.setAttribute("aria-label", label);
+    const glyph = node("span", symbol, "card-state-glyph");
+    glyph.setAttribute("aria-hidden", "true");
+    mark.append(glyph);
+    layer.append(mark);
+  }
+  if (layer.childElementCount) face.append(layer);
+  const attack = !!card.attacked || (card.attacksMade ?? 0) > 0;
+  const ability = !!card.usedAbility;
+  face.classList.toggle("used-attack", attack);
+  face.classList.toggle("used-ability", ability);
+  face.classList.toggle("used-both", attack && ability);
+  face.dataset.actionUsage =
+    attack && ability
+      ? "both"
+      : attack
+        ? "attack"
+        : ability
+          ? "ability"
+          : "none";
+}
+
 export function cardFace(
   card,
   { slot, slots, hand = false, previous, reactions = {} } = {},
@@ -229,7 +287,9 @@ export function cardFace(
     Atordoado: "✦",
     Cego: "◉",
   };
-  for (const status of card.statuses || []) {
+  for (const status of (card.statuses || []).filter(
+    (s) => s.turnosRestantes > 0,
+  )) {
     const tag = node(
       "span",
       `${symbols[status.nome] || "✧"} ${status.semExpiracao ? "∞" : status.permanente ? (status.valor ?? "∞") : status.turnosRestantes}`,
@@ -279,7 +339,27 @@ export function cardFace(
     usage.append(node("span", "Ataque usado", "usage-token"));
   if (card.usedAbility)
     usage.append(node("span", "Habilidade usada", "usage-token"));
+  for (const token of usage.children) {
+    const label = token.textContent;
+    const ability = label.includes("Habilidade");
+    token.classList.add(
+      ability ? "usage-token--ability" : "usage-token--attack",
+    );
+    token.title = label;
+    const icon = node(
+      "span",
+      ability
+        ? "✧"
+        : (card.limiteAtaques || 1) > 1
+          ? "⚔ " + (card.attacksMade || 0) + "/" + card.limiteAtaques
+          : "⚔",
+      "usage-icon",
+    );
+    icon.setAttribute("aria-hidden", "true");
+    token.replaceChildren(icon, node("span", label, "usage-text"));
+  }
   face.append(art, heading, effects, footer, stats, usage);
+  cardStateVisuals(face, card, hand);
   face.classList.toggle("hand-card", hand);
   return face;
 }

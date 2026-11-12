@@ -33,6 +33,15 @@ export function actionTarget(selection) {
 }
 export function spellSlotTarget(action, slot, userId) {
   if (!action || zoneTargets.includes(action.alvo)) return false;
+  const forced = action.efeitos?.some(
+    (e) => e.id === "basicStrike" && e.ataque?.origem === "frontal",
+  );
+  if (
+    forced &&
+    (slot.kind !== "Tropa" ||
+      Math.abs(slot.column - (2 - action.sourceColumn)) !== 1)
+  )
+    return false;
   const own = slot.ownerId === userId,
     type = action.alvo;
   if (type === "Global") return false;
@@ -182,6 +191,12 @@ export function zoneCardAllowed(action, card) {
   return true;
 }
 export function targetDescription(action) {
+  if (
+    action?.efeitos?.some(
+      (e) => e.id === "basicStrike" && e.ataque?.origem === "frontal",
+    )
+  )
+    return "Escolha uma tropa vizinha da tropa inimiga diretamente à frente. Ela gastará um ataque próprio, sem gastar o limite do mago.";
   if (action?.apenasFrontal)
     return "Escolha a tropa ou ocupante da coluna inimiga diretamente à frente.";
   if (action?.efeitos?.some((e) => e.id === "relocate"))

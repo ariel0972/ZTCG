@@ -352,3 +352,108 @@ test("mana mostra custo na mão e recuperação nas cartas em campo", async () =
     dom.window.close();
   }
 });
+
+test("estados persistentes e uso de ações têm sinais independentes, sem revelar cartas ocultas", async () => {
+  const dom = new JSDOM("<body></body>");
+  const previous = Object.getOwnPropertyDescriptor(globalThis, "document");
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: dom.window.document,
+  });
+  try {
+    const modulePath = "../public/JS/battle-ui.js";
+    const { cardFace } = await import(modulePath);
+    const base = {
+      nome: "Teste",
+      tipo: "Tropa",
+      custoMana: 5,
+      hp: 12,
+      hpAtual: 12,
+      ataque: 3,
+      limiteAtaques: 2,
+      palavrasChave: ["Esconder", "Guardar"],
+      statuses: [
+        { nome: "Atordoamento", turnosRestantes: 1 },
+        { nome: "Cegueira", turnosRestantes: 2 },
+        { nome: "Incapacitado", turnosRestantes: 1 },
+      ],
+    };
+    const face = cardFace({
+      ...base,
+      attacksMade: 1,
+      attacked: false,
+      usedAbility: true,
+    });
+    for (const key of ["hidden", "guard", "stunned", "blind", "disabled"])
+      assert.ok(face.querySelector(".card-state--" + key));
+    assert.equal(face.dataset.actionUsage, "both");
+    assert.ok(face.classList.contains("used-both"));
+    assert.match(
+      face.querySelector('[aria-label="Em guarda"]').title,
+      /Em guarda/,
+    );
+    assert.equal(face.querySelectorAll(".card-state-layer").length, 1);
+    const fresh = cardFace({
+      ...base,
+      palavrasChave: [],
+      statuses: base.statuses.map((s) => ({ ...s, turnosRestantes: 0 })),
+      attacked: false,
+      usedAbility: false,
+    });
+    assert.equal(fresh.querySelector(".card-state-layer"), null);
+    assert.equal(fresh.dataset.actionUsage, "none");
+    assert.equal(fresh.querySelector(".effect-token"), null);
+    const hidden = cardFace({ ...base, oculta: true });
+    assert.equal(hidden.querySelector(".card-state-layer"), null);
+    assert.equal(hidden.dataset.actionUsage, undefined);
+    const hand = cardFace(
+      { ...base, attacked: true, usedAbility: true },
+      { hand: true },
+    );
+    assert.equal(hand.querySelector(".card-state-layer"), null);
+    assert.equal(hand.classList.contains("used-both"), false);
+    for (const [attacked, usedAbility, usage] of [
+      [true, false, "attack"],
+      [false, true, "ability"],
+      [true, true, "both"],
+    ])
+      assert.equal(
+        cardFace({ ...base, attacked, usedAbility }).dataset.actionUsage,
+        usage,
+      );
+  } finally {
+    if (previous) Object.defineProperty(globalThis, "document", previous);
+    else delete (globalThis as any).document;
+    dom.window.close();
+  }
+});
+
+test("Marionete destaca somente vizinhas da tropa frontal, sem incluir mago ou outra coluna", async () => {
+  const modulePath = "../public/JS/battle-targets.js";
+  const { spellSlotTarget } = await import(modulePath);
+  const action = {
+    alvo: "UnicoInimigo",
+    sourceColumn: 0,
+    tiposAlvo: ["Tropa"],
+    efeitos: [
+      { id: "basicStrike", ataque: { origem: "frontal", consumirUso: true } },
+    ],
+  };
+  const slot = {
+    ownerId: "q",
+    kind: "Tropa",
+    column: 1,
+    card: { id: "t", tipo: "Tropa", hp: 12 },
+  };
+  assert.equal(spellSlotTarget(action, slot, "p"), true);
+  for (const column of [0, 2])
+    assert.equal(spellSlotTarget(action, { ...slot, column }, "p"), false);
+  assert.equal(
+    spellSlotTarget(
+      action,
+      { ...slot, kind: "Mago", card: { id: "m", tipo: "Mago", hp: 20 } },
+      "p",
+    ),
+    false,
+  );
+});

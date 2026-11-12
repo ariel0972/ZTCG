@@ -372,12 +372,47 @@ void fakeDatabase().then(async (db) => {
         instance(id, owner),
       );
     }
+    if (process.env.PREVIEW_TAILORING === "1") {
+      const other = enemy.ownerId;
+      for (const [who, refs] of [
+        [owner, ["138", "137", "088"]],
+        [other, ["137", "020", "023"]],
+      ] as [string, string[]][]) {
+        refs.forEach((id, column) => {
+          const s = game.state.slots.find(
+            (s) => s.id === who + ":front:" + column,
+          )!;
+          s.card = instance(id, who);
+          s.structure = null;
+          s.rider = null;
+          if (who === other) {
+            s.card.hp = s.card.hpAtual = 30;
+            s.card.resistencia = [];
+            s.card.fraqueza = [];
+          }
+        });
+      }
+      const at = (who: string, col: number) =>
+        game.state.slots.find((s) => s.id === who + ":front:" + col)!.card!;
+      at(owner, 0).statuses = [{ nome: "Guardar", turnosRestantes: 2 }];
+      at(owner, 0).attacked = true;
+      at(owner, 1).attacked = true;
+      at(owner, 1).attacksMade = 1;
+      at(owner, 2).statuses = [{ nome: "Esconder", turnosRestantes: 2 }];
+      at(owner, 2).attacked = true;
+      at(owner, 2).usedAbility = true;
+      at(other, 0).statuses = [{ nome: "Atordoado", turnosRestantes: 2 }];
+      at(other, 1).statuses = [{ nome: "Incapacitado", turnosRestantes: 2 }];
+      game.player(other).mage.statuses = [{ nome: "Cego", turnosRestantes: 2 }];
+      game.player(owner).hand = ["001", "097"].map((id) => instance(id, owner));
+    }
     room.game = game.exportState();
     room.deadline =
       Date.now() +
       (process.env.PREVIEW_REACTIONS === "1" ||
       process.env.PREVIEW_PEST === "1" ||
-      process.env.PREVIEW_ROGUE === "1"
+      process.env.PREVIEW_ROGUE === "1" ||
+      process.env.PREVIEW_TAILORING === "1"
         ? 1200000
         : 120000);
     // Keep the fictitious opponent connected for this isolated visual fixture.

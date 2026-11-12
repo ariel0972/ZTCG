@@ -4257,5 +4257,151 @@
       }
     ],
     "maxAlvos": 1
+  },
+  {
+    "numeroCatalogo": "137",
+    "nome": "Tubarão",
+    "tipo": "Tropa",
+    "custoMana": 5,
+    "elemento": "Agua",
+    "descricao": "Ataca uma vez por turno. Causa +2 de dano com ataques básicos e Mordida contra alvos com Sangramento.",
+    "imgURL": "/assets/Cards/Tubarão.webp",
+    "hp": 12,
+    "ataque": 2,
+    "manaGerada": 3,
+    "subtipo": "Animal",
+    "direcaoAtaque": "Frente",
+    "fraqueza": [
+      "Terra"
+    ],
+    "resistencia": [
+      "Fogo"
+    ],
+    "publicado": true,
+    "efeitos": [],
+    "habilidadesAtivas": [
+      {
+        "id": "mordida",
+        "nome": "Mordida",
+        "custoMana": 5,
+        "alvo": "UnicoInimigo",
+        "alvoAutomatico": "Frontal",
+        "tiposAlvo": [
+          "Tropa"
+        ],
+        "descricao": "Golpeia a tropa à frente com seu ataque atual e aplica Incapacitado por 1 ciclo completo. Estruturas absorvem o dano e protegem do status. Consome somente a habilidade.",
+        "efeitos": [
+          {
+            "id": "basicStrike",
+            "ataque": {
+              "origem": "fonte",
+              "consumirUso": false
+            }
+          },
+          {
+            "id": "status",
+            "status": "Incapacitado",
+            "duracao": 1,
+            "unidade": "rodada",
+            "requerEstrutura": false
+          }
+        ]
+      }
+    ],
+    "habilidadesPassivas": [
+      {
+        "gatilho": "continuous",
+        "escopo": "proprio",
+        "filtroAlvo": {
+          "status": "Sangrando"
+        },
+        "efeitos": [
+          {
+            "id": "attackBonus",
+            "valor": 2
+          }
+        ],
+        "descricao": "Ataques básicos e golpes com ataque atual causam +2 de dano contra alvos com Sangramento."
+      }
+    ],
+    "palavrasChave": []
+  },
+  {
+    "numeroCatalogo": "138",
+    "nome": "Costureira",
+    "tipo": "Tropa",
+    "custoMana": 5,
+    "elemento": "Ar",
+    "descricao": "Ataca uma vez por turno. Enquanto estiver em campo, seus feitiços custam 1 mana a menos. O desconto acumula entre cópias, até o mínimo de zero.",
+    "imgURL": "/assets/Cards/Costureira.webp",
+    "hp": 12,
+    "ataque": 3,
+    "manaGerada": 3,
+    "subtipo": "Humano",
+    "direcaoAtaque": "Universal",
+    "fraqueza": [
+      "Fogo"
+    ],
+    "resistencia": [
+      "Terra"
+    ],
+    "publicado": true,
+    "efeitos": [],
+    "habilidadesAtivas": [
+      {
+        "id": "marionete",
+        "nome": "Marionete",
+        "custoMana": 5,
+        "alvo": "UnicoInimigo",
+        "tiposAlvo": [
+          "Tropa"
+        ],
+        "descricao": "A tropa inimiga à frente ataca uma vizinha escolhida com seu ataque atual, elemento e armamentos. Consome um ataque dessa tropa sem gastar o contador do mago. Exige que ela possa atacar.",
+        "efeitos": [
+          {
+            "id": "basicStrike",
+            "ataque": {
+              "origem": "frontal",
+              "consumirUso": true
+            }
+          }
+        ]
+      },
+      {
+        "id": "pontoCruz",
+        "nome": "Ponto Cruz",
+        "custoMana": 3,
+        "alvo": "TodasTropasInimigas",
+        "tiposAlvo": [
+          "Tropa"
+        ],
+        "descricao": "Causa 1 de dano e Sangramento padrão em todas as tropas inimigas. Estruturas absorvem o dano e protegem dos status normalmente.",
+        "efeitos": [
+          {
+            "id": "damage",
+            "valor": 1
+          },
+          {
+            "id": "status",
+            "status": "Sangrando",
+            "duracao": 3
+          }
+        ]
+      }
+    ],
+    "habilidadesPassivas": [
+      {
+        "gatilho": "continuous",
+        "escopo": "proprio",
+        "efeitos": [
+          {
+            "id": "spellDiscount",
+            "valor": 1
+          }
+        ],
+        "descricao": "Seus feitiços custam 1 mana a menos enquanto esta carta estiver em campo. Cópias acumulam; custo mínimo zero."
+      }
+    ],
+    "palavrasChave": []
   }
 ]

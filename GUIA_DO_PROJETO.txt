@@ -2399,3 +2399,30 @@ Descarte, ataque errado e reação contra IA — 03/11/2026:
 - tests/turn-feedback.test.ts e tests/battle-effects.test.ts — erro sem dano em
   ataque/retaliação, evento sem repetição e descarte maior com mais 500ms, limpeza
   dos elementos, limites em tela pequena e movimento reduzido.
+
+
+Costureira, Tubarão e estados visuais — 11/11/2026:
+- src/data/catalog.json — publica 137 e 138 com atributos das artes, desconto
+  acumulável, Marionete, Ponto Cruz, bônus contra Sangramento e Mordida.
+- public/assets/Cards/Costureira.webp — arte de referência da Costureira no catálogo local.
+- public/assets/Cards/Tubarão.webp — arte de referência do Tubarão no catálogo local.
+- src/types/card.ts e src/db/models/Card.ts — configuração de basicStrike e
+  spellDiscount e filtro de passiva pelo status do alvo, preservados no banco.
+- src/game/passives.ts e src/game/spell-modifiers.ts — desconto por fonte viva
+  aliada em campo, mínimo zero, e bônus condicional por alvo em golpes de ataque.
+- src/game/engine.ts e src/game/action-bonus.ts — golpe com ataque atual da fonte
+  ou da tropa frontal contra uma vizinha, arma/elemento, consumo opcional de ataque
+  próprio e sem gastar limite do mago. Desvios seguem resolução persistida.
+- src/game/capabilities.ts — valida as novas configurações e as expõe no catálogo.
+- public/JS/battle-ui.js, public/JS/battle-targets.js, public/JS/card-view.js e
+  public/CSS/battle.css — sinais animados de Esconder, Guardar/Interceptar,
+  Atordoado, Cego e Incapacitado; uso de ataque/habilidade tem símbolos discretos
+  e bordas laterais. Sem animação para movimento reduzido ou identidade oculta.
+- scripts/update-tailoring-shark-cards.ts — simula/aplica só 137/138 com backup
+  e versão concorrente, preservando imagem enviada e demais cartas do banco.
+- tests/tailoring-shark-cards.test.ts — custos, dano, armas, estruturas, estados,
+  alvos vizinhos, consumo independente, desvio sem duplicar e reutilização genérica.
+- tests/battle-ui.test.ts — estados simultâneos, duração, uso parcial/ambos,
+  privacidade e seleção das vizinhas da tropa frontal.
+- tests/preview.ts — PREVIEW_TAILORING=1 com PREVIEW_MECHANICS=1 monta um campo
+  isolado com as duas cartas e os cinco estados para verificar menus e visual.

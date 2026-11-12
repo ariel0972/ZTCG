@@ -147,6 +147,14 @@ function effectDescription(effect) {
       shuffleGraveyard: `Embaralha até ${effect.valor} tropas escolhidas do próprio cemitério no baralho.`,
       attackField: `Cria um efeito no campo inimigo por ${effect.duracao} rodadas, causando ${effect.valor} de dano após cada ataque.`,
       nextActionDamage: `A próxima ação que causar dano recebe +${effect.valor} de dano até o fim do turno.`,
+      basicStrike:
+        "Usa o ataque atual, elemento e armamento " +
+        (effect.ataque?.origem === "frontal"
+          ? "da tropa inimiga à frente contra uma vizinha escolhida"
+          : "da própria carta contra o alvo") +
+        (effect.ataque?.consumirUso
+          ? ", consumindo um ataque da carta sem gastar o limite do mago."
+          : ", sem consumir ataque normal."),
       damage: `Causa ${effect.valor || 0} de dano.${effect.valorEstrutura === undefined ? "" : " Contra estrutura, causa " + effect.valorEstrutura + "."}`,
       displace: `Desloca uma tropa para ${effect.direcao === "direita" ? "o espaço à direita" : "um espaço vizinho vazio escolhido"}${effect.borda === "mao" ? "; na borda direita, devolve à mão" : effect.borda === "manter" ? "; na borda direita, permanece em campo" : ""}.`,
       heal:
@@ -303,6 +311,10 @@ export function passiveDescription(h) {
             attackElement: `os ataques passam a ser de ${e.elemento === "Agua" ? "Água" : e.elemento}`,
             attackLimit: `pode atacar até ${e.valor} vezes por rodada`,
             abilityDiscount: "habilidades custam " + e.valor + " mana a menos",
+            spellDiscount:
+              "seus feitiços custam " +
+              e.valor +
+              " mana a menos enquanto esta carta estiver em campo",
             blockOwnAttack: "não pode atacar enquanto a condição valer",
             blockAttack: "impede ataques básicos que correspondam ao filtro",
             summonFromDeck:

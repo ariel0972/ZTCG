@@ -1019,6 +1019,7 @@ export class Game {
             )
           : [
               "damage",
+              "basicStrike",
               "trap",
               "attackField",
               "periodicDamage",
@@ -3241,6 +3242,9 @@ export class Game {
           status.originOwnerId = ownerId;
           break;
         }
+        case "basicStrike":
+          this.effectBasicStrike(ownerId, effect, ids, source, cause);
+          break;
         case "damage":
           for (const id of ids) {
             const structure =
@@ -4857,7 +4861,12 @@ export class Game {
     this.reactFields(card.elemento);
     this.log(`${player.nome} cancelou ${pending.card.nome} com ${card.nome}.`);
   }
-  private attackSourceError(user: string, slot: Slot, card: Instance | null) {
+  private attackSourceError(
+    user: string,
+    slot: Slot,
+    card: Instance | null,
+    ignoreMageLimit = false,
+  ) {
     const p = this.player(user);
     if (!card || !["Tropa", "Mago", "Estrutura"].includes(card.tipo))
       return "Selecione uma tropa, mago ou estrutura.";
@@ -4890,7 +4899,8 @@ export class Game {
     if (
       card.attacked ||
       (card.attacksMade ?? 0) >= basicAttackLimit(card, this.state.slots) ||
-      (card.tipo !== "Mago" &&
+      (!ignoreMageLimit &&
+        card.tipo !== "Mago" &&
         p.counters.attacks >= p.mage.limites[0].tropaAtacam)
     )
       return "Limite de ataque atingido.";
@@ -5144,7 +5154,7 @@ export class Game {
     const bonusOnTarget = targetAttackBonus(card, defender, this.state.slots);
     if (bonusOnTarget)
       this.log(
-        `${card.nome} ganhou +${bonusOnTarget} neste ataque contra ${defender.nome} pela vida do alvo.`,
+        `${card.nome} ganhou +${bonusOnTarget} neste ataque contra ${defender.nome} pela condição do alvo.`,
       );
     const damage = this.basicAttackDamage(card, defender) + actionBonus;
     if (this.canReflectAttack(defender, card)) {
@@ -5168,6 +5178,99 @@ export class Game {
       false,
       undefined,
       interceptionProtection,
+    );
+  }
+  private effectBasicStrike(
+    ownerId: string,
+    effect: Effect,
+    ids: string[],
+    source?: Instance,
+    cause?: string,
+  ) {
+    const origin = source && this.targetSlot(source.id);
+    const frontal = effect.ataque?.origem === "frontal";
+    const position =
+      frontal && origin
+        ? this.front(this.opponent(ownerId).id).find(
+            (s) => s.column === 2 - origin.column,
+          )
+        : origin;
+    const attacker = frontal ? position?.card : source;
+    const victim = ids.length === 1 ? this.findCard(ids[0]) : undefined;
+    const targetSlot = victim && this.targetSlot(victim.id);
+    if (
+      !attacker ||
+      !position ||
+      attacker.hpAtual <= 0 ||
+      !victim ||
+      !targetSlot ||
+      victim.tipo !== "Tropa" ||
+      victim.hpAtual <= 0
+    )
+      this.fail("Escolha uma tropa válida para o golpe.");
+    if (frontal) {
+      if (this.has(attacker, "Esconder"))
+        this.fail("A tropa à frente está escondida.");
+      if (
+        attacker.tipo !== "Tropa" ||
+        victim.ownerId !== attacker.ownerId ||
+        targetSlot.kind !== "Tropa" ||
+        Math.abs(targetSlot.column - position.column) !== 1
+      )
+        this.fail("Escolha uma tropa vizinha da tropa controlada à frente.");
+      const error = this.attackSourceError(
+        attacker.ownerId,
+        position,
+        attacker,
+        true,
+      );
+      if (error) this.fail(error);
+      if (!this.impactAllowed(attacker.id)) return;
+    }
+    if (effect.ataque?.consumirUso) {
+      const error = this.attackSourceError(
+        attacker.ownerId,
+        position,
+        attacker,
+        true,
+      );
+      if (error) this.fail(error);
+      attacker.attacksMade = (attacker.attacksMade ?? 0) + 1;
+      attacker.attacked =
+        attacker.attacksMade >= basicAttackLimit(attacker, this.state.slots);
+    }
+    attacker.palavrasChave = attacker.palavrasChave.filter(
+      (k) => k !== "Esconder",
+    );
+    attacker.statuses = attacker.statuses.filter((s) => s.nome !== "Esconder");
+    this.event(
+      "attack",
+      attacker,
+      (cause ?? source?.nome ?? "Golpe") +
+        ": " +
+        attacker.nome +
+        " atacou " +
+        victim.nome +
+        ".",
+      { slotId: position.id, originOwnerId: ownerId },
+    );
+    if (hasStatus(attacker.statuses, ["Cego"]) && this.random() < 0.5) {
+      this.event("miss", attacker, attacker.nome + " errou por cegueira.", {
+        slotId: position.id,
+        originOwnerId: ownerId,
+      });
+      return;
+    }
+    const target =
+      targetSlot.rider?.id === victim.id
+        ? { ...targetSlot, card: victim, rider: null }
+        : targetSlot;
+    const defender = this.basicAttackDefender(target);
+    this.completeAttackOnce(
+      attacker,
+      target,
+      this.basicAttackDamage(attacker, defender) + (effect.valor ?? 0),
+      this.attackElement(attacker),
     );
   }
   private attackElement(card: Instance) {

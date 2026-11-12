@@ -1,5 +1,6 @@
 import type { Card, Effect } from "../types/card";
 import { canonicalStatus } from "./status";
+import { alliedSpellDiscount } from "./passives";
 import type { Instance, State } from "./state";
 import { fieldVariant, fieldDiscount } from "./field-rules";
 export function spellModifier(card: Card, mage: Instance) {
@@ -19,6 +20,7 @@ export function currentSpellCost(card: Card, mage: Instance, state?: State) {
     0,
     selected.custoMana -
       fieldDiscount(card, state) -
+      alliedSpellDiscount(card, mage.ownerId, state?.slots ?? []) -
       (card.tipo === "Feitico" ? spellModifier(card, mage).discount : 0),
   );
 }

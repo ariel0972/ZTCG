@@ -2108,3 +2108,31 @@ RECUPERAÇÃO, DADO, TERRENO E SELEÇÃO FRONTAL — 03/11/2026
   Usa o ciclo completo de dois turnos e mantém a tropa que já ocupa o campo.
 - Congelado e Atordoado suspendem passivas de eventos e habilidades do armamento
   equipado. Não suspendem passivas contínuas, geração de mana ou bônus impressos.
+
+
+Golpes com ataque atual e desconto de feitiços — 11/11/2026
+basicStrike pode ser usado em uma habilidade com alvo UnicoInimigo e carta de
+origem Tropa, Mago ou Estrutura. Não depende do nome ou número de catálogo:
+{"id":"basicStrike","ataque":{"origem":"fonte","consumirUso":false}}
+Usa ataque atual, elemento e armamento da fonte contra a tropa selecionada;
+executa os eventos de ataque e as proteções do golpe. Pode ser combinado com
+status e outros efeitos. Em Mordida, segue Incapacitado por uma rodada, somente
+sem estrutura (requerEstrutura:false). Sangramento usa sua duração padrão.
+{"id":"basicStrike","ataque":{"origem":"frontal","consumirUso":true}}
+Usa a tropa inimiga diretamente à frente para atingir uma vizinha escolhida.
+Exige ataque disponível e ausência de bloqueio na controlada; gasta um ataque
+somente dela, sem o contador do mago e sem mudar controle ou posição.
+A seleção de alvo da habilidade precisa ser Tropa. Sem tropa frontal ou vizinha
+válida, a jogada é rejeitada sem gastar mana. Cego pode errar e ainda gastar uso.
+Golpes respeitam desvio e estruturas; o bônus de uma próxima ação soma ao dano.
+
+Passiva contínua de desconto reutilizável:
+{"gatilho":"continuous","escopo":"proprio","efeitos":[{"id":"spellDiscount","valor":1}]}
+Desconta dos feitiços do dono enquanto a fonte permanece em campo. Soma entre
+fontes e com outros descontos; custo mínimo zero. filtro opcional na ação
+restringe os feitiços por tipo, elemento e demais filtros suportados.
+Passiva contínua de ataque contra um status do alvo:
+{"gatilho":"continuous","escopo":"proprio","filtroAlvo":{"status":"Sangrando"},"efeitos":[{"id":"attackBonus","valor":2}]}
+Acrescenta o valor apenas ao golpe contra o alvo correspondente; não altera o
+ataque geral mostrado na carta. Vale também em basicStrike. Status pode ser
+qualquer condição suportada pelo jogo. As duas passivas têm modelos no catálogo.

@@ -46,6 +46,7 @@ export const passiveActionIds = [
   "interceptAttack",
   "blockOwnAttack",
   "abilityDiscount",
+  "spellDiscount",
   "attackLimit",
   "attackElement",
   "damage",
@@ -567,9 +568,10 @@ export function targetAttackBonus(
     .reduce((bonus, rule) => {
       if (
         rule.gatilho !== "continuous" ||
-        !rule.condicoes?.some(
-          (c) => c.tipo === "vidaPercentual" && c.alvo === "alvoAtaque",
-        ) ||
+        (!rule.filtroAlvo &&
+          !rule.condicoes?.some(
+            (c) => c.tipo === "vidaPercentual" && c.alvo === "alvoAtaque",
+          )) ||
         !passiveMatches(
           rule,
           card,
@@ -641,7 +643,12 @@ export function continuousPassiveActive(
     )
   )
     return false;
-  if (rule.efeitos.some((e) => e.id === "abilityDiscount")) return true;
+  if (
+    rule.efeitos.some((e) =>
+      ["abilityDiscount", "spellDiscount"].includes(e.id),
+    )
+  )
+    return true;
   const position = slots.find(
     (s) => s.card?.id === source.id && s.kind === "Tropa",
   );
@@ -1009,3 +1016,61 @@ export function abilityManaCost(card: Instance, base: number, slots: Slot[]) {
     .reduce((n, e) => n + (e.id === "abilityDiscount" ? e.valor : 0), 0);
   return Math.max(0, base - discount);
 }
+
+export function alliedSpellDiscount(
+  spell: Instance | import("../types/card").Card,
+  ownerId: string,
+  slots: Slot[],
+) {
+  if (spell.tipo !== "Feitico") return 0;
+  const seen = new Set<string>();
+  let discount = 0;
+  for (const source of slots.flatMap(slotCards)) {
+    if (
+      source.ownerId !== ownerId ||
+      (source.hp !== undefined && source.hpAtual <= 0) ||
+      seen.has(source.id)
+    )
+      continue;
+    seen.add(source.id);
+    for (const rule of cardPassives(source).map(normalizePassive)) {
+      if (
+        rule.gatilho !== "continuous" ||
+        !passiveMatches(
+          rule,
+          source,
+          { ownerId, cardId: source.id, card: source },
+          slots,
+        )
+      )
+        continue;
+      for (const e of rule.efeitos)
+        if (
+          e.id === "spellDiscount" &&
+          matchesPassiveFilter(spell as Instance, e.filtro)
+        )
+          discount += e.valor;
+    }
+  }
+  return discount;
+}
+
+passiveTemplates.push(
+  {
+    nome: "Desconto acumulável de feitiços aliados em campo",
+    passiva: {
+      gatilho: "continuous",
+      escopo: "proprio",
+      efeitos: [{ id: "spellDiscount", valor: 1 }],
+    },
+  },
+  {
+    nome: "Ataque extra contra alvo com Sangramento",
+    passiva: {
+      gatilho: "continuous",
+      escopo: "proprio",
+      filtroAlvo: { status: "Sangrando" },
+      efeitos: [{ id: "attackBonus", valor: 2 }],
+    },
+  },
+);

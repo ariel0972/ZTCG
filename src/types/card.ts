@@ -83,6 +83,13 @@ export const spellVariantSchema = z
 export const effectSchema = z
   .object({
     id: identifier,
+    ataque: z
+      .object({
+        origem: z.enum(["fonte", "frontal"]),
+        consumirUso: z.boolean().default(false),
+      })
+      .strict()
+      .optional(),
     selecao: z
       .object({
         jogador: z.enum(["aliado", "inimigo", "qualquer"]),
@@ -440,6 +447,13 @@ export const passiveActionSchema = z.discriminatedUnion("id", [
   z.object({ id: z.literal("blockOwnAttack") }).strict(),
   z.object({ id: z.literal("abilityDiscount"), valor: number.min(1) }).strict(),
   z
+    .object({
+      id: z.literal("spellDiscount"),
+      valor: number.min(1),
+      filtro: passiveFilterSchema.optional(),
+    })
+    .strict(),
+  z
     .object({ id: z.literal("attackElement"), elemento: z.enum(elements) })
     .strict(),
   z
@@ -556,6 +570,7 @@ export const declarativePassiveSchema = z
         tipo: z.enum(cardTypes).optional(),
         elemento: z.enum(elements).optional(),
         relacao: z.enum(["aliado", "inimigo"]).optional(),
+        status: z.string().min(1).max(80).optional(),
       })
       .strict()
       .optional(),

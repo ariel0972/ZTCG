@@ -264,6 +264,16 @@ const effect = new Schema(
       default: undefined,
     },
     origem: { type: String, enum: ["fonte", "alvo"] },
+    ataque: {
+      type: new Schema(
+        {
+          origem: { type: String, enum: ["fonte", "frontal"], required: true },
+          consumirUso: Boolean,
+        },
+        { _id: false, strict: "throw" },
+      ),
+      default: undefined,
+    },
     direcao: { type: String, enum: ["direita", "vizinho"] },
     borda: { type: String, enum: ["mao", "manter"] },
     semDestino: { type: String, enum: ["manter"] },
@@ -441,6 +451,7 @@ const passive = new Schema(
           tipo: { type: String, enum: cardTypes },
           elemento: { type: String, enum: elements },
           relacao: { type: String, enum: ["aliado", "inimigo"] },
+          status: String,
         },
         { _id: false, strict: "throw" },
       ),
