@@ -457,3 +457,64 @@ test("Marionete destaca somente vizinhas da tropa frontal, sem incluir mago ou o
     false,
   );
 });
+
+test("menu oferece estrutura só à tropa operadora e carga preserva limites e acessibilidade", async () => {
+  const dom = new JSDOM("<body></body>");
+  const previous = Object.getOwnPropertyDescriptor(globalThis, "document");
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: dom.window.document,
+  });
+  try {
+    const path = "../public/JS/structure-actions.js";
+    const { structureAttackOption, createChargeControl } = await import(path);
+    const mount = { id: "m", tipo: "Tropa" },
+      rider = { id: "r", tipo: "Tropa" },
+      structure = { tipo: "Estrutura", nome: "Canhão", ataque: 4 };
+    const slot = {
+      card: mount,
+      rider,
+      structure,
+      attackTargets: { structure: ["enemy"] },
+    };
+    assert.equal(structureAttackOption(mount, slot), null);
+    const option = structureAttackOption(rider, slot);
+    assert.equal(option.source, "structure");
+    assert.match(option.label, /Canhão.*4/);
+    assert.equal(option.reason, "");
+    assert.equal(
+      structureAttackOption(mount, {
+        ...slot,
+        rider: null,
+        structure: { ...structure, ataque: 0 },
+      }),
+      null,
+    );
+    const card = {
+      ...structure,
+      estrutura: { carga: { minimoMana: 2, manaPorDano: 2 } },
+      storedMana: 3,
+    };
+    let charged = 0;
+    const control = createChargeControl(card, {
+      mana: 7,
+      onCharge: (n: number) => (charged = n),
+    });
+    const input = control.querySelector("input");
+    input.value = "5";
+    control.querySelector("button").click();
+    assert.equal(charged, 5);
+    assert.equal(input.min, "2");
+    assert.equal(input.max, "7");
+    assert.match(input.getAttribute("aria-label"), /Canhão/);
+    const blocked = createChargeControl(card, {
+      mana: 1,
+      onCharge: () => assert.fail(),
+    });
+    assert.equal(blocked.querySelector("button").disabled, true);
+  } finally {
+    if (previous) Object.defineProperty(globalThis, "document", previous);
+    else delete (globalThis as any).document;
+    dom.window.close();
+  }
+});

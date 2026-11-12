@@ -840,6 +840,7 @@ test("Proteção Rochosa não reduz condições periódicas e a estrutura absorv
   slot(guarded, "p1:front:0").card = warrior;
   const structure = instance("021", "p1", {
     tipo: "Estrutura",
+    ataque: 0,
     hp: 2,
     resistencia: [],
     fraqueza: [],
@@ -931,6 +932,7 @@ test("Guerreiro em Modo Ofensivo atinge a tropa Congelada, com ou sem estrutura,
     if (protectedTarget)
       target.structure = instance("020", "p2", {
         tipo: "Estrutura",
+        ataque: 0,
         hp: 30,
         resistencia: [],
         fraqueza: [],

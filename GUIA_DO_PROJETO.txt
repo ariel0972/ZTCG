@@ -2426,3 +2426,37 @@ Costureira, Tubarão e estados visuais — 11/11/2026:
   privacidade e seleção das vizinhas da tropa frontal.
 - tests/preview.ts — PREVIEW_TAILORING=1 com PREVIEW_MECHANICS=1 monta um campo
   isolado com as duas cartas e os cinco estados para verificar menus e visual.
+
+
+Estruturas ofensivas, recarga e carga — 11/11/2026:
+- src/data/catalog.json — publica Torreta 058, Muro de Terra 059, Canhão 091 e
+  Canhão de Mana Instável 109 com custos, vida, ataque e regras das artes.
+- src/types/card.ts e src/db/models/Card.ts — configuração estrutura reutilizável
+  com alcance, recarga, bloqueio da tropa, conversão/destruição elemental e carga.
+- src/game/structures.ts — escolhe ocupante como operador, identifica estrutura
+  ofensiva e calcula dano por mana armazenada e recarga por rodada.
+- src/game/engine.ts, src/game/contracts.ts e src/game/state.ts — disparo consome
+  um ataque do operador e do limite do mago; alvo card/structure é validado no
+  servidor. Torre continua absorvendo; ofensivas aceitam alvo direto; Instável
+  mantém interceptação da tropa em ataques básicos. Carga e tiro são duráveis.
+- src/game/passives.ts — ataque atual de estrutura inclui a mana armazenada.
+- src/game/ai-actions.ts — IA considera carregar estruturas e escolher alvo direto
+  em estruturas ofensivas, sempre usando os alvos públicos calculados pelo motor.
+- public/JS/structure-actions.js — opção de disparo no menu da tropa operadora e
+  controle numérico acessível para carregar a mana da estrutura.
+- public/JS/game.js, public/JS/battle-ui.js, public/JS/battle-confirmations.js e
+  public/CSS/battle.css — destacam estrutura inimiga atacável, mostram ataque e
+  carga junto à vida e contam a alternativa da estrutura uma única vez por tropa.
+- scripts/update-structure-cards.ts — simula/aplica só as quatro estruturas novas
+  com backup e controle de versão, preservando artes e a Torre já publicada.
+- tests/structure-cards.test.ts — banco/migração, alcance, operação montada,
+  contadores compartilhados, recarga, Muro, sorteio elemental, carga e explosão
+  mesmo em erro/desvio/reflexão e limpeza ao sair do campo.
+- tests/battle-ui.test.ts e tests/battle-confirmations.test.ts — menus, carga
+  acessível, limite compartilhado e confirmação quando só a estrutura é atacável.
+- tests/rules.test.ts, tests/field-abilities.test.ts, tests/passives.test.ts e
+  tests/mounted-passives.test.ts — fixtures defensivas explícitas com ataque zero.
+- tests/preview.ts — PREVIEW_STRUCTURES=1 com PREVIEW_MECHANICS=1 monta campo
+  isolado com estruturas ofensivas, Muro e ocupante para verificar o menu.
+- public/HTML/regras.html — explica a escolha entre tropa e estrutura ofensiva,
+  disparo compartilhado, ocupante operador e recarga sem bloquear ataque próprio.

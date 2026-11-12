@@ -485,6 +485,43 @@ const schema = new Schema<Card>(
     numeroCatalogo: { type: String, required: true, unique: true },
     nome: { type: String, required: true, trim: true },
     tipo: { type: String, enum: cardTypes, required: true },
+    estrutura: {
+      type: new Schema(
+        {
+          alcance: { type: String, enum: ["Frente", "QualquerTropa"] },
+          esperaRodadas: n,
+          bloqueiaAtaqueTropa: Boolean,
+          tropaDefendeAtaques: Boolean,
+          reacoesDano: {
+            type: [
+              new Schema(
+                {
+                  elemento: { type: String, enum: elements },
+                  acao: { type: String, enum: ["crescer", "destruir"] },
+                  valor: n,
+                },
+                { _id: false, strict: "throw" },
+              ),
+            ],
+            default: undefined,
+          },
+          carga: {
+            type: new Schema(
+              {
+                minimoMana: n,
+                manaPorDano: n,
+                explosao: n,
+                elementos: { type: [String], enum: elements },
+              },
+              { _id: false, strict: "throw" },
+            ),
+            default: undefined,
+          },
+        },
+        { _id: false, strict: "throw" },
+      ),
+      default: undefined,
+    },
     custoMana: { ...n, required: true },
     assinatura: { type: Boolean, default: false },
     custoEntrada: {

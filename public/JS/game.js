@@ -1,4 +1,8 @@
 import {
+  structureAttackOption,
+  createChargeControl,
+} from "./structure-actions.js";
+import {
   createMaterialChoice,
   entryCostRule,
   describeEntryCost,
@@ -423,7 +427,10 @@ function selectSlot(slot, asStructure = false, asRider = false) {
       return;
     }
     if (selected.type === "attack") {
-      if (!selected.slot.attackTargets?.[selected.source]?.includes(slot.id)) {
+      const attackTargets = asStructure
+        ? selected.slot.attackStructureTargets?.[selected.source]
+        : selected.slot.attackTargets?.[selected.source];
+      if (!attackTargets?.includes(slot.id)) {
         const reason =
           selected.slot.attackBlockReasons?.[selected.source]?.[slot.id];
         if (reason && slot.card)
@@ -439,6 +446,7 @@ function selectSlot(slot, asStructure = false, asRider = false) {
         slotId: selected.slot.id,
         targetId: slot.id,
         source: selected.source,
+        targetSource: asStructure ? "structure" : "card",
       });
       return;
     }
@@ -864,7 +872,7 @@ function renderActions() {
                       )
                     ? "Um status impede o ataque."
                     : !slot.attackTargets?.[fieldSource(card, slot)]?.length
-                      ? "Nenhum alvo disponível para esta carta."
+                      ? Object.values(slot.attackBlockReasons?.[fieldSource(card, slot)] ?? {}).find(Boolean) || "Nenhum alvo disponível para esta carta."
                       : "",
         ),
       );
@@ -900,6 +908,48 @@ function renderActions() {
           ),
         );
     }
+    const structureAttack = structureAttackOption(card, slot);
+    if (structureAttack)
+      panel.append(
+        actionButton(
+          structureAttack.label,
+          () => {
+            selected = {
+              type: "attack",
+              card: structureAttack.card,
+              slot,
+              source: "structure",
+            };
+            targets = [];
+            render();
+          },
+          structureAttack.reason,
+        ),
+      );
+    const charging =
+      card.tipo === "Estrutura"
+        ? card
+        : card.tipo === "Tropa" && (slot.rider?.id ?? slot.card?.id) === card.id
+          ? slot.structure
+          : null;
+    const chargeControl = createChargeControl(charging, {
+      mana: myPlayer().mana,
+      blocked:
+        !myTurn() || pending
+          ? "Aguarde seu turno."
+          : charging?.usedAbility
+            ? "A estrutura já carregou ou usou uma habilidade neste turno."
+            : charging?.statuses?.some(
+                  (s) =>
+                    s.turnosRestantes > 0 &&
+                    ["Congelado", "Atordoado", "Cego"].includes(s.nome),
+                )
+              ? "Um estado impede a carga."
+              : "",
+      onCharge: (mana) =>
+        command({ type: "chargeStructure", slotId: slot.id, mana }),
+    });
+    if (chargeControl) panel.append(chargeControl);
     if (
       card.tipo === "Tropa" &&
       fieldSource(card, slot) === "card" &&
@@ -1368,8 +1418,28 @@ function slotView(slot) {
     );
     structureButton.setAttribute("aria-disabled", String(!valid));
   }
+  if (selected?.type === "attack" && slot.ownerId !== user.id) {
+    const valid =
+      selected.slot.attackStructureTargets?.[selected.source]?.includes(
+        slot.id,
+      ) &&
+      myTurn() &&
+      !pending;
+    structureButton.classList.add(
+      valid ? "attack-target" : "attack-unavailable",
+    );
+    structureButton.setAttribute("aria-disabled", String(!valid));
+    if (valid)
+      structureButton.append(
+        node("span", "Atacar estrutura", "attack-target-label"),
+      );
+  }
   structureButton.onclick = (event) => {
     anchorAt(event, structureButton);
+    if (selected?.type === "attack") {
+      selectSlot(slot, true);
+      return;
+    }
     if (isChoosingSpell()) {
       selectSlot(slot, true);
       return;

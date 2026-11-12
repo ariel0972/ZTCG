@@ -361,6 +361,7 @@ test("retaliação respeita incapacidades e a estrutura do atacante", () => {
     if (status === "Estrutura")
       attack.structure = instance("020", "p2", {
         tipo: "Estrutura",
+        ataque: 0,
         hp: 10,
         fraqueza: [],
         resistencia: [],

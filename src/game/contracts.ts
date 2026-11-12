@@ -5,6 +5,14 @@ export const commandSchema = z.discriminatedUnion("type", [
   z
     .object({
       ...base,
+      type: z.literal("chargeStructure"),
+      slotId: id,
+      mana: z.number().int().min(1).max(20),
+    })
+    .strict(),
+  z
+    .object({
+      ...base,
       type: z.literal("chooseCoin"),
       face: z.enum(["heads", "tails"]),
     })
@@ -68,6 +76,7 @@ export const commandSchema = z.discriminatedUnion("type", [
     .object({
       ...base,
       type: z.literal("attack"),
+      targetSource: z.enum(["card", "structure"]).optional(),
       slotId: id,
       targetId: id,
       source: z.enum(["card", "structure", "rider"]).optional(),

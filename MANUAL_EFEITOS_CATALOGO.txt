@@ -2193,3 +2193,39 @@ Na rejeitada, não deve aparecer animação de sucesso. Recarregue a partida:
 update(snapshot) já evita repetir eventos antigos. Confira celular, espectador,
 movimento reduzido e várias ativações juntas. Animações só apresentam o resultado;
 dano, cura, mana e duração continuam sendo decididos no motor do servidor.
+
+
+ESTRUTURAS CONFIGURÁVEIS — 11/11/2026
+O objeto estrutura é opcional e exclusivo de cartas Estrutura. Não depende do
+nome ou número de catálogo. Exemplo de Torreta com recarga:
+"estrutura":{"alcance":"QualquerTropa","esperaRodadas":1}
+Frente usa a coluna inimiga à frente e pode atingir o mago exposto.
+QualquerTropa ignora distância entre colunas, mas não atinge magos/estruturas.
+Após disparar na rodada 3, espera a rodada 4 e dispara novamente na 5.
+O disparo usa um ataque da tropa e um do limite do mago. Em montaria, só o
+ocupante opera. Dois ataques permitem combinar disparo e ataque próprio,
+respeitando a recarga da estrutura. A estrutura não recebe bônus de armamento.
+
+Exemplo de muro que impede ataques e reage ao dano elemental:
+"estrutura":{"bloqueiaAtaqueTropa":true,"reacoesDano":[
+ {"elemento":"Terra","acao":"crescer","valor":1},
+ {"elemento":"Agua","acao":"destruir"},
+ {"elemento":"Ar","acao":"destruir"}]}
+Crescer ignora o golpe e aumenta vida máxima/atual até sair do campo.
+Destruir remove a estrutura ao receber aquele dano; a tropa não recebe excedente.
+
+Exemplo de canhão carregável, com um disparo por rodada:
+"estrutura":{"alcance":"Frente","esperaRodadas":0,"tropaDefendeAtaques":true,
+ "carga":{"minimoMana":2,"manaPorDano":2,"explosao":10,
+ "elementos":["Neutro","Fogo","Agua","Terra","Ar","Zarcos"]}}
+chargeStructure recebe slotId e mana inteira. O dono paga, uma carga por turno;
+a carga permanece entre turnos e vira floor(mana/manaPorDano) de ataque.
+Ao disparar, gasta tudo e sorteia uniformemente um elemento da lista. Com dano
+bruto no limiar explosao, mata a estrutura, montaria e ocupante após o tiro,
+inclusive em erro, desvio ou reflexão. Proteções do alvo não evitam a explosão.
+Carga e recarga são apagadas quando a estrutura sai do campo.
+
+Ataques básicos aceitam targetSource:"card" ou "structure". O segundo só é
+válido em estruturas ofensivas; o primeiro atinge diretamente a tropa que usa
+uma ofensiva. Estruturas defensivas continuam absorvendo. tropaDefendeAtaques
+faz a tropa interceptar básicos dirigidos à estrutura; feitiços mantêm o alvo.

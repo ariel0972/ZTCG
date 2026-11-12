@@ -18,9 +18,24 @@ export function availableAttackCount(state, userId) {
     .reduce(
       (count, s) =>
         count +
-        Object.values(s.attackTargets ?? {}).filter(
-          (targets) => targets?.length,
-        ).length,
+        Number(
+          !!(
+            s.attackTargets?.card?.length ||
+            s.attackStructureTargets?.card?.length ||
+            (!s.rider &&
+              (s.attackTargets?.structure?.length ||
+                s.attackStructureTargets?.structure?.length))
+          ),
+        ) +
+        Number(
+          !!(
+            s.attackTargets?.rider?.length ||
+            s.attackStructureTargets?.rider?.length ||
+            (s.rider &&
+              (s.attackTargets?.structure?.length ||
+                s.attackStructureTargets?.structure?.length))
+          ),
+        ),
       0,
     );
 }

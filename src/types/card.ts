@@ -675,11 +675,41 @@ export const entryCostSchema = z
   .refine((c) => !(c.mesmoElemento && c.elementos), {
     message: "Escolha mesmoElemento ou elementos específicos, não ambos.",
   });
+export const structureRulesSchema = z
+  .object({
+    alcance: z.enum(["Frente", "QualquerTropa"]).optional(),
+    esperaRodadas: number.max(100).optional(),
+    bloqueiaAtaqueTropa: z.boolean().optional(),
+    tropaDefendeAtaques: z.boolean().optional(),
+    reacoesDano: z
+      .array(
+        z
+          .object({
+            elemento: z.enum(elements),
+            acao: z.enum(["crescer", "destruir"]),
+            valor: number.min(1).optional(),
+          })
+          .strict(),
+      )
+      .max(6)
+      .optional(),
+    carga: z
+      .object({
+        minimoMana: number.min(1).max(20),
+        manaPorDano: number.min(1),
+        explosao: number.min(1),
+        elementos: z.array(z.enum(elements)).min(2).max(6),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
 export const cardSchema = z
   .object({
     numeroCatalogo: z.string().regex(/^\d{3,6}$/),
     nome: z.string().trim().min(1).max(100),
     tipo: z.enum(cardTypes),
+    estrutura: structureRulesSchema.optional(),
     custoMana: number,
     assinatura: z.boolean().default(false),
     custoEntrada: entryCostSchema.optional(),
@@ -795,6 +825,12 @@ export const cardSchema = z
           message: "Defina os limites do mago.",
         });
     }
+    if (c.estrutura && c.tipo !== "Estrutura")
+      ctx.addIssue({
+        code: "custom",
+        path: ["estrutura"],
+        message: "Regras de estrutura exigem Estrutura.",
+      });
     if (c.tipo === "Feitico") required("alvo");
     if (c.tipo === "Armamento") {
       required("bonusAtaque");

@@ -2116,48 +2116,99 @@
     "nome": "Torreta",
     "tipo": "Estrutura",
     "custoMana": 6,
-    "descricao": "",
+    "descricao": "Ataca qualquer tropa inimiga, usando um ataque da tropa protegida (somente o ocupante em montaria). Aguarda uma rodada completa entre disparos. O atacante inimigo pode escolher acertar diretamente a tropa ou a Torreta.",
     "imgURL": "/assets/Cards/Torreta.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
-    "hp": 1,
-    "ataque": 2
+    "hp": 8,
+    "ataque": 3,
+    "elemento": "Neutro",
+    "direcaoAtaque": "Universal",
+    "estrutura": {
+      "alcance": "QualquerTropa",
+      "esperaRodadas": 1
+    }
   },
   {
     "numeroCatalogo": "059",
-    "nome": "Muro de terra",
+    "nome": "Muro de Terra",
     "tipo": "Estrutura",
-    "custoMana": 6,
-    "descricao": "",
+    "custoMana": 5,
+    "descricao": "A tropa protegida não pode atacar. Ao receber dano de Terra, ignora o golpe e ganha +1 de vida máxima e atual. Dano de Água ou Ar destrói o muro imediatamente. Outros elementos causam dano normalmente.",
     "imgURL": "/assets/Cards/Muro de Terra.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
-    "hp": 1,
-    "ataque": 2
+    "hp": 8,
+    "ataque": 0,
+    "elemento": "Terra",
+    "estrutura": {
+      "bloqueiaAtaqueTropa": true,
+      "reacoesDano": [
+        {
+          "elemento": "Terra",
+          "acao": "crescer",
+          "valor": 1
+        },
+        {
+          "elemento": "Agua",
+          "acao": "destruir"
+        },
+        {
+          "elemento": "Ar",
+          "acao": "destruir"
+        }
+      ]
+    }
   },
   {
     "numeroCatalogo": "091",
     "nome": "Canhão",
     "tipo": "Estrutura",
-    "custoMana": 6,
-    "descricao": "",
+    "custoMana": 5,
+    "descricao": "Ataca à frente usando um ataque da tropa protegida (somente o ocupante em montaria). Aguarda uma rodada completa entre disparos; a tropa pode usar seus próprios ataques durante a recarga. Pode atingir o mago quando não houver tropas inimigas. Não bloqueia condições negativas. O inimigo pode escolher tropa ou canhão como alvo direto.",
     "imgURL": "/assets/Cards/Canhão.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
-    "hp": 1,
-    "ataque": 2
+    "hp": 9,
+    "ataque": 4,
+    "elemento": "Neutro",
+    "direcaoAtaque": "Frente",
+    "estrutura": {
+      "alcance": "Frente",
+      "esperaRodadas": 1
+    }
   },
   {
     "numeroCatalogo": "109",
     "nome": "Canhão de Mana Instável",
     "tipo": "Estrutura",
-    "custoMana": 6,
-    "descricao": "",
+    "custoMana": 8,
+    "descricao": "Uma vez por turno, o mago pode armazenar qualquer quantidade inteira a partir de 2 mana. Cada 2 mana dão +1 de dano (arredonda para baixo); a carga permanece até disparar. Ataca à frente, uma vez por rodada, usando um ataque da tropa (somente o ocupante em montaria), gasta toda a carga e sorteia o elemento em 1d6: Neutro, Fogo, Água, Terra, Ar ou Zarcos. A tropa intercepta ataques básicos dirigidos ao canhão; feitiços atingem a estrutura normalmente. Disparos de 10+ de dano antes das proteções explodem o canhão e matam montaria e ocupante, mesmo se errarem ou forem desviados.",
     "imgURL": "/assets/Cards/Canhão de Mana Instável.png",
-    "publicado": false,
+    "publicado": true,
     "versao": 1,
-    "hp": 1,
-    "ataque": 2
+    "hp": 8,
+    "ataque": 0,
+    "elemento": "Neutro",
+    "direcaoAtaque": "Frente",
+    "estrutura": {
+      "alcance": "Frente",
+      "esperaRodadas": 0,
+      "tropaDefendeAtaques": true,
+      "carga": {
+        "minimoMana": 2,
+        "manaPorDano": 2,
+        "explosao": 10,
+        "elementos": [
+          "Neutro",
+          "Fogo",
+          "Agua",
+          "Terra",
+          "Ar",
+          "Zarcos"
+        ]
+      }
+    }
   },
   {
     "numeroCatalogo": "020",

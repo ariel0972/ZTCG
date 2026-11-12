@@ -32,6 +32,9 @@ export interface BattleEvent {
 
 export interface Instance extends Card {
   equipmentMode?: string;
+  storedMana?: number;
+  structureAttackRound?: number;
+  structureChargeTurn?: number;
   fieldGrowth?: { hp: number };
   passiveUses?: Record<string, { round: number; count: number }>;
   attacksBlockedUntilTurn?: number;
@@ -207,6 +210,8 @@ export interface State {
     damage: number;
     element?: Card["elemento"];
     interception?: { cardId: string; valor: number; origin: string };
+    targetSource?: "card" | "structure";
+    structureExplosion?: boolean;
   };
   ongoingSpells?: {
     id: string;

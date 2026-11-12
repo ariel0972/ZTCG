@@ -199,6 +199,26 @@ export function aiCandidates(game: Game, bot: string): AiCommand[] {
               targetId,
               source,
             });
+        for (const targetId of visible.attackStructureTargets?.[source] ?? [])
+          groups[0].push({
+            type: "attack",
+            slotId: slot.id,
+            targetId,
+            source,
+            targetSource: "structure",
+          });
+        if (
+          source === "structure" &&
+          card.estrutura?.carga &&
+          !card.usedAbility &&
+          player.mana >= card.estrutura.carga.minimoMana
+        ) {
+          for (const mana of new Set([
+            card.estrutura.carga.minimoMana,
+            player.mana,
+          ]))
+            groups[2].push({ type: "chargeStructure", slotId: slot.id, mana });
+        }
         for (const ability of card.habilidadesAtivas) {
           if (visible.abilityBlockReasons?.[source]?.[ability.id]) continue;
           expand(

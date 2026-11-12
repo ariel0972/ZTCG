@@ -19,7 +19,7 @@ test("confirmação considera apenas ataques legais próprios, inclusive ataques
       { ownerId: "enemy", attackTargets: { card: ["me:0"] } },
     ],
   };
-  assert.equal(availableAttackCount(state, "me"), 2);
+  assert.equal(availableAttackCount(state, "me"), 1);
   state.slots[0].attackTargets.card = [];
   assert.equal(availableAttackCount(state, "me"), 1);
   for (const change of [
@@ -110,4 +110,25 @@ test("confirmar envia uma única decisão; cancelar e atualizar estado não pass
     if (previous) Object.defineProperty(globalThis, "document", previous);
     else Reflect.deleteProperty(globalThis, "document");
   }
+});
+
+test("confirmação conta a tropa uma vez com estrutura alternativa e inclui alvo direto na estrutura", async () => {
+  const path = "../public/JS/battle-confirmations.js";
+  const { availableAttackCount } = await import(path);
+  const slot: any = {
+    ownerId: "me",
+    attackTargets: { card: ["a"], structure: ["b"], rider: [] },
+  };
+  const state = {
+    phase: "BATTLE",
+    status: "ACTIVE",
+    current: "me",
+    slots: [slot],
+  };
+  assert.equal(availableAttackCount(state, "me"), 1);
+  slot.rider = { id: "r" };
+  assert.equal(availableAttackCount(state, "me"), 2);
+  slot.attackTargets = { card: [], structure: [], rider: [] };
+  slot.attackStructureTargets = { card: ["b"] };
+  assert.equal(availableAttackCount(state, "me"), 1);
 });

@@ -70,6 +70,18 @@ export function structureFace(card) {
   bar.value = hp;
   bar.setAttribute("aria-label", "Vida de " + card.nome);
   info.append(name, health, bar);
+  if ((card.ataque || 0) > 0 || card.estrutura?.carga)
+    info.append(
+      node(
+        "small",
+        attackValue(card) +
+          " ATQ" +
+          (card.estrutura?.carga
+            ? " · " + (card.storedMana || 0) + " mana"
+            : ""),
+        "structure-attack-stat",
+      ),
+    );
   if (art) face.append(art);
   face.append(info);
   return face;

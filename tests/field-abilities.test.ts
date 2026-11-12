@@ -353,6 +353,7 @@ test("Em Guarda intercepta o Cavaleiro escolhido, reduz dois, e a estrutura do E
     if (withStructure)
       defenderSlot.structure = instance("023", "p1", {
         tipo: "Estrutura",
+        ataque: 0,
         hp: 8,
         fraqueza: [],
         resistencia: [],

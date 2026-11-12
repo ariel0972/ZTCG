@@ -17,6 +17,12 @@ import {
 } from "./deployment";
 import { entryCost, materialOptions } from "./entry-cost";
 import { modifiedSpell, currentSpellCost } from "./spell-modifiers";
+import {
+  structureOperator,
+  offensiveStructure,
+  structureCooldown,
+  storedAttackBonus,
+} from "./structures";
 import { cancelledByField, normalElementDamage } from "./field-rules";
 import { createCoinToss, resolveCoinToss, type CoinFace } from "./coin-toss";
 import { effectRoundDue, nextEffectRound } from "./effect-clock";
@@ -912,7 +918,10 @@ export class Game {
       (f) => f.rounds > 0,
     );
   }
-  private afterAttackFields(card: Instance) {
+  private afterAttackFields(
+    card: Instance,
+    element = this.attackElement(card),
+  ) {
     for (const field of this.state.fieldEffects ?? []) {
       if (
         field.affectedOwnerId !== card.ownerId ||
@@ -928,14 +937,14 @@ export class Game {
             field.damage +
             temporarySpellDamageBonus(this.player(field.ownerId).mage),
         },
-        this.attackElement(card),
+        element,
       );
       if (result.remove) {
         field.rounds = 0;
         this.event(
           "notice",
           field.card,
-          `${card.nome} removeu ${field.card.nome} com seu ataque de ${this.attackElement(card)}.`,
+          `${card.nome} removeu ${field.card.nome} com seu ataque de ${element}.`,
         );
         continue;
       }
@@ -1173,6 +1182,50 @@ export class Game {
     target.statuses = target.statuses.filter(
       (s) => !s.removerElemento || s.removerElemento !== element,
     );
+    const reaction =
+      value > 0 &&
+      target.estrutura?.reacoesDano?.find((r) => r.elemento === element);
+    if (reaction) {
+      if (reaction.acao === "crescer") {
+        const gain = reaction.valor ?? 1;
+        target.hp = (target.hp ?? 0) + gain;
+        target.hpAtual += gain;
+        (target.fieldGrowth ??= { hp: 0 }).hp += gain;
+        this.reportHealthGain(target, gain, target);
+        this.event(
+          "passive",
+          target,
+          "Converteu o golpe de " +
+            element +
+            " em +" +
+            gain +
+            " de vida máxima e atual.",
+        );
+      } else {
+        const before = target.hpAtual;
+        target.hpAtual = 0;
+        if (source ?? attacker)
+          target.killedBy = {
+            ownerId: (source ?? attacker)!.ownerId,
+            cardId: (source ?? attacker)!.id,
+          };
+        this.reportDamage(
+          target,
+          before,
+          origin,
+          before,
+          "destruída ao receber " + element,
+          { element },
+          originOwnerId ?? source?.ownerId ?? attacker?.ownerId,
+        );
+      }
+      return {
+        target,
+        amount: reaction.acao === "destruir" ? value : 0,
+        killed: target.hpAtual <= 0,
+      };
+    }
+
     let remaining = value;
     const protection = target.statuses.find(
       (s) =>
@@ -1475,6 +1528,9 @@ export class Game {
       delete card.fieldGrowth;
     }
     delete card.fieldModifiers;
+    delete card.storedMana;
+    delete card.structureAttackRound;
+    delete card.structureChargeTurn;
     if (!card.reviveBonuses) return;
     card.hp = Math.max(0, (card.hp ?? 0) - card.reviveBonuses.hp);
     card.ataque = Math.max(0, (card.ataque ?? 0) - card.reviveBonuses.ataque);
@@ -4866,7 +4922,7 @@ export class Game {
     slot: Slot,
     card: Instance | null,
     ignoreMageLimit = false,
-  ) {
+  ): string {
     const p = this.player(user);
     if (!card || !["Tropa", "Mago", "Estrutura"].includes(card.tipo))
       return "Selecione uma tropa, mago ou estrutura.";
@@ -4885,17 +4941,27 @@ export class Game {
     )
       return "O mago não pode atacar enquanto tiver tropas em campo.";
     if (
-      card.tipo === "Estrutura" &&
-      (!slot.card ||
-        hasStatus(slot.card.statuses, [
-          "Atordoado",
-          "Incapacitado",
-          "SemAtaque",
-          "Cego",
-          "Congelado",
-        ]))
+      card.tipo === "Tropa" &&
+      (slot.structure?.hpAtual ?? 0) > 0 &&
+      slot.structure?.estrutura?.bloqueiaAtaqueTropa
     )
-      return "A tropa protegida não pode atacar com a estrutura neste estado.";
+      return "A estrutura impede os ataques da tropa protegida.";
+    if (card.tipo === "Estrutura") {
+      const operator = structureOperator(slot);
+      if (!operator || operator.tipo !== "Tropa" || operator.hpAtual <= 0)
+        return "A estrutura exige uma tropa para operar.";
+      const error = this.attackSourceError(
+        user,
+        slot,
+        operator,
+        ignoreMageLimit,
+      );
+      if (error) return error;
+      if (currentBasicAttack(card, this.state.slots) <= 0)
+        return "A estrutura não tem dano disponível; carregue mana se aplicável.";
+      if (structureCooldown(card, this.state.round))
+        return "A estrutura está recarregando por uma rodada completa.";
+    }
     if (
       card.attacked ||
       (card.attacksMade ?? 0) >= basicAttackLimit(card, this.state.slots) ||
@@ -4919,7 +4985,35 @@ export class Game {
       return "Tropa incapacitada.";
     return "";
   }
-  private attackTargetError(slot: Slot, card: Instance, target: Slot) {
+  private attackTargetError(
+    slot: Slot,
+    card: Instance,
+    target: Slot,
+    targetSource: "card" | "structure" = "card",
+  ) {
+    if (
+      card.tipo === "Estrutura" &&
+      !target.card &&
+      target.kind === "Tropa" &&
+      this.state.slots.some(
+        (s) => s.ownerId === target.ownerId && s.card?.tipo === "Tropa",
+      )
+    )
+      return "O mago ainda está protegido por tropas.";
+    if (
+      targetSource === "structure" &&
+      (!offensiveStructure(target.structure) ||
+        !target.structure ||
+        target.structure.hpAtual <= 0)
+    )
+      return "Selecione uma estrutura ofensiva inimiga.";
+    if (
+      card.estrutura?.alcance === "QualquerTropa" &&
+      (target.kind !== "Tropa" ||
+        targetSource === "structure" ||
+        target.card?.tipo !== "Tropa")
+    )
+      return "Esta estrutura só pode atacar tropas.";
     if (target.card?.concealedTrap && card.tipo !== "Tropa")
       return "Somente tropas podem atacar este espaço ocupado por carta oculta.";
     if (
@@ -4953,17 +5047,27 @@ export class Game {
           ? "Universal"
           : (card.direcaoAtaque ?? slot.card?.direcaoAtaque ?? "Frente");
       if (
-        (direction === "Frente" && difference !== 0) ||
-        (direction === "Diagonal" && difference !== 1) ||
-        (direction === "Universal" && difference > 1)
+        card.estrutura?.alcance !== "QualquerTropa" &&
+        ((direction === "Frente" && difference !== 0) ||
+          (direction === "Diagonal" && difference !== 1) ||
+          (direction === "Universal" && difference > 1))
       )
         return "Alvo fora do alcance.";
     }
-    if (target.card && this.has(target.card, "Esconder"))
+    if (
+      targetSource !== "structure" &&
+      target.card &&
+      this.has(target.card, "Esconder")
+    )
       return "Alvo escondido.";
     return "";
   }
-  private attackTargets(user: string, slot: Slot, card: Instance | null) {
+  private attackTargets(
+    user: string,
+    slot: Slot,
+    card: Instance | null,
+    targetSource: "card" | "structure" = "card",
+  ) {
     if (
       this.state.status !== "ACTIVE" ||
       this.openingBlocked() ||
@@ -4991,7 +5095,7 @@ export class Game {
             guarded ||
             target.kind === "Mago" ||
             !!target.card?.concealedTrap) &&
-          !this.attackTargetError(slot, card, target),
+          !this.attackTargetError(slot, card, target, targetSource),
       )
       .map((target) => target.id);
   }
@@ -5010,6 +5114,41 @@ export class Game {
           `Ataque ${card.nome} foi bloqueado pela passiva de ${target.card!.nome} (${this.player(target.ownerId).nome}).`,
         ]),
     );
+  }
+  private chargeStructure(user: string, slotId: string, mana: number) {
+    const p = this.player(user),
+      slot = this.ownSlot(slotId, user),
+      card = slot.structure;
+    const charge = card?.estrutura?.carga;
+    if (!card || !charge || card.hpAtual <= 0 || !slot.card)
+      this.fail("Escolha uma estrutura em campo que aceite carga de mana.");
+    if (this.state.phase !== "BATTLE" || this.state.turn === 1)
+      this.fail("Carregar mana exige seu turno de combate após a abertura.");
+    if (card.usedAbility || card.structureChargeTurn === this.state.turn)
+      this.fail(
+        "A estrutura já recebeu carga ou usou uma habilidade neste turno.",
+      );
+    if (hasStatus(card.statuses, ["Congelado", "Atordoado", "Cego"]))
+      this.fail("Um estado impede a carga de mana.");
+    if (mana < charge.minimoMana)
+      this.fail("A carga exige pelo menos " + charge.minimoMana + " mana.");
+    this.spend(p, mana);
+    card.storedMana = (card.storedMana ?? 0) + mana;
+    card.structureChargeTurn = this.state.turn;
+    card.usedAbility = true;
+    this.event(
+      "ability",
+      card,
+      "Armazenou " +
+        mana +
+        " mana; carga total " +
+        card.storedMana +
+        " e bônus de ataque " +
+        storedAttackBonus(card) +
+        ".",
+      { slotId: slot.id },
+    );
+    this.log(card.nome + " recebeu " + mana + " mana de " + p.nome + ".");
   }
   private attack(user: string, cmd: Extract<Command, { type: "attack" }>) {
     if (this.openingBlocked())
@@ -5032,13 +5171,25 @@ export class Game {
       (s) => s.id === cmd.targetId && s.ownerId === enemy.id,
     );
     if (!target) this.fail("Selecione um slot inimigo.");
-    const targetError = this.attackTargetError(slot, card, target);
+    let targetSource = cmd.targetSource ?? "card";
+    const targetError = this.attackTargetError(
+      slot,
+      card,
+      target,
+      targetSource,
+    );
     if (targetError) this.fail(targetError);
     let interception = "";
     let interceptionProtection:
       { cardId: string; valor: number; origin: string } | undefined;
     {
-      const interceptor = attackInterceptor(card, target, this.state.slots);
+      const interceptor = attackInterceptor(
+        card,
+        targetSource === "structure"
+          ? { ...target, card: target.structure!, rider: null }
+          : target,
+        this.state.slots,
+      );
       if (interceptor && interceptor.card.id !== target.card?.id) {
         const protection = interceptor.protection?.origin;
         if (interceptor.protection?.protegidoId)
@@ -5051,6 +5202,7 @@ export class Game {
         this.log(
           `${interceptor.card.nome} interceptou o ataque de ${card.nome} destinado a ${target.card?.nome ?? enemy.mage.nome}.`,
         );
+        targetSource = "card";
         target =
           interceptor.slot.rider?.id === interceptor.card.id
             ? { ...interceptor.slot, card: interceptor.card, rider: null }
@@ -5060,7 +5212,7 @@ export class Game {
         enemy.lastTroopAttacker = { cardId: card.id, turn: this.state.turn };
     }
     const actionBonus = this.takeActionBonus(user);
-    const announcedDefender = this.basicAttackDefender(target);
+    const announcedDefender = this.basicAttackDefender(target, targetSource);
     this.event(
       "attack",
       card,
@@ -5069,6 +5221,41 @@ export class Game {
     card.attacksMade = (card.attacksMade ?? 0) + 1;
     card.attacked =
       card.attacksMade >= basicAttackLimit(card, this.state.slots);
+    if (card.tipo === "Estrutura") {
+      const operator = structureOperator(slot)!;
+      operator.attacksMade = (operator.attacksMade ?? 0) + 1;
+      operator.attacked =
+        operator.attacksMade >= basicAttackLimit(operator, this.state.slots);
+      card.structureAttackRound = this.state.round;
+      operator.palavrasChave = operator.palavrasChave.filter(
+        (k) => k !== "Esconder",
+      );
+      operator.statuses = operator.statuses.filter(
+        (s) => s.nome !== "Esconder",
+      );
+    }
+    const shotDamage =
+      this.basicAttackDamage(card, announcedDefender) + actionBonus;
+    const structureExplosion =
+      !!card.estrutura?.carga && shotDamage >= card.estrutura.carga.explosao;
+    let shotElement = this.attackElement(card);
+    if (card.estrutura?.carga) {
+      const elements = card.estrutura.carga.elementos;
+      const roll = Math.floor(this.random() * elements.length);
+      shotElement = elements[roll];
+      card.storedMana = 0;
+      this.event(
+        "notice",
+        card,
+        "Disparo: dado caiu " +
+          (roll + 1) +
+          " — " +
+          (shotElement === "Agua" ? "Água" : shotElement) +
+          "; " +
+          shotDamage +
+          " de dano antes das proteções.",
+      );
+    }
     p.combatStarted = true;
     if (card.tipo !== "Mago") p.counters.attacks++;
     if (card.tipo === "Tropa" && target.card?.concealedTrap) {
@@ -5124,7 +5311,12 @@ export class Game {
     card.statuses = card.statuses.filter(
       (s) => !s.requerStatus || this.has(card, s.requerStatus),
     );
-    if (this.has(card, "Cegueira") || this.has(card, "Cego")) {
+    if (
+      this.has(card, "Cegueira") ||
+      this.has(card, "Cego") ||
+      (card.tipo === "Estrutura" &&
+        hasStatus(structureOperator(slot)!.statuses, ["Cego"]))
+    ) {
       if (this.random() < 0.5) {
         this.event("miss", card, `${card.nome} errou por cegueira.`, {
           slotId: slot.id,
@@ -5136,7 +5328,7 @@ export class Game {
             cardId: target.card.id,
             attackerId: card.id,
           });
-        const missedDefender = this.basicAttackDefender(target);
+        const missedDefender = this.basicAttackDefender(target, targetSource);
         this.trigger("onAttack", {
           ownerId: user,
           cardId: card.id,
@@ -5147,16 +5339,17 @@ export class Game {
         });
         this.log(`${card.nome} errou por cegueira.`);
         this.afterAttackFields(card);
+        if (structureExplosion) this.explodeStructure(card);
         return;
       }
     }
-    const defender = this.basicAttackDefender(target);
+    const defender = this.basicAttackDefender(target, targetSource);
     const bonusOnTarget = targetAttackBonus(card, defender, this.state.slots);
     if (bonusOnTarget)
       this.log(
         `${card.nome} ganhou +${bonusOnTarget} neste ataque contra ${defender.nome} pela condição do alvo.`,
       );
-    const damage = this.basicAttackDamage(card, defender) + actionBonus;
+    const damage = shotDamage;
     if (this.canReflectAttack(defender, card)) {
       this.state.pendingAttack = {
         attackerOwnerId: user,
@@ -5164,8 +5357,10 @@ export class Game {
         targetSlotId: target.id,
         defenderId: defender.id,
         damage,
-        element: this.attackElement(card),
+        element: shotElement,
         interception: interceptionProtection,
+        targetSource,
+        structureExplosion,
       };
       this.log(`${defender.nome} pode devolver o ataque de ${card.nome}.`);
       return;
@@ -5174,10 +5369,12 @@ export class Game {
       card,
       target,
       damage,
-      this.attackElement(card),
+      shotElement,
       false,
       undefined,
       interceptionProtection,
+      targetSource,
+      structureExplosion,
     );
   }
   private effectBasicStrike(
@@ -5188,6 +5385,12 @@ export class Game {
     cause?: string,
   ) {
     const origin = source && this.targetSlot(source.id);
+    if (
+      (origin?.structure?.hpAtual ?? 0) > 0 &&
+      origin?.structure?.estrutura?.bloqueiaAtaqueTropa &&
+      source?.tipo === "Tropa"
+    )
+      this.fail("A estrutura impede ataques da tropa protegida.");
     const frontal = effect.ataque?.origem === "frontal";
     const position =
       frontal && origin
@@ -5265,12 +5468,17 @@ export class Game {
       targetSlot.rider?.id === victim.id
         ? { ...targetSlot, card: victim, rider: null }
         : targetSlot;
-    const defender = this.basicAttackDefender(target);
+    const defender = this.basicAttackDefender(target, "card", false);
     this.completeAttackOnce(
       attacker,
       target,
       this.basicAttackDamage(attacker, defender) + (effect.valor ?? 0),
       this.attackElement(attacker),
+      false,
+      undefined,
+      undefined,
+      "card",
+      false,
     );
   }
   private attackElement(card: Instance) {
@@ -5292,7 +5500,19 @@ export class Game {
         : 0)
     );
   }
-  private basicAttackDefender(target: Slot): Instance {
+  private basicAttackDefender(
+    target: Slot,
+    targetSource: "card" | "structure" = "card",
+    basic = true,
+  ): Instance {
+    if (basic && offensiveStructure(target.structure)) {
+      if (
+        targetSource === "structure" &&
+        !target.structure!.estrutura?.tropaDefendeAtaques
+      )
+        return target.structure!;
+      return target.card ?? this.player(target.ownerId).mage;
+    }
     if (
       target.structure &&
       target.structure.hpAtual > 0 &&
@@ -5301,6 +5521,30 @@ export class Game {
     )
       return target.structure;
     return target.card ?? this.player(target.ownerId).mage;
+  }
+  private explodeStructure(card: Instance) {
+    const slot = this.targetSlot(card.id);
+    if (!slot) return;
+    this.event(
+      "notice",
+      card,
+      "Explodiu após um disparo de dano 10 ou mais e eliminou as tropas que o protegiam.",
+      { slotId: slot.id },
+    );
+    for (const c of [card, slot.card, slot.rider])
+      if (c && c.hpAtual > 0) {
+        const before = c.hpAtual;
+        c.hpAtual = 0;
+        this.reportDamage(
+          c,
+          before,
+          "Explosão de " + card.nome,
+          before,
+          undefined,
+          undefined,
+          card.ownerId,
+        );
+      }
   }
   private canReflectAttack(card: Instance, attacker: Instance) {
     return (
@@ -5337,11 +5581,13 @@ export class Game {
     reflect = false,
     reactionCard?: Instance,
     interception?: { cardId: string; valor: number; origin: string },
+    targetSource: "card" | "structure" = "card",
+    structureExplosion = false,
   ) {
     return this.inImpact(
       "attack",
       `Ataque de ${card.nome}`,
-      () =>
+      () => {
         this.completeAttackOnce(
           card,
           target,
@@ -5350,7 +5596,10 @@ export class Game {
           reflect,
           reactionCard,
           interception,
-        ),
+          targetSource,
+        );
+        if (structureExplosion) this.explodeStructure(card);
+      },
       { ownerId: card.ownerId },
     );
   }
@@ -5362,11 +5611,21 @@ export class Game {
     reflect = false,
     reactionCard?: Instance,
     interception?: { cardId: string; valor: number; origin: string },
+    targetSource: "card" | "structure" = "card",
+    basic = true,
   ) {
     const user = card.ownerId,
       enemy = this.opponent(user);
-    const attackedCard = target.card;
-    const effectiveDefender = this.basicAttackDefender(target);
+    const effectiveDefender = this.basicAttackDefender(
+      target,
+      targetSource,
+      basic,
+    );
+    const attackedCard =
+      targetSource === "structure" &&
+      effectiveDefender.id === target.structure?.id
+        ? target.structure
+        : target.card;
     if (reflect && reactionCard) {
       reactionCard.reflectedAttackRound = this.state.round;
       this.damage(
@@ -5389,7 +5648,9 @@ export class Game {
         effectiveDefender.id,
         damage,
         card,
-        false,
+        basic &&
+          offensiveStructure(target.structure) &&
+          effectiveDefender.id !== target.structure?.id,
         element,
         undefined,
         undefined,
@@ -5411,7 +5672,7 @@ export class Game {
       slotId: target.id,
     });
     this.log(`${card.nome} atacou a coluna ${target.column + 1}.`);
-    this.afterAttackFields(card);
+    this.afterAttackFields(card, element);
   }
   resolvePendingAttack(reflect = false) {
     if (this.state.pendingAttack)
@@ -5431,10 +5692,11 @@ export class Game {
     if (
       !card ||
       !target ||
-      this.basicAttackDefender(target).id !== pending.defenderId
+      this.basicAttackDefender(target, pending.targetSource).id !==
+        pending.defenderId
     )
       this.fail("Ataque pendente inválido.");
-    const defender = this.basicAttackDefender(target);
+    const defender = this.basicAttackDefender(target, pending.targetSource);
     if (reflect && !this.canReflectAttack(defender, card))
       this.fail("Reação já utilizada ou indisponível.");
     delete this.state.pendingAttack;
@@ -5446,6 +5708,8 @@ export class Game {
       reflect,
       defender,
       pending.interception,
+      pending.targetSource,
+      pending.structureExplosion,
     );
     this.resolve();
     this.state.version++;
@@ -6139,6 +6403,9 @@ export class Game {
     this.state = structuredClone(previous);
     try {
       switch (cmd.type) {
+        case "chargeStructure":
+          this.chargeStructure(user, cmd.slotId, cmd.mana);
+          break;
         case "discardHand":
           this.discardHand(user, cmd.cardId);
           break;
@@ -6429,6 +6696,7 @@ export class Game {
               manaAttachments: this.manaAttachments(slot.structure),
               bonusAtaquePassivo:
                 fieldAttackBonus(slot.structure) +
+                storedAttackBonus(slot.structure) +
                 slot.structure.statuses
                   .filter(
                     (s) => s.nome === "BonusAtaque" && s.turnosRestantes > 0,
@@ -6477,6 +6745,21 @@ export class Game {
               : null,
         ...(slot.ownerId === user
           ? {
+              attackStructureTargets: {
+                card: this.attackTargets(user, slot, slot.card, "structure"),
+                rider: this.attackTargets(
+                  user,
+                  slot,
+                  slot.rider ?? null,
+                  "structure",
+                ),
+                structure: this.attackTargets(
+                  user,
+                  slot,
+                  slot.structure,
+                  "structure",
+                ),
+              },
               attackTargets: {
                 card: this.attackTargets(user, slot, slot.card),
                 structure: this.attackTargets(user, slot, slot.structure),

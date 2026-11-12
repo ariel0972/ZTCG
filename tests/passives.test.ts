@@ -303,7 +303,11 @@ test("congelado recebe o ataque sem acionar reação do mago; estrutura continua
       },
     ],
   });
-  destination.structure = instance("020", "p2", { tipo: "Estrutura", hp: 20 });
+  destination.structure = instance("020", "p2", {
+    tipo: "Estrutura",
+    ataque: 0,
+    hp: 20,
+  });
   destination.card.statuses = [{ nome: "Congelado", turnosRestantes: 2 }];
   act(protectedGame, {
     type: "attack",

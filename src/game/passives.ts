@@ -15,6 +15,7 @@ import { troopPositions, slotCards } from "./state";
 import { normalizePassive, legacyFireCounter } from "./legacy-passives";
 import { canonicalStatus, hasStatus } from "./status";
 import { spellTurnBonusStatus } from "./resurrection";
+import { storedAttackBonus } from "./structures";
 
 export interface PassiveEvent {
   ownerId: string;
@@ -990,6 +991,7 @@ export function currentBasicAttack(card: Instance, slots: Slot[]) {
     : 0;
   return (
     (card.ataque ?? 0) +
+    storedAttackBonus(card) +
     fieldAttackBonus(card) +
     weaponBonus +
     adjacentAttackBonus(card, slots) +
