@@ -2136,3 +2136,60 @@ Passiva contínua de ataque contra um status do alvo:
 Acrescenta o valor apenas ao golpe contra o alvo correspondente; não altera o
 ataque geral mostrado na carta. Vale também em basicStrike. Status pode ser
 qualquer condição suportada pelo jogo. As duas passivas têm modelos no catálogo.
+
+
+MINI GUIA — ANIMAÇÃO APÓS HABILIDADE OU PASSIVA — 11/11/2026
+
+1. Caminho do evento
+O jogador usa a habilidade; src/game/engine.ts resolve a regra e emite
+this.event("ability", card, ability.nome). Passivas executadas emitem "passive".
+public/JS/battle-events.js recebe esses eventos e show(event) encontra a carta
+por data-live-card-id. Já existe um brilho padrão para essas ativações.
+Anime após o evento confirmado pelo servidor, em vez de no clique do botão.
+
+2. Primeiro efeito: pulso de cor reutilizável
+Em public/JS/battle-events.js, dentro de show(event), encontre o face.animate
+que já existe. Preserve o if externo, a busca por ID e o controle de movimento
+reduzido. Substitua só essa chamada pelo exemplo abaixo:
+
+const activation = ["ability", "passive"].includes(event.kind);
+const color = event.kind === "ability" ? "#9ddcff" : "#dcc18a";
+face.animate?.(
+  activation
+    ? [
+        { boxShadow: "0 0 0 0 transparent", filter: "brightness(1)" },
+        { offset: 0.35, boxShadow: "0 0 18px " + color,
+          filter: "brightness(1.25)" },
+        { boxShadow: "0 0 0 0 transparent", filter: "brightness(1)" },
+      ]
+    : [
+        { filter: "brightness(1.7)", transform: "translateY(-5px)" },
+        { filter: "brightness(1)", transform: "translateY(0)" },
+      ],
+  { duration: activation ? 900 : 750, easing: "ease-out" },
+);
+
+O pulso azul é de habilidade; o dourado é de passiva. duration está em
+milissegundos; offset:0.35 é o ponto em 35% do tempo. Não usa nome de carta,
+portanto vale para cartas futuras. É um exemplo para copiar; não substitui
+as animações atuais automaticamente. Nenhum elemento extra precisa ser removido.
+
+3. Onde colocar animações maiores ou que persistem
+- Dano, cura, mana e reações: public/JS/battle-effects.js e public/CSS/battle.css.
+  Reaproveite a camada limitada e reset/close, que limpam elementos e animações.
+- Estado enquanto durar: cardStateVisuals em public/JS/battle-ui.js e as classes
+  .card-state--... em battle.css. Derive do status com turnosRestantes > 0;
+  CSS @keyframes repete até o servidor remover o estado.
+- Ativações: "ability" e "passive" indicam a fonte; "damage" e "heal" indicam
+  o alvo atingido. Preserve a fila visual de 60ms e a sequência dos eventos.
+- Visual diferente por habilidade: o evento atual não tem uma chave própria
+  da habilidade. Primeiro acrescente uma chave estruturada e validada ao evento
+  (src/game/state.ts e emissão no engine), depois mapeie a chave no navegador.
+  Não dependa do texto da mensagem ou do nome da carta para decidir o efeito.
+
+4. Conferência rápida
+Teste uma ativação válida, uma rejeitada e uma passiva realmente disparada.
+Na rejeitada, não deve aparecer animação de sucesso. Recarregue a partida:
+update(snapshot) já evita repetir eventos antigos. Confira celular, espectador,
+movimento reduzido e várias ativações juntas. Animações só apresentam o resultado;
+dano, cura, mana e duração continuam sendo decididos no motor do servidor.
